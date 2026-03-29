@@ -5,7 +5,7 @@ type InputProps = JSX.IntrinsicElements["input"] & { class?: string };
 export function Input({ class: className, ...props }: InputProps) {
   return (
     <input
-      class={`rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-600 ${className ?? ""}`.trim()}
+      class={`rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 text-sm text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-violet-600 ${className ?? ""}`.trim()}
       {...props}
     />
   );
