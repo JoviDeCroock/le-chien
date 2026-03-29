@@ -2,15 +2,6 @@
 
 ## Design
 
-## Landing page design and copy
-
-**Priority:** P1 (blocks launch)
-**What:** Design and build the landing page for the sovereignty-first MVP.
-**Why:** This is the entire marketing surface. No landing page = no new users. Must communicate "AI chat, hosted in Europe" clearly and credibly without falling into AI-slop design patterns (hero sections, feature grids, stock imagery — all banned by DESIGN.md).
-**Context:** DESIGN.md defines the aesthetic (industrial/utilitarian, dark-only, Geist Sans, violet-600 accent). The page needs: headline (sovereignty value prop), single CTA, trust signals (EU hosting, open model), pricing (free/pro). Information hierarchy matters more than decoration. Use honest marketing — claim AI inference + conversations stay in EU, don't overclaim on third-party services (Polar, email provider).
-**Effort:** M (human: ~1 week / CC: ~30 min)
-**Depends on:** EU region validation (must know what's technically true before writing copy).
-
 ## Engineering
 
 ## Validate EU region pinning for Workers AI and D1
