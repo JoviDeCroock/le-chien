@@ -1,7 +1,8 @@
 import { Agent, callable, type StreamingResponse } from "agents";
-import { streamText } from "ai";
+import { streamText, stepCountIs } from "ai";
 import { getModel, MODELS, DEFAULT_MODEL } from "../lib/models";
 import type { ModelId } from "../lib/models";
+import { createTools } from "../lib/tools";
 
 type Conversation = {
   id: string;
@@ -16,6 +17,7 @@ type Message = {
   conversation_id: string;
   role: string;
   content: string;
+  tool_calls: string | null;
   created_at: number;
 };
 
@@ -36,6 +38,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
         conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
         role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system')),
         content TEXT NOT NULL,
+        tool_calls TEXT,
         created_at INTEGER NOT NULL DEFAULT (unixepoch())
       )
     `;
@@ -43,6 +46,12 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       CREATE INDEX IF NOT EXISTS idx_messages_conversation
       ON messages(conversation_id, created_at)
     `;
+    // Migration: add tool_calls column for existing DOs
+    try {
+      this.sql`ALTER TABLE messages ADD COLUMN tool_calls TEXT`;
+    } catch {
+      // Column already exists — ignore
+    }
   }
 
   @callable()
@@ -77,7 +86,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     if (conversations.length === 0) throw new Error("Conversation not found");
 
     const messages = this.sql<Message>`
-      SELECT id, conversation_id, role, content, created_at
+      SELECT id, conversation_id, role, content, tool_calls, created_at
       FROM messages WHERE conversation_id = ${conversationId}
       ORDER BY created_at ASC
     `;
@@ -141,30 +150,63 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       sessionAffinity: conversationId,
     });
 
+    const tools = createTools(this.env);
+
     // Stream AI response
     let fullContent = "";
+    const toolCalls: { id: string; name: string; args: unknown; result: unknown }[] = [];
     const assistantMessageId = crypto.randomUUID();
 
     try {
       const result = streamText({
         model: aiModel,
-        system: "You are a helpful AI assistant. Be concise and clear in your responses.",
+        system:
+          "You are a helpful AI assistant called le chien. Be concise and clear in your responses. You have access to tools — use them when they would help answer the user's question accurately. For math, use the calculate tool rather than computing in your head. For questions about current dates/times, use get_current_datetime. For web content, use read_url.",
         messages: history.map((m) => ({
           role: m.role as "user" | "assistant",
           content: m.content,
         })),
+        tools,
+        stopWhen: stepCountIs(5),
       });
 
-      for await (const chunk of result.textStream) {
-        fullContent += chunk;
-        stream.send(chunk);
+      for await (const part of result.fullStream) {
+        switch (part.type) {
+          case "text-delta":
+            fullContent += part.text;
+            stream.send(part.text);
+            break;
+          case "tool-call":
+            stream.send({
+              __event: "tool-call",
+              id: part.toolCallId,
+              name: part.toolName,
+              args: part.input,
+            });
+            break;
+          case "tool-result":
+            toolCalls.push({
+              id: part.toolCallId,
+              name: part.toolName,
+              args: part.input,
+              result: part.output,
+            });
+            stream.send({
+              __event: "tool-result",
+              id: part.toolCallId,
+              name: part.toolName,
+              result: part.output,
+            });
+            break;
+        }
       }
 
-      // Save assistant message
+      // Save assistant message with tool call metadata
       const finishedAt = Math.floor(Date.now() / 1000);
+      const toolCallsJson = toolCalls.length > 0 ? JSON.stringify(toolCalls) : null;
       this.sql`
-        INSERT INTO messages (id, conversation_id, role, content, created_at)
-        VALUES (${assistantMessageId}, ${conversationId}, ${"assistant"}, ${fullContent}, ${finishedAt})
+        INSERT INTO messages (id, conversation_id, role, content, tool_calls, created_at)
+        VALUES (${assistantMessageId}, ${conversationId}, ${"assistant"}, ${fullContent}, ${toolCallsJson}, ${finishedAt})
       `;
 
       // Auto-title: if this is the first exchange, generate a title from user message

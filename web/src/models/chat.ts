@@ -14,11 +14,20 @@ export type Conversation = {
   updated_at: number;
 };
 
+export type ToolCall = {
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+  result?: unknown;
+  status: "pending" | "complete";
+};
+
 export type Message = {
   id: string;
   conversation_id: string;
   role: "user" | "assistant";
   content: string;
+  tool_calls?: ToolCall[];
   created_at: number;
 };
 
@@ -93,11 +102,36 @@ export const ChatModel = createModel(() => {
     error.value = null;
 
     try {
-      const result = await agent.value!.call<{ conversation: Conversation; messages: Message[] }>(
-        "getConversation",
-        [conversationId],
-      );
-      messages.value = result.messages;
+      const result = await agent.value!.call<{
+        conversation: Conversation;
+        messages: (Message & { tool_calls?: string | ToolCall[] | null })[];
+      }>("getConversation", [conversationId]);
+      // Parse tool_calls JSON from DB storage
+      messages.value = result.messages.map((m) => {
+        if (typeof m.tool_calls === "string") {
+          try {
+            const parsed = JSON.parse(m.tool_calls) as {
+              id: string;
+              name: string;
+              args: unknown;
+              result: unknown;
+            }[];
+            return {
+              ...m,
+              tool_calls: parsed.map((tc) => ({
+                id: tc.id,
+                name: tc.name,
+                args: (tc.args as Record<string, unknown>) ?? {},
+                result: tc.result,
+                status: "complete" as const,
+              })),
+            };
+          } catch {
+            return { ...m, tool_calls: undefined };
+          }
+        }
+        return m as Message;
+      });
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to load conversation";
     }
@@ -175,6 +209,38 @@ export const ChatModel = createModel(() => {
         onChunk: (chunk) => {
           const msgs = messages.value;
           const last = msgs[msgs.length - 1];
+
+          // Handle structured tool events
+          if (typeof chunk === "object" && chunk !== null && "__event" in chunk) {
+            const event = chunk as {
+              __event: string;
+              id: string;
+              name: string;
+              args?: unknown;
+              result?: unknown;
+            };
+            if (event.__event === "tool-call") {
+              const tc: ToolCall = {
+                id: event.id,
+                name: event.name,
+                args: (event.args as Record<string, unknown>) ?? {},
+                status: "pending",
+              };
+              const existing = last.tool_calls ?? [];
+              messages.value = [...msgs.slice(0, -1), { ...last, tool_calls: [...existing, tc] }];
+            } else if (event.__event === "tool-result") {
+              const existing = last.tool_calls ?? [];
+              const updated = existing.map((tc) =>
+                tc.id === event.id
+                  ? { ...tc, result: event.result, status: "complete" as const }
+                  : tc,
+              );
+              messages.value = [...msgs.slice(0, -1), { ...last, tool_calls: updated }];
+            }
+            return;
+          }
+
+          // Regular text chunk
           messages.value = [
             ...msgs.slice(0, -1),
             { ...last, content: last.content + (chunk as string) },
