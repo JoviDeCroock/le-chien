@@ -3,11 +3,18 @@ import { AuthFormModel } from "../models/auth-form";
 import { Button } from "./ui/Button";
 import { Input, Label, LabelText } from "./ui/Input";
 import { Alert } from "./ui/Alert";
+import { TabToggle } from "./ui/TabToggle";
+import { Card } from "./ui/Layout";
 
 interface AuthFormProps {
   onSuccess?: () => void;
   compact?: boolean;
 }
+
+const TABS = [
+  { id: "signin", label: "Sign In" },
+  { id: "signup", label: "Sign Up" },
+];
 
 export function AuthForm({ onSuccess, compact = false }: AuthFormProps) {
   const form = useModel(AuthFormModel);
@@ -27,34 +34,14 @@ export function AuthForm({ onSuccess, compact = false }: AuthFormProps) {
   return (
     <div class={compact ? "w-full" : "min-h-screen flex items-center justify-center px-4 pt-16"}>
       <div class="w-full max-w-md mx-auto">
-        {/* Tab toggle */}
-        <div class="flex rounded-lg bg-neutral-900 border border-neutral-800 p-1 mb-6">
-          <button
-            type="button"
-            class={`flex-1 text-sm font-medium py-2 rounded-md transition-colors ${
-              form.tab.value === "signin"
-                ? "bg-neutral-800 text-white"
-                : "text-neutral-400 hover:text-white"
-            }`}
-            onClick={() => form.switchTab("signin")}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            class={`flex-1 text-sm font-medium py-2 rounded-md transition-colors ${
-              form.tab.value === "signup"
-                ? "bg-neutral-800 text-white"
-                : "text-neutral-400 hover:text-white"
-            }`}
-            onClick={() => form.switchTab("signup")}
-          >
-            Sign Up
-          </button>
-        </div>
+        <TabToggle
+          tabs={TABS}
+          active={form.tab.value}
+          onSelect={(id) => form.switchTab(id as "signin" | "signup")}
+          class="mb-6"
+        />
 
-        {/* Form card */}
-        <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
+        <Card>
           <h1 class="text-xl font-semibold text-white mb-6">
             {form.tab.value === "signin" ? "Welcome back" : "Create your account"}
           </h1>
@@ -124,7 +111,7 @@ export function AuthForm({ onSuccess, compact = false }: AuthFormProps) {
               </Button>
             </form>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

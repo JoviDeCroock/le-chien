@@ -19,14 +19,13 @@ export function getAgentConnection(): AgentConnection {
   const connected = signal(false);
 
   // Derive WebSocket URL from the API base URL
-  const wsProtocol = API_BASE_URL.startsWith("https") ? "wss" : "ws";
   const host = API_BASE_URL.replace(/^https?:\/\//, "");
 
   const client = new AgentClient({
     agent: "chat-agent",
     name: "default",
     host,
-    basePath: `${wsProtocol}://${host}/api/v1/agent`,
+    basePath: "api/v1/agent",
   });
 
   // Use addEventListener since PartySocket extends WebSocket
