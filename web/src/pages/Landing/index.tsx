@@ -1,3 +1,8 @@
+import { useEffect } from "preact/hooks";
+import { useLocation } from "preact-iso";
+import { useModel } from "@preact/signals";
+import { AuthModel } from "../../models/auth";
+
 const EU_FLAG = (
   <svg width="20" height="14" viewBox="0 0 20 14" fill="none" aria-hidden="true">
     <rect width="20" height="14" rx="2" fill="#003399" />
@@ -51,6 +56,20 @@ function TrustSignal({ label }: { label: string }) {
 }
 
 export function Landing() {
+  const { route } = useLocation();
+  const auth = useModel(AuthModel);
+
+  useEffect(() => {
+    auth.checkSession();
+  }, []);
+
+  // Redirect to chat if already authenticated
+  useEffect(() => {
+    if (!auth.loading.value && auth.authenticated.value) {
+      route("/chat");
+    }
+  }, [auth.loading.value, auth.authenticated.value]);
+
   return (
     <div class="bg-neutral-950 min-h-screen font-sans text-neutral-300">
       {/* Nav */}
