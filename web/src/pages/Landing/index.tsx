@@ -36,7 +36,7 @@ export function Landing() {
         <span class="text-white text-base font-bold tracking-tight">le&nbsp;chien</span>
         <a
           href="/auth"
-          class="text-sm text-neutral-400 hover:text-white transition-colors py-2 px-3 -mr-3"
+          class="text-sm text-neutral-400 hover:text-white transition-colors py-3 px-3 -mr-3"
         >
           Sign in
         </a>
