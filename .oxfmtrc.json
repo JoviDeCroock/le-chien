@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/oxfmt@0.15.0/configuration_schema.json",
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/dist-ssr/**",
+    "**/.wrangler/**",
+    "**/.agents/**",
+    "**/coverage/**",
+    "**/.claude",
+    "**/.agents",
+    "api/worker-configuration.d.ts",
+    "**/*.min.js"
+  ]
+}
