@@ -4,11 +4,11 @@ le chien supports tool calling, allowing the LLM to take actions and fetch infor
 
 ## Available Tools
 
-| Tool | Description | Requires Config |
-|------|-------------|-----------------|
-| `get_current_datetime` | Returns current date, time, day of week, and Unix timestamp. Supports IANA timezones. | No |
-| `calculate` | Evaluates math expressions safely (no eval). Supports arithmetic, exponents, functions (sqrt, sin, log, etc.), and constants (PI, E). | No |
-| `read_url` | Fetches a URL and returns extracted text content. HTML is stripped to plain text. Truncated to 12k chars. | No |
+| Tool                   | Description                                                                                                                           | Requires Config |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `get_current_datetime` | Returns current date, time, day of week, and Unix timestamp. Supports IANA timezones.                                                 | No              |
+| `calculate`            | Evaluates math expressions safely (no eval). Supports arithmetic, exponents, functions (sqrt, sin, log, etc.), and constants (PI, E). | No              |
+| `read_url`             | Fetches a URL and returns extracted text content. HTML is stripped to plain text. Truncated to 12k chars.                             | No              |
 
 ## Architecture
 
@@ -25,6 +25,7 @@ Tool call metadata is stored in the `messages.tool_calls` column (JSON) so it pe
 ### Frontend
 
 The stream protocol sends:
+
 - **String chunks** for text content (backwards compatible)
 - **Objects with `__event` field** for tool events (`tool-call`, `tool-result`)
 
@@ -49,4 +50,3 @@ stream.send({ __event: "tool-result", id: "tc_123", name: "calculate", result: {
 2. Use `tool({ description, inputSchema: z.object({...}), execute: async (input) => ... })`
 3. Add a label/icon entry in `web/src/components/ToolCallCard.tsx` `TOOL_LABELS`
 4. The tool will automatically be available to the model — no other wiring needed
-

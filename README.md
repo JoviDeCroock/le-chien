@@ -158,9 +158,9 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
    Each command will prompt you to paste the value.
 
 6. **Update production URLs** in `api/wrangler.jsonc`:
-    - Set `BETTER_AUTH_URL` to your production auth URL (e.g. `https://api.yourdomain.com/api/auth`).
-    - Set `APP_URL` to your production frontend URL (e.g. `https://app.yourdomain.com`).
-    - `placement.mode = "smart"` is already enabled for the API Worker to reduce latency to backend services, but this is a performance optimization, not an EU residency guarantee.
+   - Set `BETTER_AUTH_URL` to your production auth URL (e.g. `https://api.yourdomain.com/api/auth`).
+   - Set `APP_URL` to your production frontend URL (e.g. `https://app.yourdomain.com`).
+   - `placement.mode = "smart"` is already enabled for the API Worker to reduce latency to backend services, but this is a performance optimization, not an EU residency guarantee.
 
 ### Deploy the API
 
