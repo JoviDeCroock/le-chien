@@ -14,6 +14,7 @@
   "dependencies": {
     "@polar-sh/better-auth": "^1.6.4",
     "@polar-sh/sdk": "^0.42.5",
+    "agents": "^0.8.7",
     "ai": "^6.0.141",
     "better-auth": "^1.4.18",
     "drizzle-orm": "^0.45.1",

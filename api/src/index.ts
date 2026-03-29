@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { drizzle } from "drizzle-orm/d1";
 import { Polar } from "@polar-sh/sdk";
+import { getAgentByName } from "agents";
 import { createAuth } from "./lib/auth";
 import { subscription } from "./routes/subscription";
 import { chatRoutes } from "./routes/chat";
@@ -9,6 +10,8 @@ import { Bindings, Variables } from "./types";
 import { isProduction } from "./utils/isProduction";
 import { getAppOrigin } from "./utils/urls";
 import * as schema from "./db/schema";
+
+export { ChatAgent } from "./agents/chat-agent";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -155,5 +158,13 @@ app.route("/api/v1/subscription", subscription);
 
 // Chat
 app.route("/api/v1/chat", chatRoutes);
+
+// Agent WebSocket — forwards to per-user Durable Object
+app.all("/api/v1/agent", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+  const agent = await getAgentByName(c.env.CHAT_AGENT as any, user.id);
+  return agent.fetch(c.req.raw);
+});
 
 export default app;

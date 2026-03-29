@@ -10,6 +10,7 @@
   "dependencies": {
     "@preact/signals": "^2.7.0",
     "@tailwindcss/vite": "^4.1.18",
+    "agents": "^0.8.7",
     "better-auth": "^1.4.18",
     "preact": "^10.26.9",
     "preact-iso": "^2.11.1",
