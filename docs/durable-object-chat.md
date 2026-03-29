@@ -22,9 +22,14 @@ Chat state is managed by a per-user Durable Object (`ChatAgent`) using the Cloud
 ### Routing & Auth
 
 - Hono's `/api/v1/*` session middleware validates auth cookies
-- `app.all("/api/v1/agent")` gets the user's DO stub via `getAgentByName(env.CHAT_AGENT, userId)`
+- `app.all("/api/v1/agent")` gets the user's DO stub via `getAgentByName(env.CHAT_AGENT, userId, { jurisdiction: "eu" })`
 - Forwards both HTTP and WebSocket upgrade requests to the DO
 - The DO itself performs no auth — it trusts the Worker layer
+
+### Locality notes
+
+- The chat Durable Object is now requested with `jurisdiction: "eu"`, which is a real Cloudflare Durable Objects jurisdiction constraint.
+- This protects where the DO state runs and persists, but it does not make Workers AI inference EU-only.
 
 ### Frontend
 
