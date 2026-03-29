@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 
-export function createTools(env: Cloudflare.Env) {
+export function createTools(_env: Cloudflare.Env) {
   return {
     get_current_datetime: tool({
       description: "Get the current date, time, and day of the week.",

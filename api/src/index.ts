@@ -168,7 +168,7 @@ app.all("/api/v1/agent", async (c) => {
   const user = c.get("user");
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const agent = await getAgentByName(c.env.CHAT_AGENT as any, user.id, {
-    jurisdiction: "eu",
+    jurisdiction: c.env.LOCAL ? undefined : "eu",
   });
   return agent.fetch(c.req.raw);
 });
