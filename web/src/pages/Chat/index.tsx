@@ -68,53 +68,72 @@ export function Chat() {
   const hasMessages = chat.messages.value.length > 0;
 
   return (
-    <div class="h-screen bg-neutral-950 flex flex-col overflow-hidden pt-16">
-      {/* ── Model selector bar ── */}
-      <div class="shrink-0 border-b border-neutral-800/60 bg-neutral-950/80 backdrop-blur-sm">
-        <div class="max-w-3xl mx-auto px-4 py-3">
-          <div class="flex items-center gap-3">
+    <div class="h-screen bg-neutral-950 flex flex-col overflow-hidden">
+      {/* ── Top bar ── */}
+      <div class="shrink-0 border-b border-neutral-800/60 bg-neutral-950">
+        <div class="max-w-3xl mx-auto px-4 h-12 flex items-center justify-between">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="text-sm font-semibold text-white shrink-0 tracking-tight">le chien</span>
+
             {/* New chat button */}
             {hasMessages && (
               <button
                 onClick={chat.clear}
-                class="shrink-0 p-1.5 rounded-md text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all"
+                class="shrink-0 p-1 rounded-md text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all"
                 title="New chat"
               >
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width={2}>
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width={2}>
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
               </button>
             )}
+          </div>
 
-            {/* Scrollable model chips */}
-            <div
-              ref={modelBarRef}
-              class="flex items-center gap-1.5 overflow-x-auto scrollbar-none"
-              style="scrollbar-width: none; -ms-overflow-style: none;"
+          {auth.authenticated.value ? (
+            <button
+              onClick={() => { auth.signOut(); }}
+              class="text-xs text-neutral-500 hover:text-white transition-colors"
             >
-              {chat.models.value.map((m) => {
-                const selected = chat.selectedModel.value === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => (chat.selectedModel.value = m.id)}
-                    disabled={chat.streaming.value}
-                    class={`
-                      shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                      ${
-                        selected
-                          ? "bg-violet-600 text-white shadow-[0_0_12px_rgba(139,92,246,0.15)]"
-                          : "bg-neutral-900 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 border border-neutral-800/60"
-                      }
-                      disabled:opacity-50 disabled:cursor-not-allowed
-                    `}
-                    title={m.description}
-                  >
-                    {m.name}
-                  </button>
-                );
-              })}
-            </div>
+              Sign out
+            </button>
+          ) : (
+            <a href="/auth" class="text-xs text-neutral-500 hover:text-white transition-colors">
+              Sign in
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* ── Model selector bar ── */}
+      <div class="shrink-0 border-b border-neutral-800/40 bg-neutral-950/80">
+        <div class="max-w-3xl mx-auto px-4 py-2">
+          <div
+            ref={modelBarRef}
+            class="flex items-center gap-1.5 overflow-x-auto"
+            style="scrollbar-width: none; -ms-overflow-style: none;"
+          >
+            {chat.models.value.map((m) => {
+              const selected = chat.selectedModel.value === m.id;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => (chat.selectedModel.value = m.id)}
+                  disabled={chat.streaming.value}
+                  class={`
+                    shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
+                    ${
+                      selected
+                        ? "bg-violet-600 text-white shadow-[0_0_12px_rgba(139,92,246,0.15)]"
+                        : "bg-neutral-900 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 border border-neutral-800/60"
+                    }
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                  `}
+                  title={m.description}
+                >
+                  {m.name}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
