@@ -2,6 +2,8 @@
 
 ## Design
 
+- [ ] **FINDING-007 (polish):** Add visual markers (checkmarks or bullets) to pricing feature lists for better scannability. Deferred from /design-review on feat/landing-page, 2026-03-29.
+
 ## Engineering
 
 ## Validate EU region pinning for Workers AI and D1
