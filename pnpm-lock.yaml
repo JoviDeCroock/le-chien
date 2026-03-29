@@ -11,6 +11,9 @@ importers:
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
+      lint-staged:
+        specifier: ^16.4.0
+        version: 16.4.0
       oxfmt:
         specifier: ^0.28.0
         version: 0.28.0
@@ -28,7 +31,7 @@ importers:
         version: 0.42.5
       agents:
         specifier: ^0.8.7
-        version: 0.8.7(@babel/core@7.29.0)(@babel/runtime@7.29.2)(@cloudflare/workers-types@4.20260329.1)(ai@6.0.141(zod@4.3.6))(react@19.2.4)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1))(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))(zod@4.3.6)
+        version: 0.8.7(@babel/core@7.29.0)(@babel/runtime@7.29.2)(@cloudflare/workers-types@4.20260329.1)(ai@6.0.141(zod@4.3.6))(react@19.2.4)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1))(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))(zod@4.3.6)
       ai:
         specifier: ^6.0.141
         version: 6.0.141(zod@4.3.6)
@@ -68,10 +71,10 @@ importers:
         version: 2.7.0(preact@10.28.3)
       '@tailwindcss/vite':
         specifier: ^4.1.18
-        version: 4.1.18(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))
+        version: 4.1.18(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))
       agents:
         specifier: ^0.8.7
-        version: 0.8.7(@babel/core@7.29.0)(@babel/runtime@7.29.2)(@cloudflare/workers-types@4.20260329.1)(ai@6.0.141(zod@4.3.6))(react@19.2.4)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1))(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))(zod@4.3.6)
+        version: 0.8.7(@babel/core@7.29.0)(@babel/runtime@7.29.2)(@cloudflare/workers-types@4.20260329.1)(ai@6.0.141(zod@4.3.6))(react@19.2.4)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1))(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))(zod@4.3.6)
       better-auth:
         specifier: ^1.4.18
         version: 1.4.18(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260329.1)(@opentelemetry/api@1.9.0)(kysely@0.28.11))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -90,13 +93,13 @@ importers:
     devDependencies:
       '@preact/preset-vite':
         specifier: ^2.10.3
-        version: 2.10.3(@babel/core@7.29.0)(preact@10.28.3)(rollup@4.57.1)(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))
+        version: 2.10.3(@babel/core@7.29.0)(preact@10.28.3)(rollup@4.57.1)(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vite:
         specifier: ^7.0.4
-        version: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)
+        version: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3)
 
 packages:
 
@@ -2319,6 +2322,10 @@ packages:
   ajv@8.18.0:
     resolution: {integrity: sha512-PlXPeEWMXMZ7sPYOHqmDyCJzcfNrUr3fGNKtezX14ykXOEIvyK81d+qydx89KY5O71FKMPaQ2vBfBFI5NHR63A==}
 
+  ansi-escapes@7.3.0:
+    resolution: {integrity: sha512-BvU8nYgGQBxcmMuEeUEmNTvrMVjJNSH7RgW24vXexN4Ven6qCvy4TntnvlnwnMLTVlcRQQdbRY8NKnaIoeWDNg==}
+    engines: {node: '>=18'}
+
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
@@ -2461,6 +2468,14 @@ packages:
   class-variance-authority@0.7.1:
     resolution: {integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==}
 
+  cli-cursor@5.0.0:
+    resolution: {integrity: sha512-aCj4O5wKyszjMmDT4tZj93kxyydN/K5zPWSCe6/0AV/AA1pqe5ZBIw0a2ZfPQV7lL5/yb5HsUreJ6UFAF1tEQw==}
+    engines: {node: '>=18'}
+
+  cli-truncate@5.2.0:
+    resolution: {integrity: sha512-xRwvIOMGrfOAnM1JYtqQImuaNtDEv9v6oIYAs4LIHwTiKee8uwvIi363igssOC0O5U04i4AlENs79LQLu9tEMw==}
+    engines: {node: '>=20'}
+
   cliui@8.0.1:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
     engines: {node: '>=12'}
@@ -2485,6 +2500,13 @@ packages:
 
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
+
+  colorette@2.0.20:
+    resolution: {integrity: sha512-IfEDxwoWIjkeXL1eXcDiow4UbKjhLdq6/EuSVR9GMN7KVH3r9gQ83e73hsz1Nd1T3ijd5xv1wcWRYO+D6kCI2w==}
+
+  commander@14.0.3:
+    resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
+    engines: {node: '>=20'}
 
   concurrently@9.2.1:
     resolution: {integrity: sha512-fsfrO0MxV64Znoy8/l1vVIjjHa29SZyyqPgQBwhiDcaW8wJc2W3XWVOGx4M3oJBnv/zdUZIIp1gDeS98GzP8Ng==}
@@ -2755,6 +2777,10 @@ packages:
     resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
     engines: {node: '>=0.12'}
 
+  environment@1.1.0:
+    resolution: {integrity: sha512-xUtoPkMggbz0MPyPiIWr1Kp4aeWJjDZ6SMvURhimjdZgsRuDplF5/s9hcgGhyXMhs+6vpnuoiZ2kFiu3FMnS8Q==}
+    engines: {node: '>=18'}
+
   error-stack-parser-es@1.0.5:
     resolution: {integrity: sha512-5qucVt2XcuGMcEGgWI7i+yZpmpByQ8J1lHhcL7PwqCwu9FPP3VUXzT4ltHe5i2z9dePwEHcDVOAfSnHsOlCXRA==}
 
@@ -2974,6 +3000,10 @@ packages:
     resolution: {integrity: sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg==}
     engines: {node: '>=8'}
 
+  is-fullwidth-code-point@5.1.0:
+    resolution: {integrity: sha512-5XHYaSyiqADb4RnZ1Bdad6cPp8Toise4TzEjcOYDHZkTCbKgiUl7WTUCpNWHuxmDt91wnsZBc9xinNzopv3JMQ==}
+    engines: {node: '>=18'}
+
   is-glob@4.0.3:
     resolution: {integrity: sha512-xelSayHH36ZgE7ZWhli7pW34hNbNl8Ojv5KVmkJD4hBdD3th8Tfk9vYasLM+mXWOZhFkgZfxhLSnrwRr4elSSg==}
     engines: {node: '>=0.10.0'}
@@ -3106,8 +3136,21 @@ packages:
     resolution: {integrity: sha512-utfs7Pr5uJyyvDETitgsaqSyjCb2qNRAtuqUeWIAKztsOYdcACf2KtARYXg2pSvhkt+9NfoaNY7fxjl6nuMjIQ==}
     engines: {node: '>= 12.0.0'}
 
+  lint-staged@16.4.0:
+    resolution: {integrity: sha512-lBWt8hujh/Cjysw5GYVmZpFHXDCgZzhrOm8vbcUdobADZNOK/bRshr2kM3DfgrrtR1DQhfupW9gnIXOfiFi+bw==}
+    engines: {node: '>=20.17'}
+    hasBin: true
+
+  listr2@9.0.5:
+    resolution: {integrity: sha512-ME4Fb83LgEgwNw96RKNvKV4VTLuXfoKudAmm2lP8Kk87KaMK0/Xrx/aAkMWmT8mDb+3MlFDspfbCs7adjRxA2g==}
+    engines: {node: '>=20.0.0'}
+
   lodash@4.17.23:
     resolution: {integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==}
+
+  log-update@6.1.0:
+    resolution: {integrity: sha512-9ie8ItPR6tjY5uYJh8K/Zrv/RMZ5VOlOWvtZdEHYSTFKZfIBPQa9tOAEeAWhd+AnIneLJ22w5fjOYtoutpWq5w==}
+    engines: {node: '>=18'}
 
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
@@ -3163,6 +3206,10 @@ packages:
 
   mimetext@3.0.28:
     resolution: {integrity: sha512-eQXpbNrtxLCjUtiVbR/qR09dbPgZ2o+KR1uA7QKqGhbn8QV7HIL16mXXsobBL4/8TqoYh1us31kfz+dNfCev9g==}
+
+  mimic-function@5.0.1:
+    resolution: {integrity: sha512-VP79XUPxV2CigYP3jWwAUFSku2aKqBH7uTAapFWCBqutsbmDo96KY5o8uh6U+/YSIn5OxJnXp73beVkpqMIGhA==}
+    engines: {node: '>=18'}
 
   miniflare@4.20260205.0:
     resolution: {integrity: sha512-jG1TknEDeFqcq/z5gsOm1rKeg4cNG7ruWxEuiPxl3pnQumavxo8kFpeQC6XKVpAhh2PI9ODGyIYlgd77sTHl5g==}
@@ -3222,6 +3269,10 @@ packages:
 
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
+
+  onetime@7.0.0:
+    resolution: {integrity: sha512-VXJjc87FScF88uafS3JllDgvAm+c/Slfz06lorj2uAY34rlUu0Nt+v8wreiImcrgAjjIHp1rXpTDlLOGw29WwQ==}
+    engines: {node: '>=18'}
 
   oxfmt@0.28.0:
     resolution: {integrity: sha512-3+hhBqPE6Kp22KfJmnstrZbl+KdOVSEu1V0ABaFIg1rYLtrMgrupx9znnHgHLqKxAVHebjTdiCJDk30CXOt6cw==}
@@ -3433,6 +3484,13 @@ packages:
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
 
+  restore-cursor@5.1.0:
+    resolution: {integrity: sha512-oMA2dcrw6u0YfxJQXm342bFKX/E4sG9rbTzO9ptUcR/e8A33cHuvStiYOwH7fszkZlZ1z/ta9AAoPk2F4qIOHA==}
+    engines: {node: '>=18'}
+
+  rfdc@1.4.1:
+    resolution: {integrity: sha512-q1b3N5QkRUWUl7iyylaaj3kOpIT0N2i9MqIEQXP73GVsN9cw3fdx8X63cEmWhJGi2PPCF23Ijp7ktmd39rawIA==}
+
   rolldown@1.0.0-rc.12:
     resolution: {integrity: sha512-yP4USLIMYrwpPHEFB5JGH1uxhcslv6/hL0OyvTuY+3qlOSJvZ7ntYnoWpehBxufkgN0cvXxppuTu5hHa/zPh+A==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -3514,8 +3572,20 @@ packages:
     resolution: {integrity: sha512-ZX99e6tRweoUXqR+VBrslhda51Nh5MTQwou5tnUDgbtyM0dBgmhEDtWGP/xbKn6hqfPRHujUNwz5fy/wbbhnpw==}
     engines: {node: '>= 0.4'}
 
+  signal-exit@4.1.0:
+    resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
+    engines: {node: '>=14'}
+
   simple-code-frame@1.3.0:
     resolution: {integrity: sha512-MB4pQmETUBlNs62BBeRjIFGeuy/x6gGKh7+eRUemn1rCFhqo7K+4slPqsyizCbcbYLnaYqaoZ2FWsZ/jN06D8w==}
+
+  slice-ansi@7.1.2:
+    resolution: {integrity: sha512-iOBWFgUX7caIZiuutICxVgX1SdxwAVFFKwt1EvMYYec/NWO5meOJ6K5uQxhrYBdQJne4KxiqZc+KptFOWFSI9w==}
+    engines: {node: '>=18'}
+
+  slice-ansi@8.0.0:
+    resolution: {integrity: sha512-stxByr12oeeOyY2BlviTNQlYV5xOj47GirPr4yA1hE9JCtxfQN0+tVbkxwCtYDQWhEKWFHsEK48ORg5jrouCAg==}
+    engines: {node: '>=20'}
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -3543,6 +3613,10 @@ packages:
     resolution: {integrity: sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==}
     engines: {node: '>= 0.8'}
 
+  string-argv@0.3.2:
+    resolution: {integrity: sha512-aqD2Q0144Z+/RqG52NeHEkZauTAUWJO8c6yTftGJKO3Tja5tUgIfmIl6kExvhtxSDP7fXB6DvzkfMpCd/F3G+Q==}
+    engines: {node: '>=0.6.19'}
+
   string-width@4.2.3:
     resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}
     engines: {node: '>=8'}
@@ -3550,6 +3624,10 @@ packages:
   string-width@7.2.0:
     resolution: {integrity: sha512-tsaTIkKW9b4N+AEj+SVA+WhJzV7/zMhcSu78mLKWSk7cXMOSHsBKFWUs0fWwq8QyK3MgJBQRX6Gbi4kYbdvGkQ==}
     engines: {node: '>=18'}
+
+  string-width@8.2.0:
+    resolution: {integrity: sha512-6hJPQ8N0V0P3SNmP6h2J99RLuzrWz2gvT7VnK5tKvrNqJoyS9W4/Fb8mo31UiPvy00z7DQXkP2hnKBVav76thw==}
+    engines: {node: '>=20'}
 
   strip-ansi@6.0.1:
     resolution: {integrity: sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==}
@@ -3583,6 +3661,10 @@ packages:
 
   tiny-invariant@1.3.3:
     resolution: {integrity: sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==}
+
+  tinyexec@1.0.4:
+    resolution: {integrity: sha512-u9r3uZC0bdpGOXtlxUIdwf9pkmvhqJdrVCH9fapQtgy/OeTTMZ1nqH7agtvEfmGui6e1XxjcdrlxvxJvc3sMqw==}
+    engines: {node: '>=18'}
 
   tinyglobby@0.2.15:
     resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
@@ -3767,6 +3849,11 @@ packages:
 
   yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
+
+  yaml@2.8.3:
+    resolution: {integrity: sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
 
   yargs-parser@21.1.1:
     resolution: {integrity: sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==}
@@ -4716,18 +4803,18 @@ snapshots:
 
   '@poppinss/exception@1.2.3': {}
 
-  '@preact/preset-vite@2.10.3(@babel/core@7.29.0)(preact@10.28.3)(rollup@4.57.1)(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))':
+  '@preact/preset-vite@2.10.3(@babel/core@7.29.0)(preact@10.28.3)(rollup@4.57.1)(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))':
     dependencies:
       '@babel/core': 7.29.0
       '@babel/plugin-transform-react-jsx': 7.28.6(@babel/core@7.29.0)
       '@babel/plugin-transform-react-jsx-development': 7.27.1(@babel/core@7.29.0)
-      '@prefresh/vite': 2.4.11(preact@10.28.3)(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))
+      '@prefresh/vite': 2.4.11(preact@10.28.3)(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))
       '@rollup/pluginutils': 5.3.0(rollup@4.57.1)
       babel-plugin-transform-hook-names: 1.0.2(@babel/core@7.29.0)
       debug: 4.4.3
       picocolors: 1.1.1
-      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)
-      vite-prerender-plugin: 0.5.12(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))
+      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3)
+      vite-prerender-plugin: 0.5.12(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))
     transitivePeerDependencies:
       - preact
       - rollup
@@ -4748,7 +4835,7 @@ snapshots:
 
   '@prefresh/utils@1.2.1': {}
 
-  '@prefresh/vite@2.4.11(preact@10.28.3)(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))':
+  '@prefresh/vite@2.4.11(preact@10.28.3)(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))':
     dependencies:
       '@babel/core': 7.29.0
       '@prefresh/babel-plugin': 0.5.2
@@ -4756,7 +4843,7 @@ snapshots:
       '@prefresh/utils': 1.2.1
       '@rollup/pluginutils': 4.2.1
       preact: 10.28.3
-      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)
+      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3)
     transitivePeerDependencies:
       - supports-color
 
@@ -5248,14 +5335,14 @@ snapshots:
   '@rolldown/binding-win32-x64-msvc@1.0.0-rc.12':
     optional: true
 
-  '@rolldown/plugin-babel@0.2.2(@babel/core@7.29.0)(@babel/runtime@7.29.2)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1))(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))':
+  '@rolldown/plugin-babel@0.2.2(@babel/core@7.29.0)(@babel/runtime@7.29.2)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1))(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))':
     dependencies:
       '@babel/core': 7.29.0
       picomatch: 4.0.4
       rolldown: 1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1)
     optionalDependencies:
       '@babel/runtime': 7.29.2
-      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)
+      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3)
 
   '@rolldown/pluginutils@1.0.0-rc.12': {}
 
@@ -5427,12 +5514,12 @@ snapshots:
       '@tailwindcss/oxide-win32-arm64-msvc': 4.1.18
       '@tailwindcss/oxide-win32-x64-msvc': 4.1.18
 
-  '@tailwindcss/vite@4.1.18(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))':
+  '@tailwindcss/vite@4.1.18(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))':
     dependencies:
       '@tailwindcss/node': 4.1.18
       '@tailwindcss/oxide': 4.1.18
       tailwindcss: 4.1.18
-      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)
+      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3)
 
   '@tanstack/react-table@8.21.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
@@ -5490,12 +5577,12 @@ snapshots:
       mime-types: 3.0.2
       negotiator: 1.0.0
 
-  agents@0.8.7(@babel/core@7.29.0)(@babel/runtime@7.29.2)(@cloudflare/workers-types@4.20260329.1)(ai@6.0.141(zod@4.3.6))(react@19.2.4)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1))(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))(zod@4.3.6):
+  agents@0.8.7(@babel/core@7.29.0)(@babel/runtime@7.29.2)(@cloudflare/workers-types@4.20260329.1)(ai@6.0.141(zod@4.3.6))(react@19.2.4)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1))(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))(zod@4.3.6):
     dependencies:
       '@babel/plugin-proposal-decorators': 7.29.0(@babel/core@7.29.0)
       '@cfworker/json-schema': 4.1.1
       '@modelcontextprotocol/sdk': 1.28.0(@cfworker/json-schema@4.1.1)(zod@4.3.6)
-      '@rolldown/plugin-babel': 0.2.2(@babel/core@7.29.0)(@babel/runtime@7.29.2)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1))(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2))
+      '@rolldown/plugin-babel': 0.2.2(@babel/core@7.29.0)(@babel/runtime@7.29.2)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1))(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3))
       ai: 6.0.141(zod@4.3.6)
       cron-schedule: 6.0.0
       json-schema: 0.4.0
@@ -5509,7 +5596,7 @@ snapshots:
       yargs: 18.0.0
       zod: 4.3.6
     optionalDependencies:
-      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)
+      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3)
     transitivePeerDependencies:
       - '@babel/core'
       - '@babel/plugin-transform-runtime'
@@ -5536,6 +5623,10 @@ snapshots:
       fast-uri: 3.1.0
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
+
+  ansi-escapes@7.3.0:
+    dependencies:
+      environment: 1.1.0
 
   ansi-regex@5.0.1: {}
 
@@ -5639,6 +5730,15 @@ snapshots:
     dependencies:
       clsx: 2.1.1
 
+  cli-cursor@5.0.0:
+    dependencies:
+      restore-cursor: 5.1.0
+
+  cli-truncate@5.2.0:
+    dependencies:
+      slice-ansi: 8.0.0
+      string-width: 8.2.0
+
   cliui@8.0.1:
     dependencies:
       string-width: 4.2.3
@@ -5670,6 +5770,10 @@ snapshots:
       color-name: 1.1.4
 
   color-name@1.1.4: {}
+
+  colorette@2.0.20: {}
+
+  commander@14.0.3: {}
 
   concurrently@9.2.1:
     dependencies:
@@ -5832,6 +5936,8 @@ snapshots:
       tapable: 2.3.0
 
   entities@4.5.0: {}
+
+  environment@1.1.0: {}
 
   error-stack-parser-es@1.0.5: {}
 
@@ -6133,6 +6239,10 @@ snapshots:
 
   is-fullwidth-code-point@3.0.0: {}
 
+  is-fullwidth-code-point@5.1.0:
+    dependencies:
+      get-east-asian-width: 1.5.0
+
   is-glob@4.0.3:
     dependencies:
       is-extglob: 2.1.1
@@ -6230,7 +6340,33 @@ snapshots:
       lightningcss-win32-arm64-msvc: 1.30.2
       lightningcss-win32-x64-msvc: 1.30.2
 
+  lint-staged@16.4.0:
+    dependencies:
+      commander: 14.0.3
+      listr2: 9.0.5
+      picomatch: 4.0.4
+      string-argv: 0.3.2
+      tinyexec: 1.0.4
+      yaml: 2.8.3
+
+  listr2@9.0.5:
+    dependencies:
+      cli-truncate: 5.2.0
+      colorette: 2.0.20
+      eventemitter3: 5.0.4
+      log-update: 6.1.0
+      rfdc: 1.4.1
+      wrap-ansi: 9.0.2
+
   lodash@4.17.23: {}
+
+  log-update@6.1.0:
+    dependencies:
+      ansi-escapes: 7.3.0
+      cli-cursor: 5.0.0
+      slice-ansi: 7.1.2
+      strip-ansi: 7.2.0
+      wrap-ansi: 9.0.2
 
   loose-envify@1.4.0:
     dependencies:
@@ -6276,6 +6412,8 @@ snapshots:
       '@babel/runtime-corejs3': 7.29.2
       js-base64: 3.7.8
       mime-types: 2.1.35
+
+  mimic-function@5.0.1: {}
 
   miniflare@4.20260205.0:
     dependencies:
@@ -6331,6 +6469,10 @@ snapshots:
   once@1.4.0:
     dependencies:
       wrappy: 1.0.2
+
+  onetime@7.0.0:
+    dependencies:
+      mimic-function: 5.0.1
 
   oxfmt@0.28.0:
     dependencies:
@@ -6519,6 +6661,13 @@ snapshots:
 
   resolve-pkg-maps@1.0.0: {}
 
+  restore-cursor@5.1.0:
+    dependencies:
+      onetime: 7.0.0
+      signal-exit: 4.1.0
+
+  rfdc@1.4.1: {}
+
   rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.8.1):
     dependencies:
       '@oxc-project/types': 0.122.0
@@ -6694,9 +6843,21 @@ snapshots:
       side-channel-map: 1.0.1
       side-channel-weakmap: 1.0.2
 
+  signal-exit@4.1.0: {}
+
   simple-code-frame@1.3.0:
     dependencies:
       kolorist: 1.8.0
+
+  slice-ansi@7.1.2:
+    dependencies:
+      ansi-styles: 6.2.3
+      is-fullwidth-code-point: 5.1.0
+
+  slice-ansi@8.0.0:
+    dependencies:
+      ansi-styles: 6.2.3
+      is-fullwidth-code-point: 5.1.0
 
   source-map-js@1.2.1: {}
 
@@ -6718,6 +6879,8 @@ snapshots:
 
   statuses@2.0.2: {}
 
+  string-argv@0.3.2: {}
+
   string-width@4.2.3:
     dependencies:
       emoji-regex: 8.0.0
@@ -6727,6 +6890,11 @@ snapshots:
   string-width@7.2.0:
     dependencies:
       emoji-regex: 10.6.0
+      get-east-asian-width: 1.5.0
+      strip-ansi: 7.2.0
+
+  string-width@8.2.0:
+    dependencies:
       get-east-asian-width: 1.5.0
       strip-ansi: 7.2.0
 
@@ -6755,6 +6923,8 @@ snapshots:
   tapable@2.3.0: {}
 
   tiny-invariant@1.3.3: {}
+
+  tinyexec@1.0.4: {}
 
   tinyglobby@0.2.15:
     dependencies:
@@ -6829,7 +6999,7 @@ snapshots:
       d3-time: 3.1.0
       d3-timer: 3.0.1
 
-  vite-prerender-plugin@0.5.12(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)):
+  vite-prerender-plugin@0.5.12(vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3)):
     dependencies:
       kolorist: 1.8.0
       magic-string: 0.30.21
@@ -6837,9 +7007,9 @@ snapshots:
       simple-code-frame: 1.3.0
       source-map: 0.7.6
       stack-trace: 1.0.0-pre2
-      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)
+      vite: 7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3)
 
-  vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2):
+  vite@7.3.1(@types/node@25.2.2)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.3):
     dependencies:
       esbuild: 0.27.3
       fdir: 6.5.0(picomatch@4.0.3)
@@ -6852,6 +7022,7 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.6.1
       lightningcss: 1.30.2
+      yaml: 2.8.3
 
   which@2.0.2:
     dependencies:
@@ -6906,6 +7077,8 @@ snapshots:
   y18n@5.0.8: {}
 
   yallist@3.1.1: {}
+
+  yaml@2.8.3: {}
 
   yargs-parser@21.1.1: {}
 

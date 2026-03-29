@@ -4,6 +4,7 @@
     "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\"",
     "dev:web": "cd web && npm run dev",
     "dev:api": "cd api && npm run dev",
+    "prepare": "node ./scripts/install-git-hooks.mjs",
     "lint": "oxlint --fix",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
@@ -11,7 +12,15 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "lint-staged": "^16.4.0",
     "oxfmt": "^0.28.0",
     "oxlint": "^1.43.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "oxlint --fix",
+      "oxfmt --write"
+    ],
+    "*.{json,jsonc}": "oxfmt --write"
   }
 }
