@@ -167,7 +167,9 @@ app.route("/api/v1/chat", chatRoutes);
 app.all("/api/v1/agent", async (c) => {
   const user = c.get("user");
   if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const agent = await getAgentByName(c.env.CHAT_AGENT as any, user.id);
+  const agent = await getAgentByName(c.env.CHAT_AGENT as any, user.id, {
+    jurisdiction: "eu",
+  });
   return agent.fetch(c.req.raw);
 });
 

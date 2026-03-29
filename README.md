@@ -130,13 +130,14 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 1. **Install Wrangler** (already in devDependencies, or install globally with `npm i -g wrangler`).
 2. **Log in**: `wrangler login`
-3. **Create a D1 database**:
+3. **Create a D1 database in the EU jurisdiction**:
 
    ```sh
-   wrangler d1 create app-db
+   wrangler d1 create app-db --jurisdiction=eu
    ```
 
    Copy the output `database_id` and paste it into `api/wrangler.jsonc` (replacing the placeholder `00000000-...`).
+   Jurisdiction is fixed at creation time, so an existing non-EU production database must be recreated if EU-only storage is a requirement.
 
 4. **Run migrations on the remote database**:
 
@@ -157,8 +158,9 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
    Each command will prompt you to paste the value.
 
 6. **Update production URLs** in `api/wrangler.jsonc`:
-   - Set `BETTER_AUTH_URL` to your production auth URL (e.g. `https://api.yourdomain.com/api/auth`).
-   - Set `APP_URL` to your production frontend URL (e.g. `https://app.yourdomain.com`).
+    - Set `BETTER_AUTH_URL` to your production auth URL (e.g. `https://api.yourdomain.com/api/auth`).
+    - Set `APP_URL` to your production frontend URL (e.g. `https://app.yourdomain.com`).
+    - `placement.mode = "smart"` is already enabled for the API Worker to reduce latency to backend services, but this is a performance optimization, not an EU residency guarantee.
 
 ### Deploy the API
 
