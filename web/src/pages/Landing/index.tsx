@@ -34,7 +34,10 @@ export function Landing() {
       {/* Nav */}
       <nav class="flex items-center justify-between px-6 py-5 max-w-5xl mx-auto">
         <span class="text-white text-base font-bold tracking-tight">le&nbsp;chien</span>
-        <a href="/auth" class="text-sm text-neutral-400 hover:text-white transition-colors">
+        <a
+          href="/auth"
+          class="text-sm text-neutral-400 hover:text-white transition-colors py-2 px-3 -mr-3"
+        >
           Sign in
         </a>
       </nav>
