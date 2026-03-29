@@ -5,7 +5,7 @@ export function Auth() {
   const { route } = useLocation();
 
   function handleSuccess() {
-    route("/dashboard");
+    route("/chat");
   }
 
   return <AuthForm onSuccess={handleSuccess} />;
