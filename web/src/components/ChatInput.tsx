@@ -10,6 +10,7 @@ export function ChatInput({
   canSend,
   streaming,
   disabled,
+  textareaRef,
 }: {
   value: string;
   onInput: (value: string) => void;
@@ -18,8 +19,10 @@ export function ChatInput({
   canSend: boolean;
   streaming: boolean;
   disabled?: boolean;
+  textareaRef?: { current: HTMLTextAreaElement | null };
 }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fallbackRef = useRef<HTMLTextAreaElement>(null);
+  const resolvedTextareaRef = textareaRef ?? fallbackRef;
 
   function handleInput(e: Event) {
     const el = e.target as HTMLTextAreaElement;
@@ -33,14 +36,14 @@ export function ChatInput({
       e.preventDefault();
       if (canSend) {
         onSend();
-        if (textareaRef.current) textareaRef.current.style.height = "auto";
+        if (resolvedTextareaRef.current) resolvedTextareaRef.current.style.height = "auto";
       }
     }
   }
 
   function handleSendClick() {
     onSend();
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    if (resolvedTextareaRef.current) resolvedTextareaRef.current.style.height = "auto";
   }
 
   return (
@@ -48,7 +51,7 @@ export function ChatInput({
       <ContentContainer class="py-3">
         <div class="flex items-end gap-2 bg-neutral-900 rounded-xl border border-neutral-800/80 focus-within:border-neutral-700 transition-colors px-3 py-2">
           <textarea
-            ref={textareaRef}
+            ref={resolvedTextareaRef}
             value={value}
             onInput={handleInput}
             onKeyDown={handleKeyDown}

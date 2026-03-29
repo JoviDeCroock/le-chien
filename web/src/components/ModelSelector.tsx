@@ -20,12 +20,41 @@ export function ModelSelector({
   disabled?: boolean;
   barRef?: RefObject<HTMLDivElement>;
 }) {
+  function focusModel(button: HTMLButtonElement | null) {
+    window.requestAnimationFrame(() => button?.focus());
+  }
+
+  function handleKeyDown(event: KeyboardEvent, index: number) {
+    let nextIndex = index;
+
+    if (event.key === "ArrowRight") {
+      nextIndex = (index + 1) % models.length;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex = (index - 1 + models.length) % models.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = models.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    const nextModel = models[nextIndex];
+    onSelect(nextModel.id);
+
+    const currentButton = event.currentTarget as HTMLButtonElement | null;
+    focusModel(currentButton?.parentElement?.querySelector<HTMLButtonElement>(`[data-model-id="${nextModel.id}"]`) ?? null);
+  }
+
   return (
     <BarSection class="border-b border-neutral-800/40 bg-neutral-950/80">
       <ContentContainer class="py-2">
         <div
           ref={barRef}
           class="flex items-center gap-1.5 overflow-x-auto"
+          role="radiogroup"
+          aria-label="Model selector"
           style="scrollbar-width: none; -ms-overflow-style: none;"
         >
           {models.map((m) => {
@@ -34,7 +63,12 @@ export function ModelSelector({
               <button
                 key={m.id}
                 onClick={() => onSelect(m.id)}
+                onKeyDown={(event) => handleKeyDown(event, models.findIndex((model) => model.id === m.id))}
                 disabled={disabled}
+                role="radio"
+                aria-checked={isSelected}
+                tabIndex={isSelected ? 0 : -1}
+                data-model-id={m.id}
                 class={`
                   shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
                   ${

@@ -21,17 +21,20 @@ export function Sidebar({ open, onClose, conversations, activeId, onSelect, onNe
       <div class="fixed inset-0 bg-black/40 z-20 sm:hidden" onClick={onClose} />
 
       {/* Panel */}
-      <div class="fixed sm:relative z-30 h-full w-64 shrink-0 bg-neutral-900 border-r border-neutral-800/60 flex flex-col">
+      <nav
+        class="fixed sm:relative z-30 h-full w-64 shrink-0 bg-neutral-900 border-r border-neutral-800/60 flex flex-col"
+        aria-label="Conversations"
+      >
         {/* Header */}
         <div class="h-12 shrink-0 flex items-center justify-between px-3 border-b border-neutral-800/60">
           <span class="text-xs font-medium text-neutral-400 uppercase tracking-wider">Conversations</span>
-          <Button variant="icon" onClick={onNew} title="New chat">
+          <Button variant="icon" onClick={onNew} title="New chat (Cmd/Ctrl+N)">
             <PlusIcon size={16} />
           </Button>
         </div>
 
         {/* List */}
-        <div class="flex-1 overflow-y-auto py-1">
+        <div class="flex-1 overflow-y-auto py-1" data-sidebar-list="true">
           {conversations.length === 0 ? (
             <p class="text-xs text-neutral-600 px-3 py-4 text-center">No conversations yet</p>
           ) : (
@@ -46,7 +49,7 @@ export function Sidebar({ open, onClose, conversations, activeId, onSelect, onNe
             ))
           )}
         </div>
-      </div>
+      </nav>
     </>
   );
 }
@@ -62,17 +65,64 @@ function ConversationItem({
   onSelect: () => void;
   onDelete: () => void;
 }) {
+  function moveFocus(event: KeyboardEvent) {
+    let direction = 0;
+
+    if (event.key === "ArrowDown") {
+      direction = 1;
+    } else if (event.key === "ArrowUp") {
+      direction = -1;
+    } else if (event.key === "Home") {
+      direction = Number.NEGATIVE_INFINITY;
+    } else if (event.key === "End") {
+      direction = Number.POSITIVE_INFINITY;
+    } else {
+      return;
+    }
+
+    const currentButton = event.currentTarget as HTMLButtonElement | null;
+    const list = currentButton?.closest("[data-sidebar-list='true']");
+    const items = Array.from(list?.querySelectorAll<HTMLButtonElement>("[data-conversation-button='true']") ?? []);
+    const currentIndex = currentButton ? items.indexOf(currentButton) : -1;
+
+    if (currentIndex === -1 || items.length === 0) return;
+
+    event.preventDefault();
+
+    if (direction === Number.NEGATIVE_INFINITY) {
+      items[0]?.focus();
+      return;
+    }
+
+    if (direction === Number.POSITIVE_INFINITY) {
+      items[items.length - 1]?.focus();
+      return;
+    }
+
+    const nextIndex = (currentIndex + direction + items.length) % items.length;
+    items[nextIndex]?.focus();
+  }
+
   return (
     <div
-      class={`group flex items-center gap-2 px-3 py-2 mx-1 rounded-lg cursor-pointer transition-all ${
-        active
-          ? "bg-neutral-800 text-white"
-          : "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50"
+      class={`group flex items-center gap-2 px-1 py-0.5 mx-1 rounded-lg transition-all ${
+        active ? "bg-neutral-800" : "hover:bg-neutral-800/50"
       }`}
-      onClick={onSelect}
     >
-      <span class="flex-1 text-xs truncate">{conversation.title}</span>
       <button
+        type="button"
+        class={`flex-1 px-2 py-2 text-left text-xs truncate rounded-lg transition-colors ${
+          active ? "text-white" : "text-neutral-400 hover:text-neutral-200"
+        }`}
+        onClick={onSelect}
+        onKeyDown={moveFocus}
+        data-conversation-button="true"
+        aria-current={active ? "page" : undefined}
+      >
+        {conversation.title}
+      </button>
+      <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
           onDelete();

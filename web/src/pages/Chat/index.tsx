@@ -11,6 +11,7 @@ import { TextLink } from "../../components/ui/TextLink";
 import { TopBar } from "../../components/TopBar";
 import { ModelSelector } from "../../components/ModelSelector";
 import { Sidebar } from "../../components/Sidebar";
+import { ShortcutOverlay } from "../../components/ShortcutOverlay";
 import { ChatBubble } from "../../components/ChatBubble";
 import { ChatInput } from "../../components/ChatInput";
 import { EmptyState } from "../../components/EmptyState";
@@ -21,7 +22,9 @@ export function Chat() {
   const chat = useModel(ChatModel);
   const messagesEnd = useRef<HTMLDivElement>(null);
   const modelBarRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const sidebarOpen = useSignal(false);
+  const shortcutsOpen = useSignal(false);
 
   useEffect(() => {
     auth.checkSession();
@@ -40,6 +43,76 @@ export function Chat() {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat.messages.value.length, chat.messages.value[chat.messages.value.length - 1]?.content]);
 
+  useEffect(() => {
+    function isEditableTarget(target: EventTarget | null) {
+      if (!(target instanceof HTMLElement)) return false;
+      return target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT";
+    }
+
+    function toggleSidebar(nextOpen?: boolean) {
+      sidebarOpen.value = nextOpen ?? !sidebarOpen.value;
+    }
+
+    function focusModelSelector() {
+      const activeButton = modelBarRef.current?.querySelector<HTMLButtonElement>("[aria-checked='true']");
+      activeButton?.focus();
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      const key = event.key.toLowerCase();
+      const hasCommandModifier = event.metaKey || event.ctrlKey;
+      const editable = isEditableTarget(event.target);
+
+      if (event.key === "Escape") {
+        if (shortcutsOpen.value) {
+          shortcutsOpen.value = false;
+          event.preventDefault();
+          return;
+        }
+
+        if (sidebarOpen.value) {
+          toggleSidebar(false);
+          event.preventDefault();
+        }
+
+        return;
+      }
+
+      if (!hasCommandModifier && editable) {
+        return;
+      }
+
+      if (!hasCommandModifier && !event.altKey && event.key === "?") {
+        shortcutsOpen.value = true;
+        event.preventDefault();
+        return;
+      }
+
+      if (!hasCommandModifier) return;
+
+      if (key === "n" && !event.shiftKey) {
+        chat.clear();
+        composerRef.current?.focus();
+        event.preventDefault();
+        return;
+      }
+
+      if (event.key === "/" && !event.shiftKey) {
+        focusModelSelector();
+        event.preventDefault();
+        return;
+      }
+
+      if (key === "s" && event.shiftKey) {
+        toggleSidebar();
+        event.preventDefault();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [chat]);
+
   if (auth.loading.value) {
     return <PageLoader />;
   }
@@ -48,6 +121,8 @@ export function Chat() {
 
   return (
     <PageShell>
+      <ShortcutOverlay open={shortcutsOpen.value} onClose={() => (shortcutsOpen.value = false)} />
+
       <Sidebar
         open={sidebarOpen.value}
         onClose={() => (sidebarOpen.value = false)}
@@ -72,14 +147,14 @@ export function Chat() {
                 <Button
                   variant="icon"
                   onClick={() => (sidebarOpen.value = !sidebarOpen.value)}
-                  title="Toggle sidebar"
+                  title="Toggle sidebar (Cmd/Ctrl+Shift+S)"
                 >
                   <MenuIcon size={16} />
                 </Button>
               )}
               <span class="text-sm font-semibold text-white shrink-0 tracking-tight">le chien</span>
               {hasMessages && (
-                <Button variant="icon" onClick={chat.clear} title="New chat">
+                <Button variant="icon" onClick={chat.clear} title="New chat (Cmd/Ctrl+N)">
                   <PlusIcon size={14} />
                 </Button>
               )}
@@ -93,6 +168,7 @@ export function Chat() {
                   title={chat.connected.value ? "Connected" : "Disconnected"}
                 />
               )}
+              <TextLink onClick={() => (shortcutsOpen.value = true)}>Shortcuts</TextLink>
               {auth.authenticated.value ? (
                 <TextLink onClick={() => auth.signOut()}>Sign out</TextLink>
               ) : (
@@ -134,6 +210,7 @@ export function Chat() {
           canSend={chat.canSend.value}
           streaming={chat.streaming.value}
           disabled={!auth.authenticated.value}
+          textareaRef={composerRef}
         />
       </div>
     </PageShell>
