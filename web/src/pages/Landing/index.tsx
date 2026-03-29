@@ -51,7 +51,7 @@ export function Landing() {
 
         {/* Headline */}
         <h1
-          class="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight mb-4"
+          class="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight mb-4 text-balance"
           style={{ letterSpacing: "-0.03em" }}
         >
           Your AI conversations
