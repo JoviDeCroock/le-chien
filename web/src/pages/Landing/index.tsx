@@ -43,9 +43,9 @@ export function Landing() {
       </nav>
 
       {/* Main content */}
-      <div class="max-w-2xl mx-auto px-6 pt-24 pb-16 sm:pt-32 sm:pb-24">
+      <div class="max-w-2xl mx-auto px-6 pt-20 pb-16 sm:pt-32 sm:pb-24">
         {/* Sovereignty badge */}
-        <div class="flex items-center gap-2 mb-6">
+        <div class="flex items-center gap-2 mb-6 animate-fade-in">
           {EU_FLAG}
           <span class="text-xs font-medium tracking-wide text-neutral-400 uppercase">
             AI inference &amp; data stored in the EU
@@ -54,8 +54,8 @@ export function Landing() {
 
         {/* Headline */}
         <h1
-          class="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight mb-4 text-balance"
-          style={{ letterSpacing: "-0.03em" }}
+          class="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight mb-4 text-balance animate-fade-in"
+          style={{ letterSpacing: "-0.03em", animationDelay: "50ms" }}
         >
           Your AI conversations
           <br />
@@ -63,7 +63,10 @@ export function Landing() {
         </h1>
 
         {/* Subheadline */}
-        <p class="text-base sm:text-lg text-neutral-400 leading-relaxed mb-10 max-w-lg">
+        <p
+          class="text-base sm:text-lg text-neutral-400 leading-relaxed mb-10 max-w-lg animate-fade-in"
+          style={{ animationDelay: "100ms" }}
+        >
           Open-model AI chat with persistent memory, file retrieval, and workspaces. Runs on
           European infrastructure. No data leaves the EU.
         </p>
@@ -71,13 +74,17 @@ export function Landing() {
         {/* CTA */}
         <a
           href="/auth"
-          class="inline-block bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-6 py-3 rounded-lg transition-colors"
+          class="inline-block bg-violet-600 hover:bg-violet-500 active:scale-[0.98] text-white text-sm font-medium px-6 py-3 rounded-lg transition-all duration-150 animate-fade-in"
+          style={{ animationDelay: "150ms" }}
         >
           Get started — free
         </a>
 
         {/* Trust signals */}
-        <div class="flex flex-wrap gap-x-6 gap-y-2 mt-8">
+        <div
+          class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-x-6 sm:gap-y-2 mt-8 animate-fade-in"
+          style={{ animationDelay: "200ms" }}
+        >
           <TrustSignal label="EU-hosted inference" />
           <TrustSignal label="Open models" />
           <TrustSignal label="End-to-end encrypted" />
@@ -85,12 +92,12 @@ export function Landing() {
       </div>
 
       {/* What you get — not a feature grid, just a tight list */}
-      <section class="max-w-2xl mx-auto px-6 pb-20">
+      <section class="max-w-2xl mx-auto px-6 pb-24 sm:pb-32">
         <div class="border-t border-neutral-800 pt-12">
-          <h2 class="text-xs font-medium tracking-wide text-neutral-500 uppercase mb-8">
+          <h2 class="text-sm font-medium tracking-wide text-neutral-500 uppercase mb-10">
             What you get
           </h2>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8 sm:gap-y-6">
             {[
               [
                 "Streaming chat",
@@ -118,8 +125,8 @@ export function Landing() {
               ],
             ].map(([title, desc]) => (
               <div key={title}>
-                <h3 class="text-base font-semibold text-white mb-1">{title}</h3>
-                <p class="text-sm text-neutral-400 leading-relaxed">{desc}</p>
+                <h3 class="text-xl font-semibold text-white mb-1.5">{title}</h3>
+                <p class="text-sm text-neutral-400 leading-relaxed max-w-xs">{desc}</p>
               </div>
             ))}
           </div>
@@ -129,12 +136,16 @@ export function Landing() {
       {/* Pricing */}
       <section class="max-w-2xl mx-auto px-6 pb-24">
         <div class="border-t border-neutral-800 pt-12">
-          <h2 class="text-xs font-medium tracking-wide text-neutral-500 uppercase mb-8">Pricing</h2>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <h2 class="text-sm font-medium tracking-wide text-neutral-500 uppercase mb-10">
+            Pricing
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {/* Free */}
-            <div class="border border-neutral-800 rounded-lg p-6">
-              <div class="text-sm font-medium text-white mb-1">Free</div>
-              <div class="text-2xl font-bold text-white mb-3">
+            <div class="border border-neutral-800 rounded-lg p-6 sm:p-8">
+              <div class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">
+                Free
+              </div>
+              <div class="text-2xl font-bold text-white mb-3 tracking-tight">
                 €0<span class="text-sm font-normal text-neutral-500">/mo</span>
               </div>
               <ul class="space-y-2 text-sm text-neutral-400">
@@ -152,11 +163,11 @@ export function Landing() {
             </div>
 
             {/* Pro */}
-            <div class="border border-violet-600/40 rounded-lg p-6 relative">
-              <div class="absolute -top-2.5 left-4 bg-violet-600 text-white text-xs font-medium px-2 py-0.5 rounded">
+            <div class="border border-violet-600/40 rounded-lg p-6 sm:p-8 bg-neutral-900">
+              <div class="text-sm font-semibold text-violet-400 uppercase tracking-wide mb-2">
                 Pro
               </div>
-              <div class="text-2xl font-bold text-white mb-3">
+              <div class="text-2xl font-bold text-white mb-3 tracking-tight">
                 €12<span class="text-sm font-normal text-neutral-500">/mo</span>
               </div>
               <ul class="space-y-2 text-sm text-neutral-400">
