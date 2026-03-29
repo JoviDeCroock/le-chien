@@ -142,7 +142,7 @@ export function Landing() {
               </ul>
               <a
                 href="/auth"
-                class="block text-center mt-6 border border-neutral-700 hover:border-neutral-500 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+                class="block text-center mt-6 border border-neutral-700 hover:border-neutral-500 text-white text-sm font-medium px-4 py-3 rounded-lg transition-colors"
               >
                 Start free
               </a>
@@ -166,7 +166,7 @@ export function Landing() {
               </ul>
               <a
                 href="/auth"
-                class="block text-center mt-6 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+                class="block text-center mt-6 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-3 rounded-lg transition-colors"
               >
                 Get Pro
               </a>
