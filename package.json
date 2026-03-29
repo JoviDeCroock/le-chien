@@ -17,7 +17,7 @@
     "oxlint": "^1.43.0"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+    "*.{js,jsx,ts,tsx,mjs,cjs,md,yml,yaml,html}": [
       "oxlint --fix",
       "oxfmt --write"
     ],
