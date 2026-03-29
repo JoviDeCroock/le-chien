@@ -17,10 +17,10 @@
     "oxlint": "^1.43.0"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,mjs,cjs,md,yml,yaml,html}": [
-      "oxlint --fix",
-      "oxfmt --write"
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "oxlint --fix --no-error-on-unmatched-pattern",
+      "oxfmt --write --no-error-on-unmatched-pattern"
     ],
-    "*.{json,jsonc}": "oxfmt --write"
+    "*.{json,jsonc,md,yml,yaml,html}": "oxfmt --write --no-error-on-unmatched-pattern"
   }
 }
