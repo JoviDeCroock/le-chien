@@ -9,6 +9,9 @@
     "APP_URL": "https://app.example.com",
     "LOCAL": "false",
   },
+  "ai": {
+    "binding": "AI"
+  },
   "d1_databases": [
     {
       "binding": "DB",

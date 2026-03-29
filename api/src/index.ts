@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { Polar } from "@polar-sh/sdk";
 import { createAuth } from "./lib/auth";
 import { subscription } from "./routes/subscription";
+import { chatRoutes } from "./routes/chat";
 import { Bindings, Variables } from "./types";
 import { isProduction } from "./utils/isProduction";
 import { getAppOrigin } from "./utils/urls";
@@ -151,5 +152,8 @@ app.get("/api/v1/me", (c) => {
 
 // Subscription
 app.route("/api/v1/subscription", subscription);
+
+// Chat
+app.route("/api/v1/chat", chatRoutes);
 
 export default app;
