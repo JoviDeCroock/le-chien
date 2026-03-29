@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -78,4 +78,19 @@ export const subscription = sqliteTable(
     uniqueIndex("subscription_polar_customer_unique_idx").on(t.polarCustomerId),
     uniqueIndex("subscription_polar_subscription_unique_idx").on(t.polarSubscriptionId),
   ],
+);
+
+export const conversationIndex = sqliteTable(
+  "conversation_index",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    model: text("model").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [index("conversation_index_user_updated_idx").on(t.userId, t.updatedAt)],
 );

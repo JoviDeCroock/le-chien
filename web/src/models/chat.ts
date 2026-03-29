@@ -54,10 +54,24 @@ export const ChatModel = createModel(() => {
   const canSend = computed(
     () => input.value.trim().length > 0 && !streaming.value && connected.value,
   );
+  );
 
   const activeConversation = computed(
     () => conversations.value.find((c) => c.id === activeConversationId.value) ?? null,
   );
+
+  const fetchConversations = async () => {
+    const res = await fetch(`${API_BASE_URL}/api/v1/chat/conversations`, {
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to load conversations");
+    }
+
+    const data = (await res.json()) as { conversations: Conversation[] };
+    conversations.value = data.conversations;
+  };
 
   const fetchModels = async () => {
     try {
@@ -82,9 +96,7 @@ export const ChatModel = createModel(() => {
     });
 
     try {
-      // Load conversations once connected
-      const convos = await conn.call<Conversation[]>("listConversations");
-      conversations.value = convos;
+      await fetchConversations();
     } catch {
       // Will retry on next interaction
     }
@@ -256,13 +268,7 @@ export const ChatModel = createModel(() => {
           }
           streaming.value = false;
 
-          // Refresh conversation list to get updated titles/timestamps
-          agent.value
-            ?.call<Conversation[]>("listConversations")
-            .then((convos) => {
-              conversations.value = convos;
-            })
-            .catch(() => {});
+          fetchConversations().catch(() => {});
         },
         onError: (err) => {
           error.value = err;
