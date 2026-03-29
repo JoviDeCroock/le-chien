@@ -9,8 +9,11 @@ import { isProduction } from "../utils/isProduction";
 import { getApiOrigin, getAppOrigin } from "../utils/urls";
 
 type Env = Cloudflare.Env;
+type Auth = ReturnType<typeof betterAuth>;
 
-export function createAuth(env: Env) {
+const authCache = new WeakMap<object, Auth>();
+
+function buildAuth(env: Env) {
   const db = drizzle(env.DB, { schema });
   const appOrigin = getAppOrigin(env);
   const apiOrigin = getApiOrigin(env);
@@ -187,4 +190,16 @@ export function createAuth(env: Env) {
       }),
     ],
   });
+}
+
+export function createAuth(env: Env) {
+  const cacheKey = env as object;
+  const cachedAuth = authCache.get(cacheKey);
+  if (cachedAuth) {
+    return cachedAuth;
+  }
+
+  const auth = buildAuth(env);
+  authCache.set(cacheKey, auth);
+  return auth;
 }
