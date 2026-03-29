@@ -1,18 +1,21 @@
 # Design System — le chien
 
 ## Product Context
+
 - **What this is:** A Cloudflare-native AI workspace that gives users a ChatGPT/Claude-like experience on top of open models, with persistent memory, file retrieval, workspaces, and tool use.
 - **Who it's for:** Developers, founders, small teams, AI-native operators, research-heavy users.
 - **Space/industry:** AI chat / AI workspace. Peers: ChatGPT, Claude, Perplexity, TypingMind, Poe.
 - **Project type:** Web app (dark-only for MVP).
 
 ## Aesthetic Direction
+
 - **Direction:** Industrial/Utilitarian — function-first, information-dense when needed, quiet when idle. The product earns trust through clarity, not decoration.
 - **Decoration level:** Minimal — typography and spacing do the work. No gradients, no patterns, no texture. The violet accent is the only visual "event" in the UI.
 - **Mood:** Fast, serious, developer-grade. Like a tool that respects your time. The product feels instant and professional — not playful, not corporate.
 - **Reference sites:** ChatGPT (system fonts, clean white), Claude (serif body, warm rust-orange), Perplexity (FK Grotesk, teal, Scandinavian-subway feel). le chien is starker than all of them.
 
 ## Typography
+
 - **Display/Hero:** Geist Sans (Bold 700) — Sharp, modern geometric. Built for developer tools, excellent in dark UIs. Not overused like Inter but not obscure. Letter-spacing: -0.03em at display sizes.
 - **Body:** Geist Sans (Regular 400 / Medium 500) — Clean at small sizes, great x-height, excellent readability on dark backgrounds.
 - **UI/Labels:** Geist Sans (Medium 500) — Same family for cohesion. Medium weight distinguishes labels from body text.
@@ -29,6 +32,7 @@
   - 48px (3rem) — large display (rare). Weight: 700. Letter-spacing: -0.03em.
 
 ## Color
+
 - **Approach:** Restrained — violet accent as sole chromatic presence. Color is rare and meaningful.
 - **Primary (accent):** `#7c3aed` (violet-600) — Primary actions, selected states, focus rings, brand moments.
 - **Primary hover:** `#8b5cf6` (violet-500) — Hover on primary actions.
@@ -49,11 +53,13 @@
 - **Dark mode:** Dark-only for MVP. No light mode planned.
 
 ## Spacing
+
 - **Base unit:** 4px
 - **Density:** Comfortable
 - **Scale:** 2xs(2px) xs(4px) sm(8px) md(16px) lg(24px) xl(32px) 2xl(48px) 3xl(64px)
 
 ## Layout
+
 - **Approach:** Grid-disciplined — sidebar + main content with strict alignment.
 - **Grid:** Sidebar (256px expanded, 48px collapsed icon rail) + fluid main content.
 - **Breakpoints:** Mobile (<768px), Tablet (768-1024px), Desktop (>1024px).
@@ -61,6 +67,7 @@
 - **Border radius:** Hierarchical — sm: 4px, md: 8px (cards, inputs, buttons), lg: 12px (larger containers), full: 9999px (pills, avatars).
 
 ## Motion
+
 - **Approach:** Minimal-functional — only transitions that aid comprehension. The product feels instant.
 - **Easing:** enter: ease-out, exit: ease-in, move: ease-in-out.
 - **Duration:** micro: 50-100ms (hover, focus), short: 150-250ms (fade, expand/collapse), medium: 250-400ms (sidebar toggle, overlays).
@@ -68,6 +75,7 @@
 - **What does NOT get motion:** Page transitions, entrance animations, scroll-driven effects, loading skeletons (use opacity pulse only).
 
 ## Anti-Patterns (never use)
+
 - Purple/violet gradients as backgrounds
 - 3-column feature grid with icons in colored circles
 - Centered everything with uniform spacing
@@ -78,9 +86,10 @@
 - Shadows for elevation (use border + background color shift instead)
 
 ## Decisions Log
-| Date | Decision | Rationale |
-|------|----------|-----------|
-| 2026-03-29 | Initial design system created | Created by /design-consultation based on vision doc + competitive research of ChatGPT, Claude, Perplexity, TypingMind, Poe |
-| 2026-03-29 | Geist Sans + Geist Mono as sole type family | Developer-tool feel without code-editor coldness. Paired mono for free. Distinctive vs system-font competitors |
-| 2026-03-29 | Zero decoration, violet glow as only flourish | Starker than all competitors. Fast/serious identity. Glow makes the accent feel significant |
-| 2026-03-29 | Dark-only for MVP | Reduces surface area, matches developer audience. Every serious AI tool defaults to dark |
+
+| Date       | Decision                                      | Rationale                                                                                                                  |
+| ---------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 2026-03-29 | Initial design system created                 | Created by /design-consultation based on vision doc + competitive research of ChatGPT, Claude, Perplexity, TypingMind, Poe |
+| 2026-03-29 | Geist Sans + Geist Mono as sole type family   | Developer-tool feel without code-editor coldness. Paired mono for free. Distinctive vs system-font competitors             |
+| 2026-03-29 | Zero decoration, violet glow as only flourish | Starker than all competitors. Fast/serious identity. Glow makes the accent feel significant                                |
+| 2026-03-29 | Dark-only for MVP                             | Reduces surface area, matches developer audience. Every serious AI tool defaults to dark                                   |

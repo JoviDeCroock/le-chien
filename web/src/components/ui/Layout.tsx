@@ -1,7 +1,13 @@
 import type { ComponentChildren } from "preact";
 
 /** Full-screen dark shell — the outermost wrapper for every page. */
-export function PageShell({ children, class: className }: { children: ComponentChildren; class?: string }) {
+export function PageShell({
+  children,
+  class: className,
+}: {
+  children: ComponentChildren;
+  class?: string;
+}) {
   return (
     <div class={`h-screen bg-neutral-950 flex overflow-hidden ${className ?? ""}`.trim()}>
       {children}
@@ -20,17 +26,21 @@ export function ContentContainer({
   class?: string;
 }) {
   const maxW = width === "form" ? "max-w-md" : "max-w-3xl";
-  return (
-    <div class={`${maxW} mx-auto px-4 ${className ?? ""}`.trim()}>
-      {children}
-    </div>
-  );
+  return <div class={`${maxW} mx-auto px-4 ${className ?? ""}`.trim()}>{children}</div>;
 }
 
 /** Neutral-900 surface card with border — used for forms, panels, etc. */
-export function Card({ children, class: className }: { children: ComponentChildren; class?: string }) {
+export function Card({
+  children,
+  class: className,
+}: {
+  children: ComponentChildren;
+  class?: string;
+}) {
   return (
-    <div class={`bg-neutral-900 border border-neutral-800 rounded-xl p-6 ${className ?? ""}`.trim()}>
+    <div
+      class={`bg-neutral-900 border border-neutral-800 rounded-xl p-6 ${className ?? ""}`.trim()}
+    >
       {children}
     </div>
   );

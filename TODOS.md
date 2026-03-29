@@ -3,6 +3,7 @@
 ## Design
 
 ### WCAG contrast audit on existing color tokens
+
 **Priority:** Medium (pre-launch)
 **What:** Verify contrast ratios for all text/background combinations in the existing palette (neutral-300 on neutral-950, neutral-400 on neutral-900, violet-600 on neutral-800, etc.).
 **Why:** The plan now specifies WCAG 2.1 AA compliance. Shipping without verifying means accessibility requirements exist on paper but not in practice.
@@ -12,6 +13,7 @@
 **Depends on:** Nothing. Can be done independently.
 
 ### Define full keyboard shortcut map
+
 **Priority:** Low (during sidebar/navigation build)
 **What:** Design a complete keyboard shortcut system beyond basic navigation. Include: Cmd+N (new chat), Cmd+Shift+M (toggle memory), Cmd+/ (model switcher), Cmd+Shift+S (toggle sidebar), etc.
 **Why:** Target users are developers who expect keyboard-first workflows. Most AI chat products are mouse-only — this is a differentiator.
@@ -23,6 +25,7 @@
 ## Engineering
 
 ## DO → D1 sync error handling
+
 **Priority:** High (after DO architecture is built)
 **What:** Add retry logic for when the Durable Object fails to write conversation metadata to the D1 index.
 **Why:** Without this, conversations can exist in a DO but be invisible in the conversation list — a data consistency bug that confuses users.
@@ -30,6 +33,7 @@
 **Depends on:** DO + D1 dual storage architecture.
 
 ## Third-party data flow audit for EU sovereignty claim
+
 **Priority:** Medium (post-MVP)
 **What:** Audit all third-party services (Polar billing, email delivery, Cloudflare analytics/logging) to verify whether user data leaves EU infrastructure.
 **Why:** The product pitches "your data stays in Europe" but Polar is US-based, BetterAuth email delivery may use a US provider, and Cloudflare's internal analytics may process data outside EU. The sovereignty claim has legal gaps beyond the DO/Worker pinning.
@@ -37,6 +41,7 @@
 **Depends on:** Nothing — can be done in parallel with development.
 
 ## Cache createAuth() per Worker isolate
+
 **Priority:** Low (optimization)
 **What:** Cache the BetterAuth instance at module level instead of creating a new one on every request (`api/src/index.ts:119` and `api/src/index.ts:129`).
 **Why:** Each authenticated request creates BetterAuth + Drizzle + Polar client twice. A module-level WeakMap keyed by env would reuse instances within the same Worker isolate.

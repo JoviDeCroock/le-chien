@@ -10,16 +10,12 @@
     "LOCAL": "false",
   },
   "ai": {
-    "binding": "AI"
+    "binding": "AI",
   },
   "durable_objects": {
-    "bindings": [
-      { "name": "CHAT_AGENT", "class_name": "ChatAgent" }
-    ]
+    "bindings": [{ "name": "CHAT_AGENT", "class_name": "ChatAgent" }],
   },
-  "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["ChatAgent"] }
-  ],
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatAgent"] }],
   "d1_databases": [
     {
       "binding": "DB",

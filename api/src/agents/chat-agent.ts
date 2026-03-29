@@ -173,7 +173,8 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       `;
       if (messageCount[0].count <= 2) {
         const title = content.length > 50 ? content.slice(0, 47) + "..." : content;
-        this.sql`UPDATE conversations SET title = ${title}, updated_at = ${finishedAt} WHERE id = ${conversationId}`;
+        this
+          .sql`UPDATE conversations SET title = ${title}, updated_at = ${finishedAt} WHERE id = ${conversationId}`;
       }
 
       stream.end({ messageId: assistantMessageId });

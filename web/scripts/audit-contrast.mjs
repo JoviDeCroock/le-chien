@@ -87,7 +87,7 @@ const DISALLOWED_PAIRINGS = [
 ];
 
 function parseOklch(value) {
-  const match = value.match(/oklch\(([^%]+)%\s+([^\s]+)\s+([^\)]+)\)/);
+  const match = value.match(/oklch\(([^%]+)%\s+([^\s]+)\s+([^)]+)\)/);
 
   if (!match) {
     throw new Error(`Unsupported color format: ${value}`);
@@ -124,7 +124,9 @@ function relativeLuminance(token) {
 
   const r = toGammaEncoded(4.0767416621 * lCube - 3.3077115913 * mCube + 0.2309699292 * sCube);
   const g = toGammaEncoded(-1.2684380046 * lCube + 2.6097574011 * mCube - 0.3413193965 * sCube);
-  const bChannel = toGammaEncoded(-0.0041960863 * lCube - 0.7034186147 * mCube + 1.707614701 * sCube);
+  const bChannel = toGammaEncoded(
+    -0.0041960863 * lCube - 0.7034186147 * mCube + 1.707614701 * sCube,
+  );
 
   return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(bChannel);
 }

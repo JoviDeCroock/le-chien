@@ -18,7 +18,10 @@ export function ShortcutOverlay({ open, onClose }: ShortcutOverlayProps) {
   if (!open) return null;
 
   return (
-    <div class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
+    <div
+      class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4"
+      onClick={onClose}
+    >
       <div
         class="w-full max-w-3xl rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl"
         role="dialog"
@@ -60,7 +63,11 @@ export function ShortcutOverlay({ open, onClose }: ShortcutOverlayProps) {
         </div>
 
         <div class="border-t border-neutral-800/60 px-5 py-3 text-xs text-neutral-400">
-          Press <kbd class="rounded-md border border-neutral-700 bg-neutral-800 px-1.5 py-0.5 text-neutral-200">Esc</kbd> to close.
+          Press{" "}
+          <kbd class="rounded-md border border-neutral-700 bg-neutral-800 px-1.5 py-0.5 text-neutral-200">
+            Esc
+          </kbd>{" "}
+          to close.
         </div>
       </div>
     </div>
@@ -85,7 +92,10 @@ function ShortcutSection({
 
       <div class="space-y-3">
         {shortcuts.map((shortcut) => (
-          <div class="rounded-lg border border-neutral-800 bg-neutral-950/70 px-4 py-3" key={shortcut.id}>
+          <div
+            class="rounded-lg border border-neutral-800 bg-neutral-950/70 px-4 py-3"
+            key={shortcut.id}
+          >
             <div class="flex items-start justify-between gap-3">
               <div>
                 <div class="text-sm font-medium text-white">{shortcut.label}</div>

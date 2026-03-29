@@ -44,7 +44,11 @@ export function ModelSelector({
     onSelect(nextModel.id);
 
     const currentButton = event.currentTarget as HTMLButtonElement | null;
-    focusModel(currentButton?.parentElement?.querySelector<HTMLButtonElement>(`[data-model-id="${nextModel.id}"]`) ?? null);
+    focusModel(
+      currentButton?.parentElement?.querySelector<HTMLButtonElement>(
+        `[data-model-id="${nextModel.id}"]`,
+      ) ?? null,
+    );
   }
 
   return (
@@ -63,7 +67,12 @@ export function ModelSelector({
               <button
                 key={m.id}
                 onClick={() => onSelect(m.id)}
-                onKeyDown={(event) => handleKeyDown(event, models.findIndex((model) => model.id === m.id))}
+                onKeyDown={(event) =>
+                  handleKeyDown(
+                    event,
+                    models.findIndex((model) => model.id === m.id),
+                  )
+                }
                 disabled={disabled}
                 role="radio"
                 aria-checked={isSelected}

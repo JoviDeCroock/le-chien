@@ -6,20 +6,18 @@ type IconProps = JSX.SVGAttributes<SVGSVGElement> & {
 
 function Icon({ size = 16, class: className, children, ...props }: IconProps) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      class={className}
-      {...props}
-    >
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" class={className} {...props}>
       {children}
     </svg>
   );
 }
 
-const stroke = { stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round" as const, "stroke-linejoin": "round" as const };
+const stroke = {
+  stroke: "currentColor",
+  "stroke-width": 2,
+  "stroke-linecap": "round" as const,
+  "stroke-linejoin": "round" as const,
+};
 
 export function MenuIcon(props: IconProps) {
   return (
@@ -48,7 +46,10 @@ export function CloseIcon(props: IconProps) {
 export function SendIcon(props: IconProps) {
   return (
     <Icon {...props}>
-      <path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" {...stroke} />
+      <path
+        d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"
+        {...stroke}
+      />
     </Icon>
   );
 }
@@ -64,7 +65,10 @@ export function StopIcon(props: IconProps) {
 export function AlertTriangleIcon(props: IconProps) {
   return (
     <Icon {...props}>
-      <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" {...stroke} />
+      <path
+        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+        {...stroke}
+      />
     </Icon>
   );
 }

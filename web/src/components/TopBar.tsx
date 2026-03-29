@@ -2,13 +2,7 @@ import type { ComponentChildren } from "preact";
 import { BarSection, ContentContainer } from "./ui/Layout";
 
 /** Top navigation bar — consistent across pages. Renders left/right slots. */
-export function TopBar({
-  left,
-  right,
-}: {
-  left?: ComponentChildren;
-  right?: ComponentChildren;
-}) {
+export function TopBar({ left, right }: { left?: ComponentChildren; right?: ComponentChildren }) {
   return (
     <BarSection>
       <ContentContainer class="h-12 flex items-center justify-between">

@@ -39,13 +39,13 @@ Chat state is managed by a per-user Durable Object (`ChatAgent`) using the Cloud
 
 ### Key Files
 
-| File | Purpose |
-|------|---------|
-| `api/src/agents/chat-agent.ts` | ChatAgent DO class |
-| `api/src/index.ts` | Agent route + DO class export |
-| `api/wrangler.jsonc` | DO binding + migration |
-| `web/src/lib/agent-client.ts` | AgentClient singleton wrapper |
-| `web/src/models/chat.ts` | WebSocket-based chat state model |
+| File                           | Purpose                           |
+| ------------------------------ | --------------------------------- |
+| `api/src/agents/chat-agent.ts` | ChatAgent DO class                |
+| `api/src/index.ts`             | Agent route + DO class export     |
+| `api/wrangler.jsonc`           | DO binding + migration            |
+| `web/src/lib/agent-client.ts`  | AgentClient singleton wrapper     |
+| `web/src/models/chat.ts`       | WebSocket-based chat state model  |
 | `web/src/pages/Chat/index.tsx` | Chat UI with conversation sidebar |
 
 ### Data Model

@@ -12,7 +12,15 @@ export type SidebarProps = {
   onDelete: (id: string) => void;
 };
 
-export function Sidebar({ open, onClose, conversations, activeId, onSelect, onNew, onDelete }: SidebarProps) {
+export function Sidebar({
+  open,
+  onClose,
+  conversations,
+  activeId,
+  onSelect,
+  onNew,
+  onDelete,
+}: SidebarProps) {
   if (!open) return null;
 
   return (
@@ -27,7 +35,9 @@ export function Sidebar({ open, onClose, conversations, activeId, onSelect, onNe
       >
         {/* Header */}
         <div class="h-12 shrink-0 flex items-center justify-between px-3 border-b border-neutral-800/60">
-          <span class="text-xs font-medium text-neutral-400 uppercase tracking-wider">Conversations</span>
+          <span class="text-xs font-medium text-neutral-400 uppercase tracking-wider">
+            Conversations
+          </span>
           <Button variant="icon" onClick={onNew} title="New chat (Cmd/Ctrl+N)">
             <PlusIcon size={16} />
           </Button>
@@ -82,7 +92,9 @@ function ConversationItem({
 
     const currentButton = event.currentTarget as HTMLButtonElement | null;
     const list = currentButton?.closest("[data-sidebar-list='true']");
-    const items = Array.from(list?.querySelectorAll<HTMLButtonElement>("[data-conversation-button='true']") ?? []);
+    const items = Array.from(
+      list?.querySelectorAll<HTMLButtonElement>("[data-conversation-button='true']") ?? [],
+    );
     const currentIndex = currentButton ? items.indexOf(currentButton) : -1;
 
     if (currentIndex === -1 || items.length === 0) return;

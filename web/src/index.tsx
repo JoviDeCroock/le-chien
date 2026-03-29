@@ -1,11 +1,4 @@
-import {
-  LocationProvider,
-  Router,
-  Route,
-  hydrate,
-  prerender as ssr,
-  lazy,
-} from "preact-iso";
+import { LocationProvider, Router, Route, hydrate, prerender as ssr, lazy } from "preact-iso";
 
 import "./style.css";
 

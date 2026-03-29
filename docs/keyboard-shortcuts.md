@@ -8,25 +8,25 @@ This branch turns the design todo into a real shortcut system with a clear contr
 
 ## Available now
 
-| Shortcut | Action | Notes |
-|----------|--------|-------|
-| `Cmd/Ctrl + N` | New chat | Clears the active thread and resets to an empty composer |
-| `Cmd/Ctrl + Shift + S` | Toggle sidebar | Opens or closes the conversation drawer |
-| `Cmd/Ctrl + /` | Focus model selector | Jumps to the selected model pill |
-| `?` | Open shortcut overlay | Only outside text inputs so typing isn't interrupted |
-| `Esc` | Close overlay/sidebar | Dismisses top-level UI chrome |
-| `Left/Right` | Switch models | Works once the model selector has focus |
-| `Up/Down` | Move through conversations | Works inside the sidebar conversation list |
-| `Enter` | Send message | Existing composer behavior |
-| `Shift + Enter` | New line | Existing composer behavior |
+| Shortcut               | Action                     | Notes                                                    |
+| ---------------------- | -------------------------- | -------------------------------------------------------- |
+| `Cmd/Ctrl + N`         | New chat                   | Clears the active thread and resets to an empty composer |
+| `Cmd/Ctrl + Shift + S` | Toggle sidebar             | Opens or closes the conversation drawer                  |
+| `Cmd/Ctrl + /`         | Focus model selector       | Jumps to the selected model pill                         |
+| `?`                    | Open shortcut overlay      | Only outside text inputs so typing isn't interrupted     |
+| `Esc`                  | Close overlay/sidebar      | Dismisses top-level UI chrome                            |
+| `Left/Right`           | Switch models              | Works once the model selector has focus                  |
+| `Up/Down`              | Move through conversations | Works inside the sidebar conversation list               |
+| `Enter`                | Send message               | Existing composer behavior                               |
+| `Shift + Enter`        | New line                   | Existing composer behavior                               |
 
 ## Reserved for next panels
 
-| Shortcut | Future target | Why reserve it now |
-|----------|---------------|--------------------|
-| `Cmd/Ctrl + Shift + M` | Memory | Matches the design todo and keeps memory one chord away |
-| `Cmd/Ctrl + K` | Search | Aligns with the MVP design doc's global search overlay |
-| `Cmd/Ctrl + Shift + F` | Files | Keeps the panel map symmetrical with memory |
+| Shortcut               | Future target | Why reserve it now                                      |
+| ---------------------- | ------------- | ------------------------------------------------------- |
+| `Cmd/Ctrl + Shift + M` | Memory        | Matches the design todo and keeps memory one chord away |
+| `Cmd/Ctrl + K`         | Search        | Aligns with the MVP design doc's global search overlay  |
+| `Cmd/Ctrl + Shift + F` | Files         | Keeps the panel map symmetrical with memory             |
 
 ## Design constraints learned here
 

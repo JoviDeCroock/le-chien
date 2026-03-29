@@ -46,7 +46,12 @@ export function Chat() {
   useEffect(() => {
     function isEditableTarget(target: EventTarget | null) {
       if (!(target instanceof HTMLElement)) return false;
-      return target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT";
+      return (
+        target.isContentEditable ||
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT"
+      );
     }
 
     function toggleSidebar(nextOpen?: boolean) {
@@ -54,7 +59,8 @@ export function Chat() {
     }
 
     function focusModelSelector() {
-      const activeButton = modelBarRef.current?.querySelector<HTMLButtonElement>("[aria-checked='true']");
+      const activeButton =
+        modelBarRef.current?.querySelector<HTMLButtonElement>("[aria-checked='true']");
       activeButton?.focus();
     }
 
@@ -172,7 +178,9 @@ export function Chat() {
               {auth.authenticated.value ? (
                 <TextLink onClick={() => auth.signOut()}>Sign out</TextLink>
               ) : (
-                <TextLink as="a" href="/auth">Sign in</TextLink>
+                <TextLink as="a" href="/auth">
+                  Sign in
+                </TextLink>
               )}
             </>
           }

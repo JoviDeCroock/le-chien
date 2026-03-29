@@ -5,6 +5,7 @@
 A Cloudflare-native AI workspace that gives users a ChatGPT/Claude-like experience on top of strong open models.
 
 The product combines:
+
 - chat
 - memory
 - authentication
@@ -21,6 +22,7 @@ The goal is not to be a generic chat wrapper. The goal is to become the operatio
 Most AI chat products are still too stateless.
 
 They answer prompts, but they do not really know:
+
 - who the user is
 - what the team cares about
 - what files matter
@@ -34,6 +36,7 @@ This product exists to make AI feel less like a session and more like a working 
 The winning open-model chat product is not just a model picker.
 
 It is a workspace where:
+
 - the assistant remembers useful context
 - files and past conversations are searchable
 - teams can collaborate inside shared workspaces
@@ -45,6 +48,7 @@ The value is created by combining model quality with product context.
 ## Who it is for
 
 The first users are:
+
 - developers
 - founders
 - small teams
@@ -58,23 +62,27 @@ They want a powerful assistant, but they also want control, persistence, and a p
 The MVP should support:
 
 ### Core experience
+
 - chat with curated model modes
 - streaming responses
 - persistent conversation history
 
 ### Context
+
 - user memory
 - workspace memory
 - file upload and retrieval
 - chat and file search
 
 ### Product foundations
+
 - auth
 - billing
 - personal and shared workspaces
 - role-based access
 
 ### Actions
+
 - tool use inside chat
 - inspectable tool calls
 - approval for mutating actions
@@ -82,21 +90,27 @@ The MVP should support:
 ## Principles
 
 ### 1. Fast by default
+
 The product should feel immediate. Fast mode should be good enough for most daily use.
 
 ### 2. Context makes the product
+
 Memory, retrieval, and workspace knowledge are core, not add-ons.
 
 ### 3. Keep model choice simple
+
 Expose a small number of useful modes rather than overwhelming users with raw model names.
 
 ### 4. Retrieval should be visible
+
 When an answer comes from files or workspace knowledge, the product should make that clear.
 
 ### 5. Tools should feel trustworthy
+
 Tool calls must be visible, understandable, and safe.
 
 ### 6. Team-ready early
+
 The product should work for an individual first, but the architecture should support shared workspaces from the start.
 
 ## Information Architecture
@@ -142,22 +156,26 @@ On mobile (<768px), sidebar is a slide-over drawer, hidden by default.
 ### Content hierarchy per screen
 
 **Chat (primary screen):**
+
 1. First: Current message thread (takes 70%+ of viewport)
 2. Second: Input bar (always visible, anchored bottom)
 3. Third: Model selector (compact bar, above messages)
 4. Fourth: Sidebar navigation (collapsible, secondary)
 
 **Memory panel:**
+
 1. First: Memory entries list (key-value pairs with timestamps)
 2. Second: Add/edit memory action
 3. Third: Filter (user vs workspace memory)
 
 **Files panel:**
+
 1. First: File list with type icons and previews
 2. Second: Upload action (drag-and-drop zone)
 3. Third: Search/filter bar
 
 **Settings:**
+
 1. First: Active section content (profile, workspace, billing)
 2. Second: Section tabs/nav
 3. Third: Danger zone actions (delete workspace, cancel plan) at bottom
@@ -168,77 +186,77 @@ Every UI feature defines what the user sees in each state.
 
 ### Chat
 
-| State   | User sees                                                                 |
-|---------|---------------------------------------------------------------------------|
+| State   | User sees                                                                                                  |
+| ------- | ---------------------------------------------------------------------------------------------------------- |
 | Empty   | "Start your first conversation. Pick a model and ask anything." + [New chat] button, centered in main area |
-| Loading | Pulsing dots in assistant bubble, streaming tokens as they arrive         |
+| Loading | Pulsing dots in assistant bubble, streaming tokens as they arrive                                          |
 | Error   | Inline error banner below the input bar: "Something went wrong. [Retry]" with the failed message preserved |
-| Success | Assistant message rendered with markdown, code blocks, citations          |
-| Partial | Streaming in progress — tokens render live, send button becomes stop button |
+| Success | Assistant message rendered with markdown, code blocks, citations                                           |
+| Partial | Streaming in progress — tokens render live, send button becomes stop button                                |
 
 ### Conversation List (sidebar)
 
-| State   | User sees                                                                 |
-|---------|---------------------------------------------------------------------------|
-| Empty   | "No conversations yet" with [New chat] button                            |
-| Loading | 3 skeleton shimmer rows in sidebar                                       |
-| Error   | "Couldn't load conversations. [Retry]" inline in sidebar                 |
+| State   | User sees                                                                          |
+| ------- | ---------------------------------------------------------------------------------- |
+| Empty   | "No conversations yet" with [New chat] button                                      |
+| Loading | 3 skeleton shimmer rows in sidebar                                                 |
+| Error   | "Couldn't load conversations. [Retry]" inline in sidebar                           |
 | Success | Conversations grouped: Today, Previous 7 days, Older. Title + last message preview |
 
 ### Memory
 
-| State   | User sees                                                                 |
-|---------|---------------------------------------------------------------------------|
+| State   | User sees                                                                                                          |
+| ------- | ------------------------------------------------------------------------------------------------------------------ |
 | Empty   | "Nothing remembered yet. As you chat, save useful context here so your assistant remembers." + [Add memory] button |
-| Loading | Skeleton cards with shimmer                                              |
-| Error   | "Couldn't load memory. [Retry]"                                          |
-| Success | Key-value cards with timestamps, edit/delete actions on hover            |
-| Saving  | Inline spinner on the entry being saved, optimistic update               |
+| Loading | Skeleton cards with shimmer                                                                                        |
+| Error   | "Couldn't load memory. [Retry]"                                                                                    |
+| Success | Key-value cards with timestamps, edit/delete actions on hover                                                      |
+| Saving  | Inline spinner on the entry being saved, optimistic update                                                         |
 
 ### Files
 
-| State   | User sees                                                                 |
-|---------|---------------------------------------------------------------------------|
-| Empty   | "No files yet. Drop files here or attach them in chat to build your workspace knowledge." + [Upload] button + drag-drop zone |
-| Loading | Skeleton list with file type icon placeholders                           |
-| Error   | "Upload failed: [reason]. [Retry]" — failed file stays in list with error badge |
-| Success | File list with type icons, name, size, date. Click to preview.           |
-| Uploading | Progress bar per file, cancel button                                   |
+| State     | User sees                                                                                                                    |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Empty     | "No files yet. Drop files here or attach them in chat to build your workspace knowledge." + [Upload] button + drag-drop zone |
+| Loading   | Skeleton list with file type icon placeholders                                                                               |
+| Error     | "Upload failed: [reason]. [Retry]" — failed file stays in list with error badge                                              |
+| Success   | File list with type icons, name, size, date. Click to preview.                                                               |
+| Uploading | Progress bar per file, cancel button                                                                                         |
 
 ### Search
 
-| State   | User sees                                                                 |
-|---------|---------------------------------------------------------------------------|
-| Empty   | Search input with placeholder "Search conversations, files, and memory…" |
-| No results | "No results for '[query]'. Try different keywords." — no dead end       |
-| Loading | Skeleton result rows                                                     |
-| Success | Results grouped by type (conversations, files, memory) with highlighted matches |
+| State      | User sees                                                                       |
+| ---------- | ------------------------------------------------------------------------------- |
+| Empty      | Search input with placeholder "Search conversations, files, and memory…"        |
+| No results | "No results for '[query]'. Try different keywords." — no dead end               |
+| Loading    | Skeleton result rows                                                            |
+| Success    | Results grouped by type (conversations, files, memory) with highlighted matches |
 
 ### Tool Use
 
-| State   | User sees                                                                 |
-|---------|---------------------------------------------------------------------------|
+| State   | User sees                                                                                      |
+| ------- | ---------------------------------------------------------------------------------------------- |
 | Pending | Tool call card: tool name, parameters preview, [Approve] / [Deny] buttons for mutating actions |
-| Running | Tool card with spinner: "Running [tool name]…"                           |
-| Success | Tool card with result summary, expandable full output                    |
-| Error   | Tool card with red border: "Failed: [reason]". Expandable error detail   |
+| Running | Tool card with spinner: "Running [tool name]…"                                                 |
+| Success | Tool card with result summary, expandable full output                                          |
+| Error   | Tool card with red border: "Failed: [reason]". Expandable error detail                         |
 
 ### Workspace Members
 
-| State   | User sees                                                                 |
-|---------|---------------------------------------------------------------------------|
+| State   | User sees                                                                |
+| ------- | ------------------------------------------------------------------------ |
 | Empty   | "Just you for now. Invite teammates to collaborate." + [Invite] button   |
 | Loading | Skeleton avatar + name rows                                              |
 | Success | Member list with avatar, name, role badge. Owner can change roles/remove |
 
 ### Billing
 
-| State   | User sees                                                                 |
-|---------|---------------------------------------------------------------------------|
-| Free tier | Current plan card: "Free" with usage stats. [Upgrade to Pro] prominent button |
-| Pro tier | Current plan card: "Pro" with renewal date, usage stats. [Manage billing] link to Polar |
-| Loading | Skeleton plan card                                                       |
-| Error   | "Couldn't load billing info. [Retry]"                                    |
+| State     | User sees                                                                               |
+| --------- | --------------------------------------------------------------------------------------- |
+| Free tier | Current plan card: "Free" with usage stats. [Upgrade to Pro] prominent button           |
+| Pro tier  | Current plan card: "Pro" with renewal date, usage stats. [Manage billing] link to Polar |
+| Loading   | Skeleton plan card                                                                      |
+| Error     | "Couldn't load billing info. [Retry]"                                                   |
 
 ## User Journey
 
@@ -252,24 +270,24 @@ Sign up → Personal workspace auto-created → Empty chat → Input bar focused
 
 ### First-time user arc
 
-| Step | User does                   | User feels                | Product provides                           |
-|------|-----------------------------|---------------------------|--------------------------------------------|
-| 1    | Signs up (email/password)   | Curious, evaluating       | Fast auth → straight to workspace          |
-| 2    | Sees empty chat             | Oriented ("I know what this is") | Warm empty state, input bar focused, model defaults to "Fast" |
-| 3    | Sends first message         | Engaged — "it works"      | Fast streaming response, conversation auto-saved in sidebar |
-| 4    | Has 3+ conversations        | Building habit            | Gentle hint: "Save context to memory for better answers" |
-| 5    | Explores memory/files       | Discovery — "it does more" | Empty states with clear actions, not dead ends |
-| 6    | Tries a tool call           | Impressed or cautious     | Tool card with preview + approve/deny for mutating actions |
-| 7    | Invites a teammate          | Investment — "this is my tool" | Workspace invite flow, shared context visible immediately |
+| Step | User does                 | User feels                       | Product provides                                              |
+| ---- | ------------------------- | -------------------------------- | ------------------------------------------------------------- |
+| 1    | Signs up (email/password) | Curious, evaluating              | Fast auth → straight to workspace                             |
+| 2    | Sees empty chat           | Oriented ("I know what this is") | Warm empty state, input bar focused, model defaults to "Fast" |
+| 3    | Sends first message       | Engaged — "it works"             | Fast streaming response, conversation auto-saved in sidebar   |
+| 4    | Has 3+ conversations      | Building habit                   | Gentle hint: "Save context to memory for better answers"      |
+| 5    | Explores memory/files     | Discovery — "it does more"       | Empty states with clear actions, not dead ends                |
+| 6    | Tries a tool call         | Impressed or cautious            | Tool card with preview + approve/deny for mutating actions    |
+| 7    | Invites a teammate        | Investment — "this is my tool"   | Workspace invite flow, shared context visible immediately     |
 
 ### Returning user arc
 
-| Step | User does                   | User feels                | Product provides                           |
-|------|-----------------------------|---------------------------|--------------------------------------------|
-| 1    | Opens app                   | Continuity — "it remembers" | Last workspace, recent conversations visible |
-| 2    | Continues a conversation    | Productive                | Memory-augmented responses, file references |
-| 3    | Searches past work          | Confident in the archive  | Cross-type search (convos, files, memory)  |
-| 4    | Switches workspace          | Context shift             | Clean transition, all content scoped        |
+| Step | User does                | User feels                  | Product provides                             |
+| ---- | ------------------------ | --------------------------- | -------------------------------------------- |
+| 1    | Opens app                | Continuity — "it remembers" | Last workspace, recent conversations visible |
+| 2    | Continues a conversation | Productive                  | Memory-augmented responses, file references  |
+| 3    | Searches past work       | Confident in the archive    | Cross-type search (convos, files, memory)    |
+| 4    | Switches workspace       | Context shift               | Clean transition, all content scoped         |
 
 ### Time-horizon design
 
@@ -305,16 +323,19 @@ Selector is a compact segmented control (not a dropdown, not a scrollable list).
 Tool calls render as compact cards within the message flow, not separate panels or code blocks.
 
 **Read-only tools (search, retrieve):**
+
 ```
 ┌──────────────────────────────────┐
 │ ⚡ web_search              2.1s ▼ │
 │ Found 3 results for "query"      │
 └──────────────────────────────────┘
 ```
+
 - Collapsed by default: tool name + status icon + one-line summary + timing
 - Expandable: full parameters, output, raw response
 
 **Mutating tools (send, create, delete):**
+
 ```
 ┌──────────────────────────────────┐
 │ ⚠ send_email                     │
@@ -322,6 +343,7 @@ Tool calls render as compact cards within the message flow, not separate panels 
 │ [Approve]          [Deny]        │
 └──────────────────────────────────┘
 ```
+
 - Shown before execution with parameter preview
 - Approve/Deny buttons. Deny allows the user to explain why.
 - After approval: same card transitions to running → success/error state
@@ -329,6 +351,7 @@ Tool calls render as compact cards within the message flow, not separate panels 
 ### Citation & source display
 
 When a response draws from files or workspace memory, citations are inline:
+
 - Superscript reference numbers in the text [1] [2]
 - Clicking a citation scrolls to a source card at the bottom of the message
 - Source card shows: file name, snippet preview, and link to full file
@@ -347,22 +370,22 @@ These tokens are already established in the codebase. All new features must use 
 
 ### Colors
 
-| Token        | Value         | Usage                              |
-|--------------|---------------|-------------------------------------|
-| Base         | neutral-950   | Page background                     |
-| Surface      | neutral-900   | Cards, sidebar, elevated surfaces   |
-| Surface alt  | neutral-800   | Input backgrounds, hover states     |
-| Border       | neutral-700   | Borders, dividers                   |
-| Text muted   | neutral-400   | Secondary text, placeholders        |
-| Text body    | neutral-300   | Body text                           |
-| Text heading | white         | Headings, primary labels            |
-| Accent       | violet-600    | Primary actions, selected states    |
-| Accent hover | violet-500    | Hover on primary actions            |
-| Accent glow  | violet-800/900| Selected model mode glow, focus rings |
-| Error        | red-400       | Error text, icons                   |
-| Error bg     | red-950       | Error banner backgrounds            |
-| Success      | green-400     | Success text, icons                 |
-| Success bg   | green-900     | Success banner backgrounds          |
+| Token        | Value          | Usage                                 |
+| ------------ | -------------- | ------------------------------------- |
+| Base         | neutral-950    | Page background                       |
+| Surface      | neutral-900    | Cards, sidebar, elevated surfaces     |
+| Surface alt  | neutral-800    | Input backgrounds, hover states       |
+| Border       | neutral-700    | Borders, dividers                     |
+| Text muted   | neutral-400    | Secondary text, placeholders          |
+| Text body    | neutral-300    | Body text                             |
+| Text heading | white          | Headings, primary labels              |
+| Accent       | violet-600     | Primary actions, selected states      |
+| Accent hover | violet-500     | Hover on primary actions              |
+| Accent glow  | violet-800/900 | Selected model mode glow, focus rings |
+| Error        | red-400        | Error text, icons                     |
+| Error bg     | red-950        | Error banner backgrounds              |
+| Success      | green-400      | Success text, icons                   |
+| Success bg   | green-900      | Success banner backgrounds            |
 
 ### Spacing & Layout
 
@@ -373,25 +396,25 @@ These tokens are already established in the codebase. All new features must use 
 
 ### Existing Components
 
-| Component | Variants                                    |
-|-----------|---------------------------------------------|
+| Component | Variants                                     |
+| --------- | -------------------------------------------- |
 | Button    | primary, secondary, ghost, icon, danger-icon |
-| Input     | Default (with label, focus ring)            |
-| Alert     | error, inline-error, success                |
+| Input     | Default (with label, focus ring)             |
+| Alert     | error, inline-error, success                 |
 
 ### New Components Needed for MVP
 
 | Component         | Purpose                                | Extends existing? |
-|-------------------|----------------------------------------|--------------------|
-| Sidebar           | Collapsible nav with sections          | New                |
-| WorkspaceSwitcher | Dropdown in top bar                    | New                |
-| ConversationItem  | Sidebar list item with title + preview | New                |
-| MemoryCard        | Key-value card with edit/delete        | New                |
-| FileItem          | File list item with type icon          | New                |
-| ToolCallCard      | Inline expandable card in chat         | New                |
-| SkeletonLoader    | Shimmer placeholder for loading states | New                |
-| EmptyState        | Reusable: icon + message + action      | New                |
-| SearchResult      | Grouped result with highlighted match  | New                |
+| ----------------- | -------------------------------------- | ----------------- |
+| Sidebar           | Collapsible nav with sections          | New               |
+| WorkspaceSwitcher | Dropdown in top bar                    | New               |
+| ConversationItem  | Sidebar list item with title + preview | New               |
+| MemoryCard        | Key-value card with edit/delete        | New               |
+| FileItem          | File list item with type icon          | New               |
+| ToolCallCard      | Inline expandable card in chat         | New               |
+| SkeletonLoader    | Shimmer placeholder for loading states | New               |
+| EmptyState        | Reusable: icon + message + action      | New               |
+| SearchResult      | Grouped result with highlighted match  | New               |
 
 All new components should use the existing color tokens, `rounded-lg` radius, and Tailwind spacing scale.
 
@@ -399,11 +422,11 @@ All new components should use the existing color tokens, `rounded-lg` radius, an
 
 ### Breakpoints
 
-| Viewport     | Width       | Sidebar                   | Model selector       | Chat area             |
-|-------------|-------------|---------------------------|----------------------|-----------------------|
-| Mobile      | < 768px     | Slide-over drawer (hidden) | Single dropdown      | Full width            |
-| Tablet      | 768–1024px  | Icon rail (expandable)    | Compact segmented    | Wider margins         |
-| Desktop     | > 1024px    | Full sidebar expanded     | Full segmented bar   | Constrained max-w-3xl |
+| Viewport | Width      | Sidebar                    | Model selector     | Chat area             |
+| -------- | ---------- | -------------------------- | ------------------ | --------------------- |
+| Mobile   | < 768px    | Slide-over drawer (hidden) | Single dropdown    | Full width            |
+| Tablet   | 768–1024px | Icon rail (expandable)     | Compact segmented  | Wider margins         |
+| Desktop  | > 1024px   | Full sidebar expanded      | Full segmented bar | Constrained max-w-3xl |
 
 ### Mobile-specific behaviors
 
@@ -516,6 +539,7 @@ All new components should use the existing color tokens, `rounded-lg` radius, an
 ## Non-goals
 
 This project is not trying to:
+
 - be a frontier model lab
 - support every model under the sun
 - build a full autonomous agent platform in v1
@@ -526,6 +550,7 @@ This project is not trying to:
 We win if users come back because the product becomes their working context.
 
 That means:
+
 - they trust it with their files
 - they rely on its memory
 - they use it across sessions

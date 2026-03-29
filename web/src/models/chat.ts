@@ -1,5 +1,9 @@
 import { signal, computed, createModel } from "@preact/signals";
-import { getAgentConnection, closeAgentConnection, type AgentConnection } from "../lib/agent-client";
+import {
+  getAgentConnection,
+  closeAgentConnection,
+  type AgentConnection,
+} from "../lib/agent-client";
 import { API_BASE_URL } from "../lib/constants";
 
 export type Conversation = {
@@ -38,10 +42,12 @@ export const ChatModel = createModel(() => {
 
   const agent = signal<AgentConnection | null>(null);
 
-  const canSend = computed(() => input.value.trim().length > 0 && !streaming.value && connected.value);
+  const canSend = computed(
+    () => input.value.trim().length > 0 && !streaming.value && connected.value,
+  );
 
-  const activeConversation = computed(() =>
-    conversations.value.find((c) => c.id === activeConversationId.value) ?? null,
+  const activeConversation = computed(
+    () => conversations.value.find((c) => c.id === activeConversationId.value) ?? null,
   );
 
   const fetchModels = async () => {
@@ -169,7 +175,10 @@ export const ChatModel = createModel(() => {
         onChunk: (chunk) => {
           const msgs = messages.value;
           const last = msgs[msgs.length - 1];
-          messages.value = [...msgs.slice(0, -1), { ...last, content: last.content + (chunk as string) }];
+          messages.value = [
+            ...msgs.slice(0, -1),
+            { ...last, content: last.content + (chunk as string) },
+          ];
         },
         onDone: (result) => {
           // Update assistant message ID from server
@@ -182,9 +191,12 @@ export const ChatModel = createModel(() => {
           streaming.value = false;
 
           // Refresh conversation list to get updated titles/timestamps
-          agent.value?.call<Conversation[]>("listConversations").then((convos) => {
-            conversations.value = convos;
-          }).catch(() => {});
+          agent.value
+            ?.call<Conversation[]>("listConversations")
+            .then((convos) => {
+              conversations.value = convos;
+            })
+            .catch(() => {});
         },
         onError: (err) => {
           error.value = err;
