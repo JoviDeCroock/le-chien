@@ -9,6 +9,7 @@
     "audit:contrast": "node ./scripts/audit-contrast.mjs"
   },
   "dependencies": {
+    "@polar-sh/better-auth": "^1.6.4",
     "@preact/signals": "^2.7.0",
     "@tailwindcss/vite": "^4.1.18",
     "agents": "^0.8.7",

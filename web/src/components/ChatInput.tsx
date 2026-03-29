@@ -10,6 +10,7 @@ export function ChatInput({
   canSend,
   streaming,
   disabled,
+  placeholder,
   textareaRef,
 }: {
   value: string;
@@ -19,6 +20,7 @@ export function ChatInput({
   canSend: boolean;
   streaming: boolean;
   disabled?: boolean;
+  placeholder?: string;
   textareaRef?: { current: HTMLTextAreaElement | null };
 }) {
   const fallbackRef = useRef<HTMLTextAreaElement>(null);
@@ -55,7 +57,7 @@ export function ChatInput({
             value={value}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder="Send a message..."
+            placeholder={placeholder ?? "Send a message..."}
             rows={1}
             class="flex-1 bg-transparent text-sm text-white placeholder-neutral-400 resize-none outline-none leading-relaxed py-1"
             style="max-height: 168px;"

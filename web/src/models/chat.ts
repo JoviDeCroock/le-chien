@@ -4,6 +4,7 @@ import {
   closeAgentConnection,
   type AgentConnection,
 } from "../lib/agent-client";
+import { authClient } from "../lib/auth";
 import { API_BASE_URL } from "../lib/constants";
 
 export type Conversation = {
@@ -37,6 +38,27 @@ export type ModelOption = {
   description: string;
 };
 
+export type SubscriptionStatus = {
+  plan: "free" | "pro";
+  limits: {
+    dailyMessages: number | null;
+  };
+  usage: {
+    dailyMessagesUsed: number;
+    dailyMessagesRemaining: number | null;
+    limitReached: boolean;
+    usageDate: string;
+    resetsAt: string;
+  };
+};
+
+type SendMessageResult = {
+  messageId?: string;
+  blocked?: boolean;
+  reason?: "daily_limit";
+  subscription?: SubscriptionStatus;
+};
+
 export const ChatModel = createModel(() => {
   const conversations = signal<Conversation[]>([]);
   const activeConversationId = signal<string | null>(null);
@@ -48,11 +70,55 @@ export const ChatModel = createModel(() => {
   const models = signal<ModelOption[]>([]);
   const modelsLoaded = signal(false);
   const connected = signal(false);
+  const subscription = signal<SubscriptionStatus | null>(null);
+  const checkoutPending = signal(false);
 
   const agent = signal<AgentConnection | null>(null);
+  let subscriptionResetTimer: number | null = null;
+
+  function clearSubscriptionResetTimer() {
+    if (subscriptionResetTimer !== null && typeof window !== "undefined") {
+      window.clearTimeout(subscriptionResetTimer);
+      subscriptionResetTimer = null;
+    }
+  }
+
+  function scheduleSubscriptionRefresh(status: SubscriptionStatus) {
+    clearSubscriptionResetTimer();
+
+    if (typeof window === "undefined" || status.plan !== "free" || !status.usage.limitReached) {
+      return;
+    }
+
+    const delay = new Date(status.usage.resetsAt).getTime() - Date.now() + 1000;
+    if (delay <= 0) {
+      void refreshSubscription();
+      return;
+    }
+
+    subscriptionResetTimer = window.setTimeout(() => {
+      void refreshSubscription();
+    }, delay);
+  }
+
+  function setSubscription(status: SubscriptionStatus | null) {
+    subscription.value = status;
+
+    if (status) {
+      scheduleSubscriptionRefresh(status);
+      return;
+    }
+
+    clearSubscriptionResetTimer();
+  }
+
+  const inputLocked = computed(
+    () => subscription.value?.plan === "free" && subscription.value.usage.limitReached,
+  );
 
   const canSend = computed(
-    () => input.value.trim().length > 0 && !streaming.value && connected.value,
+    () =>
+      input.value.trim().length > 0 && !streaming.value && connected.value && !inputLocked.value,
   );
 
   const activeConversation = computed(
@@ -71,6 +137,16 @@ export const ChatModel = createModel(() => {
     }
   };
 
+  const refreshSubscription = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/subscription`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load subscription");
+      setSubscription((await res.json()) as SubscriptionStatus);
+    } catch {
+      setSubscription(null);
+    }
+  };
+
   const connect = async () => {
     if (agent.value) return;
     const conn = getAgentConnection();
@@ -85,15 +161,33 @@ export const ChatModel = createModel(() => {
       // Load conversations once connected
       const convos = await conn.call<Conversation[]>("listConversations");
       conversations.value = convos;
+      await refreshSubscription();
     } catch {
       // Will retry on next interaction
     }
   };
 
   const disconnect = () => {
+    clearSubscriptionResetTimer();
     closeAgentConnection();
     agent.value = null;
     connected.value = false;
+    subscription.value = null;
+  };
+
+  const startCheckout = async () => {
+    if (checkoutPending.value) return;
+
+    checkoutPending.value = true;
+    error.value = null;
+
+    try {
+      await authClient.checkout({ slug: "pro" });
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : "Failed to start checkout";
+    } finally {
+      checkoutPending.value = false;
+    }
   };
 
   const selectConversation = async (conversationId: string) => {
@@ -199,6 +293,8 @@ export const ChatModel = createModel(() => {
       content: "",
       created_at: Math.floor(Date.now() / 1000),
     };
+    const optimisticUserMessageId = userMessage.id;
+    const optimisticAssistantMessageId = assistantMessage.id;
 
     messages.value = [...messages.value, userMessage, assistantMessage];
     input.value = "";
@@ -247,8 +343,22 @@ export const ChatModel = createModel(() => {
           ];
         },
         onDone: (result) => {
-          // Update assistant message ID from server
-          const meta = result as { messageId?: string } | undefined;
+          const meta = result as SendMessageResult | undefined;
+
+          if (meta?.subscription) {
+            setSubscription(meta.subscription);
+          }
+
+          if (meta?.blocked) {
+            messages.value = messages.value.filter(
+              (message) =>
+                message.id !== optimisticUserMessageId &&
+                message.id !== optimisticAssistantMessageId,
+            );
+            streaming.value = false;
+            return;
+          }
+
           if (meta?.messageId) {
             const msgs = messages.value;
             const last = msgs[msgs.length - 1];
@@ -305,10 +415,15 @@ export const ChatModel = createModel(() => {
     models,
     modelsLoaded,
     connected,
+    subscription,
+    inputLocked,
+    checkoutPending,
     canSend,
     fetchModels,
+    refreshSubscription,
     connect,
     disconnect,
+    startCheckout,
     selectConversation,
     createConversation,
     deleteConversation,

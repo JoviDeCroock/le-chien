@@ -1,17 +1,66 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 
-type Plan = "free" | "pro";
+export type Plan = "free" | "pro";
+
+type PlanLimits = {
+  dailyMessages: number | null;
+};
+
+export type SubscriptionSnapshot = {
+  plan: Plan;
+  limits: PlanLimits;
+  usage: {
+    dailyMessagesUsed: number;
+    dailyMessagesRemaining: number | null;
+    limitReached: boolean;
+    usageDate: string;
+    resetsAt: string;
+  };
+};
 
 export const PLAN_LIMITS = {
   free: {
-    // Add your free plan limits here
+    dailyMessages: 20,
   },
   pro: {
-    // Add your pro plan limits here
+    dailyMessages: null,
   },
 } as const;
+
+export function getUsageDate(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
+export function getUsageResetAt(date = new Date()) {
+  const resetAt = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1),
+  );
+  return resetAt.toISOString();
+}
+
+export function buildSubscriptionSnapshot(
+  plan: Plan,
+  dailyMessagesUsed: number,
+  date = new Date(),
+): SubscriptionSnapshot {
+  const limits = PLAN_LIMITS[plan];
+  const dailyMessagesRemaining =
+    limits.dailyMessages === null ? null : Math.max(limits.dailyMessages - dailyMessagesUsed, 0);
+
+  return {
+    plan,
+    limits,
+    usage: {
+      dailyMessagesUsed,
+      dailyMessagesRemaining,
+      limitReached: limits.dailyMessages !== null && dailyMessagesUsed >= limits.dailyMessages,
+      usageDate: getUsageDate(date),
+      resetsAt: getUsageResetAt(date),
+    },
+  };
+}
 
 export async function getUserPlan(
   db: DrizzleD1Database<typeof schema>,
@@ -25,4 +74,77 @@ export async function getUserPlan(
 
   if (!row || row.plan !== "pro") return "free";
   return "pro";
+}
+
+export async function getDailyMessageUsage(
+  db: DrizzleD1Database<typeof schema>,
+  userId: string,
+  usageDate = getUsageDate(),
+) {
+  const row = await db
+    .select({ messageCount: schema.dailyMessageUsage.messageCount })
+    .from(schema.dailyMessageUsage)
+    .where(
+      and(
+        eq(schema.dailyMessageUsage.userId, userId),
+        eq(schema.dailyMessageUsage.usageDate, usageDate),
+      ),
+    )
+    .get();
+
+  return row?.messageCount ?? 0;
+}
+
+export async function getSubscriptionSnapshot(
+  db: DrizzleD1Database<typeof schema>,
+  userId: string,
+  date = new Date(),
+): Promise<SubscriptionSnapshot> {
+  const plan = await getUserPlan(db, userId);
+  const dailyMessagesUsed =
+    plan === "free" ? await getDailyMessageUsage(db, userId, getUsageDate(date)) : 0;
+
+  return buildSubscriptionSnapshot(plan, dailyMessagesUsed, date);
+}
+
+export async function tryIncrementDailyMessageUsage(
+  db: D1Database,
+  userId: string,
+  usageDate: string,
+) {
+  const now = Math.floor(Date.now() / 1000);
+  const row = await db
+    .prepare(
+      `
+        INSERT INTO daily_message_usage (id, user_id, usage_date, message_count, created_at, updated_at)
+        VALUES (?, ?, ?, 1, ?, ?)
+        ON CONFLICT(user_id, usage_date) DO UPDATE SET
+          message_count = message_count + 1,
+          updated_at = excluded.updated_at
+        WHERE message_count < ?
+        RETURNING message_count
+      `,
+    )
+    .bind(crypto.randomUUID(), userId, usageDate, now, now, PLAN_LIMITS.free.dailyMessages)
+    .first<{ message_count: number }>();
+
+  return row?.message_count ?? null;
+}
+
+export async function decrementDailyMessageUsage(
+  db: D1Database,
+  userId: string,
+  usageDate: string,
+) {
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .prepare(
+      `
+        UPDATE daily_message_usage
+        SET message_count = MAX(message_count - 1, 0), updated_at = ?
+        WHERE user_id = ? AND usage_date = ?
+      `,
+    )
+    .bind(now, userId, usageDate)
+    .run();
 }

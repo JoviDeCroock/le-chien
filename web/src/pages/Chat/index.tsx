@@ -16,6 +16,7 @@ import { ChatBubble } from "../../components/ChatBubble";
 import { ChatInput } from "../../components/ChatInput";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
+import { UpgradeBanner } from "../../components/UpgradeBanner";
 
 export function Chat() {
   const auth = useModel(AuthModel);
@@ -124,6 +125,18 @@ export function Chat() {
   }
 
   const hasMessages = chat.messages.value.length > 0;
+  const limitBannerMessage =
+    chat.subscription.value?.plan === "free" &&
+    chat.subscription.value.limits.dailyMessages !== null &&
+    chat.subscription.value.usage.limitReached
+      ? `You've used your ${chat.subscription.value.limits.dailyMessages} free messages for today. Upgrade to Pro for unlimited.`
+      : null;
+  const composerDisabled = !auth.authenticated.value || chat.inputLocked.value;
+  const composerPlaceholder = !auth.authenticated.value
+    ? "Sign in to start chatting..."
+    : chat.inputLocked.value
+      ? "Free limit reached for today. Upgrade or come back tomorrow."
+      : "Send a message...";
 
   return (
     <PageShell>
@@ -210,6 +223,14 @@ export function Chat() {
 
         {chat.error.value && <ErrorBanner message={chat.error.value} />}
 
+        {limitBannerMessage && (
+          <UpgradeBanner
+            message={limitBannerMessage}
+            onUpgrade={() => chat.startCheckout()}
+            loading={chat.checkoutPending.value}
+          />
+        )}
+
         <ChatInput
           value={chat.input.value}
           onInput={(v) => (chat.input.value = v)}
@@ -217,7 +238,8 @@ export function Chat() {
           onStop={() => chat.stop()}
           canSend={chat.canSend.value}
           streaming={chat.streaming.value}
-          disabled={!auth.authenticated.value}
+          disabled={composerDisabled}
+          placeholder={composerPlaceholder}
           textareaRef={composerRef}
         />
       </div>

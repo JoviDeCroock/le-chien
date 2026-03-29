@@ -119,7 +119,7 @@ app.get("/api/billing-success", async (c) => {
       },
     });
 
-  return c.redirect(`${getAppOrigin(c.env)}/billing?success=true`);
+  return c.redirect(`${getAppOrigin(c.env)}/?billing=success`);
 });
 
 // Mount BetterAuth handler
