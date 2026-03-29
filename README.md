@@ -189,3 +189,8 @@ pnpm -w run lint         # oxlint with auto-fix
 pnpm -w run format       # oxfmt write
 pnpm -w run check        # lint + format check (CI)
 ```
+
+`pnpm install` also installs a shared `pre-commit` hook.
+Commits run `lint-staged`, which applies `oxlint --fix` and `oxfmt --write`
+to staged JS/TS files and `oxfmt --write` to staged JSON/JSONC files before
+the commit is created.
