@@ -15,6 +15,12 @@ export { ChatAgent } from "./agents/chat-agent";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
+// Create auth instance once per request and store in context
+app.use("/api/*", async (c, next) => {
+  c.set("auth", createAuth(c.env));
+  await next();
+});
+
 // Security response headers
 app.use("/api/*", async (c, next) => {
   await next();
@@ -119,8 +125,7 @@ app.get("/api/billing-success", async (c) => {
 // Mount BetterAuth handler
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
   try {
-    const auth = createAuth(c.env);
-    return auth.handler(c.req.raw);
+    return c.get("auth").handler(c.req.raw);
   } catch (error) {
     console.error("Error in auth handler:", error);
     return c.json({ error: "Internal Server Error" }, 500);
@@ -129,8 +134,7 @@ app.on(["GET", "POST"], "/api/auth/*", (c) => {
 
 // Session middleware for protected routes
 app.use("/api/v1/*", async (c, next) => {
-  const auth = createAuth(c.env);
-  const session = await auth.api.getSession({
+  const session = await c.get("auth").api.getSession({
     headers: c.req.raw.headers,
   });
 
