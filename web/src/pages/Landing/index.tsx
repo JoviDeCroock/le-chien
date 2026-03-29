@@ -153,7 +153,6 @@ export function Landing() {
               <div class="absolute -top-2.5 left-4 bg-violet-600 text-white text-xs font-medium px-2 py-0.5 rounded">
                 Pro
               </div>
-              <div class="text-sm font-medium text-white mb-1">Pro</div>
               <div class="text-2xl font-bold text-white mb-3">
                 €12<span class="text-sm font-normal text-neutral-500">/mo</span>
               </div>
