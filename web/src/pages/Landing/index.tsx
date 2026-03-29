@@ -115,7 +115,7 @@ export function Landing() {
               ],
             ].map(([title, desc]) => (
               <div key={title}>
-                <h3 class="text-sm font-medium text-white mb-1">{title}</h3>
+                <h3 class="text-base font-semibold text-white mb-1">{title}</h3>
                 <p class="text-sm text-neutral-400 leading-relaxed">{desc}</p>
               </div>
             ))}
