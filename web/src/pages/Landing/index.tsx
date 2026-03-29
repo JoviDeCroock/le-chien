@@ -3,27 +3,6 @@ import { useLocation } from "preact-iso";
 import { useModel } from "@preact/signals";
 import { AuthModel } from "../../models/auth";
 
-const EU_FLAG = (
-  <svg width="20" height="14" viewBox="0 0 20 14" fill="none" aria-hidden="true">
-    <rect width="20" height="14" rx="2" fill="#003399" />
-    <g transform="translate(10, 7)">
-      {Array.from({ length: 12 }).map((_, i) => {
-        const angle = (i * 30 - 90) * (Math.PI / 180);
-        const cx = Math.cos(angle) * 5;
-        const cy = Math.sin(angle) * 5;
-        return (
-          <polygon
-            key={i}
-            points="0,-0.8 0.2,-0.25 0.76,-0.25 0.32,0.1 0.48,0.65 0,-0.05 -0.48,0.65 -0.32,0.1 -0.76,-0.25 -0.2,-0.25"
-            fill="#FFCC00"
-            transform={`translate(${cx}, ${cy})`}
-          />
-        );
-      })}
-    </g>
-  </svg>
-);
-
 function PricingFeature({ children }: { children: string }) {
   return (
     <li class="flex items-start gap-2">
@@ -43,15 +22,6 @@ function PricingFeature({ children }: { children: string }) {
       </svg>
       <span>{children}</span>
     </li>
-  );
-}
-
-function TrustSignal({ label }: { label: string }) {
-  return (
-    <span class="inline-flex items-center gap-1.5 text-xs font-medium tracking-wide text-neutral-400 uppercase">
-      <span class="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-      {label}
-    </span>
   );
 }
 
@@ -85,22 +55,14 @@ export function Landing() {
 
       {/* Main content */}
       <div class="max-w-2xl mx-auto px-6 pt-20 pb-16 sm:pt-32 sm:pb-24">
-        {/* Sovereignty badge */}
-        <div class="flex items-center gap-2 mb-6 animate-fade-in">
-          {EU_FLAG}
-          <span class="text-xs font-medium tracking-wide text-neutral-400 uppercase">
-            AI inference &amp; data stored in the EU
-          </span>
-        </div>
-
         {/* Headline */}
         <h1
           class="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight mb-4 text-balance animate-fade-in"
           style={{ letterSpacing: "-0.03em", animationDelay: "50ms" }}
         >
-          Your AI conversations
+          Open-model AI chat
           <br />
-          stay in Europe.
+          that works for you.
         </h1>
 
         {/* Subheadline */}
@@ -108,8 +70,8 @@ export function Landing() {
           class="text-base sm:text-lg text-neutral-400 leading-relaxed mb-10 max-w-lg animate-fade-in"
           style={{ animationDelay: "100ms" }}
         >
-          Open-model AI chat with persistent memory, file retrieval, and workspaces. Runs on
-          European infrastructure. No data leaves the EU.
+          Streaming chat with persistent memory, file retrieval, and workspaces. Powered by curated
+          open models.
         </p>
 
         {/* CTA */}
@@ -120,16 +82,6 @@ export function Landing() {
         >
           Get started — free
         </a>
-
-        {/* Trust signals */}
-        <div
-          class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-x-6 sm:gap-y-2 mt-8 animate-fade-in"
-          style={{ animationDelay: "200ms" }}
-        >
-          <TrustSignal label="EU-hosted inference" />
-          <TrustSignal label="Open models" />
-          <TrustSignal label="End-to-end encrypted" />
-        </div>
       </div>
 
       {/* What you get — not a feature grid, just a tight list */}
@@ -148,11 +100,11 @@ export function Landing() {
                 "Persistent memory",
                 "Save context across conversations. Your assistant remembers what matters.",
               ],
-              [
+              false && [
                 "File retrieval",
                 "Upload documents, reference them in chat. Answers grounded in your data.",
               ],
-              [
+              false && [
                 "Workspaces",
                 "Personal or shared. Everything — conversations, memory, files — scoped to the workspace.",
               ],
@@ -160,16 +112,14 @@ export function Landing() {
                 "Tool use",
                 "Your assistant can search, retrieve, and act. Every action is inspectable.",
               ],
-              [
-                "Sovereignty",
-                "AI inference runs in EU Cloudflare regions. Conversations stored in EU D1 databases. No US data transfer.",
-              ],
-            ].map(([title, desc]) => (
-              <div key={title}>
-                <h3 class="text-xl font-semibold text-white mb-1.5">{title}</h3>
-                <p class="text-sm text-neutral-400 leading-relaxed max-w-xs">{desc}</p>
-              </div>
-            ))}
+            ]
+              .filter(Boolean)
+              .map(([title, desc]: any) => (
+                <div key={title}>
+                  <h3 class="text-xl font-semibold text-white mb-1.5">{title}</h3>
+                  <p class="text-sm text-neutral-400 leading-relaxed max-w-xs">{desc}</p>
+                </div>
+              ))}
           </div>
         </div>
       </section>
