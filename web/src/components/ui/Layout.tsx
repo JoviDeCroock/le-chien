@@ -42,7 +42,7 @@ export function PageLoader({ label = "Loading" }: { label?: string }) {
     <div class="h-screen bg-neutral-950 flex items-center justify-center">
       <div class="flex items-center gap-3">
         <div class="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
-        <span class="text-neutral-500 text-sm tracking-wide">{label}</span>
+        <span class="text-neutral-400 text-sm tracking-wide">{label}</span>
       </div>
     </div>
   );

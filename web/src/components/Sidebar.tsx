@@ -36,7 +36,7 @@ export function Sidebar({ open, onClose, conversations, activeId, onSelect, onNe
         {/* List */}
         <div class="flex-1 overflow-y-auto py-1" data-sidebar-list="true">
           {conversations.length === 0 ? (
-            <p class="text-xs text-neutral-600 px-3 py-4 text-center">No conversations yet</p>
+            <p class="text-xs text-neutral-400 px-3 py-4 text-center">No conversations yet</p>
           ) : (
             conversations.map((c) => (
               <ConversationItem
@@ -127,7 +127,7 @@ function ConversationItem({
           e.stopPropagation();
           onDelete();
         }}
-        class="shrink-0 p-0.5 rounded text-neutral-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+        class="shrink-0 p-0.5 rounded text-neutral-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
         title="Delete"
       >
         <CloseIcon size={12} />
