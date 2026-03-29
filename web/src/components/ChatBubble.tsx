@@ -9,7 +9,7 @@ export function ChatBubble({ message, streaming }: { message: Message; streaming
   const hasToolCalls = message.tool_calls && message.tool_calls.length > 0;
 
   return (
-    <div class={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
+    <div class={`flex ${isUser ? "justify-end" : "justify-start"} mb-3 animate-fade-in`}>
       <div
         class={`
           max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed
