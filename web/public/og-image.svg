@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0a0a0a"/>
+  <!-- Dog icon -->
+  <g transform="translate(520, 140) scale(3.5)" fill="#7c3aed">
+    <circle cx="16" cy="12" r="5"/>
+    <path d="M11 12 L8 5 L13 9 Z"/>
+    <path d="M21 12 L24 5 L19 9 Z"/>
+    <ellipse cx="16" cy="21" rx="6" ry="4"/>
+    <rect x="11" y="23" width="2.5" height="4" rx="1"/>
+    <rect x="18.5" y="23" width="2.5" height="4" rx="1"/>
+    <path d="M22 19 Q26 14 25 11" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" fill="none"/>
+  </g>
+  <g transform="translate(520, 140) scale(3.5)">
+    <circle cx="14" cy="11.5" r="1" fill="#0a0a0a"/>
+    <circle cx="18" cy="11.5" r="1" fill="#0a0a0a"/>
+    <ellipse cx="16" cy="14" rx="1.2" ry="0.8" fill="#0a0a0a"/>
+  </g>
+  <!-- Brand name -->
+  <text x="600" y="480" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="48" fill="white" letter-spacing="-0.03em">le chien</text>
+  <!-- Tagline -->
+  <text x="600" y="530" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="24" fill="#a3a3a3">AI workspace — EU hosted</text>
+</svg>
