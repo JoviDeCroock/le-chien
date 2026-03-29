@@ -50,11 +50,17 @@ export const MODELS: Record<ModelId, ModelSpec> = {
 
 export const DEFAULT_MODEL: ModelId = "glm-4.7-flash";
 
-export function getModel(env: { AI: Ai }, modelId: ModelId): LanguageModel {
+export function getModel(
+  env: { AI: Ai },
+  modelId: ModelId,
+  options?: { sessionAffinity?: string },
+): LanguageModel {
   const spec = MODELS[modelId];
   if (!spec) throw new Error(`Unknown model: ${modelId}`);
   const workersai = createWorkersAI({ binding: env.AI });
-  return workersai(spec.workersAiId);
+  return workersai(spec.workersAiId, {
+    sessionAffinity: options?.sessionAffinity,
+  });
 }
 
 export function listModels() {

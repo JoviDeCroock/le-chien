@@ -137,7 +137,9 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       ORDER BY created_at ASC
     `;
 
-    const aiModel = getModel(this.env, selectedModel);
+    const aiModel = getModel(this.env, selectedModel, {
+      sessionAffinity: conversationId,
+    });
 
     // Stream AI response
     let fullContent = "";
