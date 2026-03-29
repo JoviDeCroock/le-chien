@@ -2,15 +2,6 @@
 
 ## Design
 
-### Create DESIGN.md via /design-consultation
-**Priority:** Medium (before building new components)
-**What:** Run `/design-consultation` to produce a full DESIGN.md with typography, motion, spacing rationale, and component patterns.
-**Why:** The plan has minimal design tokens documented from the existing codebase, but a full design system prevents drift as new features are built and the team scales.
-**Pros:** Single source of truth for all design decisions. New contributors can ship consistent UI without guessing.
-**Cons:** ~30 min of CC time. Not blocking any current implementation.
-**Context:** The vision_mvp.md plan now documents existing color tokens, spacing, and component inventory. DESIGN.md would formalize typography choices, motion principles, and component API patterns.
-**Depends on:** Nothing. Can be done anytime before building new components.
-
 ### WCAG contrast audit on existing color tokens
 **Priority:** Medium (pre-launch)
 **What:** Verify contrast ratios for all text/background combinations in the existing palette (neutral-300 on neutral-950, neutral-400 on neutral-900, violet-600 on neutral-800, etc.).
