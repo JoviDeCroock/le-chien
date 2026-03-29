@@ -32,8 +32,16 @@ export function AuthForm({ onSuccess, compact = false }: AuthFormProps) {
   }
 
   return (
-    <div class={compact ? "w-full" : "min-h-screen flex items-center justify-center px-4 pt-16"}>
+    <div class={compact ? "w-full" : "min-h-screen flex flex-col items-center justify-center px-4"}>
       <div class="w-full max-w-md mx-auto">
+        {!compact && (
+          <a
+            href="/"
+            class="block text-white text-base font-bold tracking-tight mb-8 hover:text-neutral-300 transition-colors"
+          >
+            le&nbsp;chien
+          </a>
+        )}
         <TabToggle
           tabs={TABS}
           active={form.tab.value}
