@@ -2,7 +2,7 @@
 
 ## Design
 
-- [ ] **FINDING-007 (polish):** Add visual markers (checkmarks or bullets) to pricing feature lists for better scannability. Deferred from /design-review on feat/landing-page, 2026-03-29.
+- [x] **FINDING-007 (polish):** Add visual markers (checkmarks or bullets) to pricing feature lists for better scannability. Fixed by /design-review on main, 2026-03-29.
 
 ## Engineering
 
