@@ -1,8 +1,17 @@
 import { Agent, callable, type StreamingResponse } from "agents";
 import { streamText, stepCountIs } from "ai";
+import { drizzle } from "drizzle-orm/d1";
+import * as schema from "../db/schema";
 import { getModel, MODELS, DEFAULT_MODEL } from "../lib/models";
 import type { ModelId } from "../lib/models";
 import { createTools } from "../lib/tools";
+import {
+  buildSubscriptionSnapshot,
+  decrementDailyMessageUsage,
+  getSubscriptionSnapshot,
+  getUsageDate,
+  tryIncrementDailyMessageUsage,
+} from "../lib/plans";
 
 type Conversation = {
   id: string;
@@ -116,6 +125,9 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     content: string,
     model?: string,
   ) {
+    const db = drizzle(this.env.DB, { schema });
+    const userId = this.name;
+
     // Verify conversation exists
     const conversations = this.sql<Conversation>`
       SELECT id, model FROM conversations WHERE id = ${conversationId}
@@ -129,22 +141,26 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     const selectedModel = (model ?? conversation.model) as ModelId;
     const userMessageId = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000);
+    const usageDate = getUsageDate();
+    let subscription = await getSubscriptionSnapshot(db, userId);
+    let usageReserved = false;
 
-    // Save user message
-    this.sql`
-      INSERT INTO messages (id, conversation_id, role, content, created_at)
-      VALUES (${userMessageId}, ${conversationId}, ${"user"}, ${content}, ${now})
-    `;
+    if (subscription.plan === "free") {
+      if (subscription.usage.limitReached) {
+        stream.end({ blocked: true, reason: "daily_limit", subscription });
+        return;
+      }
 
-    // Update conversation timestamp
-    this.sql`UPDATE conversations SET updated_at = ${now} WHERE id = ${conversationId}`;
+      const usedCount = await tryIncrementDailyMessageUsage(this.env.DB, userId, usageDate);
+      if (usedCount === null) {
+        subscription = await getSubscriptionSnapshot(db, userId);
+        stream.end({ blocked: true, reason: "daily_limit", subscription });
+        return;
+      }
 
-    // Load conversation history for context
-    const history = this.sql<{ role: string; content: string }>`
-      SELECT role, content FROM messages
-      WHERE conversation_id = ${conversationId}
-      ORDER BY created_at ASC
-    `;
+      usageReserved = true;
+      subscription = buildSubscriptionSnapshot("free", usedCount);
+    }
 
     const aiModel = getModel(this.env, selectedModel, {
       sessionAffinity: conversationId,
@@ -158,6 +174,19 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     const assistantMessageId = crypto.randomUUID();
 
     try {
+      this.sql`
+        INSERT INTO messages (id, conversation_id, role, content, created_at)
+        VALUES (${userMessageId}, ${conversationId}, ${"user"}, ${content}, ${now})
+      `;
+
+      this.sql`UPDATE conversations SET updated_at = ${now} WHERE id = ${conversationId}`;
+
+      const history = this.sql<{ role: string; content: string }>`
+        SELECT role, content FROM messages
+        WHERE conversation_id = ${conversationId}
+        ORDER BY created_at ASC
+      `;
+
       const result = streamText({
         model: aiModel,
         system:
@@ -219,8 +248,11 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
           .sql`UPDATE conversations SET title = ${title}, updated_at = ${finishedAt} WHERE id = ${conversationId}`;
       }
 
-      stream.end({ messageId: assistantMessageId });
+      stream.end({ messageId: assistantMessageId, subscription });
     } catch (err) {
+      if (usageReserved) {
+        await decrementDailyMessageUsage(this.env.DB, userId, usageDate);
+      }
       stream.error(err instanceof Error ? err.message : "Stream failed");
     }
   }

@@ -57,7 +57,7 @@ function buildAuth(env: Env) {
             // This success URL is more to support local-dev so we don't have to only use
             // webhooks. All though local webhooks are now possible with https://polar.sh/docs/integrate/webhooks/locally
             successUrl: `${apiOrigin}/api/billing-success?checkout_id={CHECKOUT_ID}`,
-            returnUrl: `${appOrigin}/billing`,
+            returnUrl: `${appOrigin}/`,
           }),
           portal(),
           webhooks({

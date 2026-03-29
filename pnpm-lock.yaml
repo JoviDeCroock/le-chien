@@ -66,6 +66,9 @@ importers:
 
   web:
     dependencies:
+      '@polar-sh/better-auth':
+        specifier: ^1.6.4
+        version: 1.8.0(@polar-sh/sdk@0.42.5)(@stripe/react-stripe-js@4.0.2(@stripe/stripe-js@7.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@stripe/stripe-js@7.9.0)(better-auth@1.4.18(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260329.1)(@opentelemetry/api@1.9.0)(kysely@0.28.11))(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react-is@19.2.4)(react@19.2.4)(redux@5.0.1)(zod@4.3.6)
       '@preact/signals':
         specifier: ^2.7.0
         version: 2.7.0(preact@10.28.3)
