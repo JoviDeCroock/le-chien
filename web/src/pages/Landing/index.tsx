@@ -19,6 +19,28 @@ const EU_FLAG = (
   </svg>
 );
 
+function PricingFeature({ children }: { children: string }) {
+  return (
+    <li class="flex items-start gap-2">
+      <svg
+        class="w-4 h-4 text-neutral-500 shrink-0 mt-0.5"
+        viewBox="0 0 16 16"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M3 8.5L6.5 12L13 4"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <span>{children}</span>
+    </li>
+  );
+}
+
 function TrustSignal({ label }: { label: string }) {
   return (
     <span class="inline-flex items-center gap-1.5 text-xs font-medium tracking-wide text-neutral-400 uppercase">
@@ -74,7 +96,7 @@ export function Landing() {
         {/* CTA */}
         <a
           href="/auth"
-          class="inline-block bg-violet-600 hover:bg-violet-500 active:scale-[0.98] text-white text-sm font-medium px-6 py-3 rounded-lg transition-all duration-150 animate-fade-in"
+          class="inline-block bg-violet-600 hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(124,58,237,0.3)] active:scale-[0.98] text-white text-sm font-medium px-6 py-3 rounded-lg transition-all duration-150 animate-fade-in"
           style={{ animationDelay: "150ms" }}
         >
           Get started — free
@@ -141,45 +163,45 @@ export function Landing() {
           </h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {/* Free */}
-            <div class="border border-neutral-800 rounded-lg p-6 sm:p-8">
+            <div class="border border-neutral-800 hover:border-neutral-700 rounded-lg p-6 sm:p-8 transition-colors">
               <div class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">
                 Free
               </div>
-              <div class="text-2xl font-bold text-white mb-3 tracking-tight">
+              <div class="text-2xl font-bold text-white mb-4 tracking-tight">
                 €0<span class="text-sm font-normal text-neutral-500">/mo</span>
               </div>
-              <ul class="space-y-2 text-sm text-neutral-400">
-                <li>Daily message limit</li>
-                <li>All model modes</li>
-                <li>Persistent memory</li>
-                <li>1 personal workspace</li>
+              <ul class="space-y-2.5 text-sm text-neutral-400">
+                <PricingFeature>Daily message limit</PricingFeature>
+                <PricingFeature>All model modes</PricingFeature>
+                <PricingFeature>Persistent memory</PricingFeature>
+                <PricingFeature>1 personal workspace</PricingFeature>
               </ul>
               <a
                 href="/auth"
-                class="block text-center mt-6 border border-neutral-700 hover:border-neutral-500 text-white text-sm font-medium px-4 py-3 rounded-lg transition-colors"
+                class="block text-center mt-6 border border-neutral-700 hover:border-neutral-500 active:scale-[0.98] text-white text-sm font-medium px-4 py-3 rounded-lg transition-all duration-150"
               >
                 Start free
               </a>
             </div>
 
             {/* Pro */}
-            <div class="border border-violet-600/40 rounded-lg p-6 sm:p-8 bg-neutral-900">
+            <div class="border border-violet-600/40 hover:border-violet-600/60 rounded-lg p-6 sm:p-8 bg-neutral-900 transition-colors">
               <div class="text-sm font-semibold text-violet-400 uppercase tracking-wide mb-2">
                 Pro
               </div>
-              <div class="text-2xl font-bold text-white mb-3 tracking-tight">
+              <div class="text-2xl font-bold text-white mb-4 tracking-tight">
                 €12<span class="text-sm font-normal text-neutral-500">/mo</span>
               </div>
-              <ul class="space-y-2 text-sm text-neutral-400">
-                <li>Unlimited messages</li>
-                <li>All model modes</li>
-                <li>File upload &amp; retrieval</li>
-                <li>Shared workspaces</li>
-                <li>Priority inference</li>
+              <ul class="space-y-2.5 text-sm text-neutral-400">
+                <PricingFeature>Unlimited messages</PricingFeature>
+                <PricingFeature>All model modes</PricingFeature>
+                <PricingFeature>File upload &amp; retrieval</PricingFeature>
+                <PricingFeature>Shared workspaces</PricingFeature>
+                <PricingFeature>Priority inference</PricingFeature>
               </ul>
               <a
                 href="/auth"
-                class="block text-center mt-6 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-3 rounded-lg transition-colors"
+                class="block text-center mt-6 bg-violet-600 hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(124,58,237,0.3)] active:scale-[0.98] text-white text-sm font-medium px-4 py-3 rounded-lg transition-all duration-150"
               >
                 Get Pro
               </a>
@@ -189,10 +211,25 @@ export function Landing() {
       </section>
 
       {/* Footer */}
-      <footer class="border-t border-neutral-800 py-8 px-6">
-        <div class="max-w-2xl mx-auto flex items-center justify-between text-xs text-neutral-500">
-          <span>le chien</span>
-          <span>AI inference &amp; data in the EU</span>
+      <footer class="border-t border-neutral-800 py-10 px-6">
+        <div class="max-w-2xl mx-auto">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <span class="text-sm font-bold text-white tracking-tight">le&nbsp;chien</span>
+              <p class="text-xs text-neutral-500 mt-1">AI inference &amp; data in the EU</p>
+            </div>
+            <div class="flex gap-6 text-xs text-neutral-500">
+              <a href="/auth" class="hover:text-neutral-300 transition-colors">
+                Sign in
+              </a>
+              <a href="mailto:hello@lechien.ai" class="hover:text-neutral-300 transition-colors">
+                Contact
+              </a>
+            </div>
+          </div>
+          <div class="mt-8 pt-6 border-t border-neutral-800/60 text-xs text-neutral-600">
+            &copy; {new Date().getFullYear()} le chien. All rights reserved.
+          </div>
         </div>
       </footer>
     </div>
