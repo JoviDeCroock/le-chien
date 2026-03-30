@@ -11,6 +11,9 @@
     "BETTER_AUTH_URL": "https://api.example.com",
     "APP_URL": "https://app.example.com",
     "LOCAL": "false",
+    "CF_ACCOUNT_ID": "c8a74ade336909a754b36a7379edca30",
+    "CF_AI_GATEWAY_ID": "chien-gateway",
+    // OPENAI_API_KEY is set via `wrangler secret put`
   },
   "ai": {
     "binding": "AI",
