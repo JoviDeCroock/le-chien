@@ -18,5 +18,5 @@
     }
   },
   "include": ["node_modules/vite/client.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "exclude": ["dist", "scripts"]
 }
