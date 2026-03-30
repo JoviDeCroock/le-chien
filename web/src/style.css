@@ -41,3 +41,131 @@ body {
     animation: none;
   }
 }
+
+/* Markdown content in assistant messages */
+.markdown-body {
+  line-height: 1.6;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body p {
+  margin: 0.5em 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  color: white;
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+}
+
+.markdown-body h1 {
+  font-size: 1.25em;
+}
+
+.markdown-body h2 {
+  font-size: 1.125em;
+}
+
+.markdown-body h3 {
+  font-size: 1em;
+}
+
+.markdown-body strong {
+  color: var(--color-neutral-200);
+  font-weight: 600;
+}
+
+.markdown-body a {
+  color: var(--color-violet-400);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-body a:hover {
+  color: var(--color-violet-300);
+}
+
+.markdown-body code {
+  background: var(--color-neutral-900);
+  border: 1px solid var(--color-neutral-700);
+  border-radius: 4px;
+  padding: 0.15em 0.35em;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.markdown-body pre {
+  background: var(--color-neutral-900);
+  border: 1px solid var(--color-neutral-700);
+  border-radius: 8px;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  margin: 0.75em 0;
+}
+
+.markdown-body pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.markdown-body li {
+  margin: 0.25em 0;
+}
+
+.markdown-body blockquote {
+  border-left: 3px solid var(--color-violet-600);
+  padding-left: 0.75em;
+  margin: 0.75em 0;
+  color: var(--color-neutral-400);
+}
+
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid var(--color-neutral-700);
+  margin: 1em 0;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75em 0;
+  font-size: 0.9em;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--color-neutral-700);
+  padding: 0.4em 0.75em;
+  text-align: left;
+}
+
+.markdown-body th {
+  background: var(--color-neutral-900);
+  color: white;
+  font-weight: 600;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 8px;
+}

@@ -1,3 +1,4 @@
+import { Markdown } from "preact-md/lite";
 import type { Message } from "../models/chat";
 import { StreamingDots } from "./ui/Layout";
 import { ToolCallCard } from "./ToolCallCard";
@@ -30,7 +31,12 @@ export function ChatBubble({ message, streaming }: { message: Message; streaming
         {isStreaming && !hasToolCalls ? (
           <StreamingDots />
         ) : (
-          message.content && <div class="whitespace-pre-wrap break-words">{message.content}</div>
+          message.content &&
+          (isUser ? (
+            <div class="whitespace-pre-wrap break-words">{message.content}</div>
+          ) : (
+            <Markdown className="markdown-body">{message.content}</Markdown>
+          ))
         )}
         {isActiveAssistant && (
           <span class="inline-block w-1.5 h-4 bg-violet-500 rounded-sm ml-0.5 animate-pulse align-text-bottom" />
