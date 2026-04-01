@@ -5,7 +5,6 @@ import {
   type AgentConnection,
 } from "../lib/agent-client";
 import { authClient } from "../lib/auth";
-import { API_BASE_URL } from "../lib/constants";
 
 export type Conversation = {
   id: string;
@@ -127,7 +126,7 @@ export const ChatModel = createModel(() => {
 
   const fetchModels = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/chat/models`, { credentials: "include" });
+      const res = await fetch(`/api/v1/chat/models`, { credentials: "include" });
       const data = (await res.json()) as { models: ModelOption[]; default: string };
       models.value = data.models;
       selectedModel.value = data.default;
@@ -139,7 +138,7 @@ export const ChatModel = createModel(() => {
 
   const refreshSubscription = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/subscription`, { credentials: "include" });
+      const res = await fetch(`/api/v1/subscription`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load subscription");
       setSubscription((await res.json()) as SubscriptionStatus);
     } catch {

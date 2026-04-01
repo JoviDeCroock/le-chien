@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { drizzle } from "drizzle-orm/d1";
 import { Polar } from "@polar-sh/sdk";
 import { getAgentByName } from "agents";
@@ -29,17 +28,6 @@ app.use("/api/*", async (c, next) => {
   c.res.headers.set("X-Frame-Options", "DENY");
   c.res.headers.set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
 });
-
-// CORS — allow the frontend origin and credentials (cookies)
-app.use(
-  "/api/*",
-  cors({
-    origin: (_, c) => getAppOrigin(c.env),
-    credentials: true,
-    allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  }),
-);
 
 app.get("/api/billing-success", async (c) => {
   // Upgrade customer
@@ -145,11 +133,6 @@ app.use("/api/v1/*", async (c, next) => {
   c.set("user", session.user);
   c.set("session", session.session);
   await next();
-});
-
-// Health check
-app.get("/", (c) => {
-  return c.json({ status: "ok" });
 });
 
 // Example protected route

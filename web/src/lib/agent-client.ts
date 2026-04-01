@@ -1,6 +1,5 @@
 import { AgentClient, type StreamOptions } from "agents/client";
 import { signal } from "@preact/signals";
-import { API_BASE_URL } from "./constants";
 
 export type AgentConnection = {
   client: AgentClient;
@@ -18,8 +17,8 @@ export function getAgentConnection(): AgentConnection {
 
   const connected = signal(false);
 
-  // Derive WebSocket URL from the API base URL
-  const host = API_BASE_URL.replace(/^https?:\/\//, "");
+  // Same-origin: derive host from current window location
+  const host = typeof window !== "undefined" ? window.location.host : "localhost:5173";
 
   const client = new AgentClient({
     agent: "chat-agent",

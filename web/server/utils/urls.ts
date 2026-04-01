@@ -15,7 +15,3 @@ export function getAppOrigin(env: Cloudflare.Env): string {
 
   return parseOrigin(env.APP_URL, "APP_URL");
 }
-
-export function getApiOrigin(env: Cloudflare.Env): string {
-  return parseOrigin(env.BETTER_AUTH_URL, "BETTER_AUTH_URL");
-}
