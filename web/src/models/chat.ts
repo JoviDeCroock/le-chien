@@ -47,6 +47,7 @@ export type SubscriptionStatus = {
   limits: {
     dailyMessages: number | null;
     dailyPremiumMessages: number | null;
+    dailyImageGenerations: number | null;
   };
   usage: {
     dailyMessagesUsed: number;
@@ -55,6 +56,9 @@ export type SubscriptionStatus = {
     dailyPremiumMessagesUsed: number;
     dailyPremiumMessagesRemaining: number | null;
     premiumLimitReached: boolean;
+    dailyImageGenerationsUsed: number;
+    dailyImageGenerationsRemaining: number | null;
+    imageGenerationLimitReached: boolean;
     usageDate: string;
     resetsAt: string;
   };

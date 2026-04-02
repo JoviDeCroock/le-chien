@@ -270,6 +270,11 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
 
     const tools = createTools(this.env, {
       onSaveMemory: (key, value) => this.createMemory(key, value),
+      rateLimit: {
+        db: this.env.DB,
+        userId,
+        plan: subscription.plan,
+      },
     });
 
     // Stream AI response

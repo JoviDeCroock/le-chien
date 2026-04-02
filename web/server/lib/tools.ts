@@ -1,8 +1,16 @@
 import { tool } from "ai";
 import { z } from "zod";
+import type { Plan } from "./plans";
+import { getUsageDate, tryIncrementDailyImageGenerationUsage } from "./plans";
 
 type ToolOptions = {
   onSaveMemory?: (key: string, value: string) => void;
+  /** When set, image generation is rate-limited for free users. */
+  rateLimit?: {
+    db: D1Database;
+    userId: string;
+    plan: Plan;
+  };
 };
 
 export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
@@ -56,11 +64,25 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
       }),
       execute: async ({ prompt }) => {
         try {
+          // Enforce image generation limit for free users
+          if (options.rateLimit?.plan === "free") {
+            const { db, userId } = options.rateLimit;
+            const usageDate = getUsageDate();
+            const count = await tryIncrementDailyImageGenerationUsage(db, userId, usageDate);
+            if (count === null) {
+              return {
+                prompt,
+                error:
+                  "You've reached your daily image generation limit on the free plan. Upgrade to Pro for unlimited image generation.",
+              };
+            }
+          }
+
           const result = await env.AI.run(
             "@cf/black-forest-labs/flux-1-schnell",
             { prompt },
             { gateway: { id: env.CF_AI_GATEWAY_ID } },
-          ); // Fire-and-forget async call to trigger billing
+          );
           if (!result.image) {
             return { prompt, error: `Image generation failed` };
           }

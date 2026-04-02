@@ -7,6 +7,7 @@ export type Plan = "free" | "pro";
 type PlanLimits = {
   dailyMessages: number | null;
   dailyPremiumMessages: number | null;
+  dailyImageGenerations: number | null;
 };
 
 export type SubscriptionSnapshot = {
@@ -19,6 +20,9 @@ export type SubscriptionSnapshot = {
     dailyPremiumMessagesUsed: number;
     dailyPremiumMessagesRemaining: number | null;
     premiumLimitReached: boolean;
+    dailyImageGenerationsUsed: number;
+    dailyImageGenerationsRemaining: number | null;
+    imageGenerationLimitReached: boolean;
     usageDate: string;
     resetsAt: string;
   };
@@ -28,10 +32,12 @@ export const PLAN_LIMITS = {
   free: {
     dailyMessages: 20,
     dailyPremiumMessages: 5,
+    dailyImageGenerations: 5,
   },
   pro: {
     dailyMessages: null,
     dailyPremiumMessages: null,
+    dailyImageGenerations: null,
   },
 } as const;
 
@@ -51,6 +57,7 @@ export function buildSubscriptionSnapshot(
   dailyMessagesUsed: number,
   date = new Date(),
   dailyPremiumMessagesUsed = 0,
+  dailyImageGenerationsUsed = 0,
 ): SubscriptionSnapshot {
   const limits = PLAN_LIMITS[plan];
   const dailyMessagesRemaining =
@@ -59,6 +66,10 @@ export function buildSubscriptionSnapshot(
     limits.dailyPremiumMessages === null
       ? null
       : Math.max(limits.dailyPremiumMessages - dailyPremiumMessagesUsed, 0);
+  const dailyImageGenerationsRemaining =
+    limits.dailyImageGenerations === null
+      ? null
+      : Math.max(limits.dailyImageGenerations - dailyImageGenerationsUsed, 0);
 
   return {
     plan,
@@ -72,6 +83,11 @@ export function buildSubscriptionSnapshot(
       premiumLimitReached:
         limits.dailyPremiumMessages !== null &&
         dailyPremiumMessagesUsed >= limits.dailyPremiumMessages,
+      dailyImageGenerationsUsed,
+      dailyImageGenerationsRemaining,
+      imageGenerationLimitReached:
+        limits.dailyImageGenerations !== null &&
+        dailyImageGenerationsUsed >= limits.dailyImageGenerations,
       usageDate: getUsageDate(date),
       resetsAt: getUsageResetAt(date),
     },
@@ -130,6 +146,25 @@ export async function getDailyPremiumMessageUsage(
   return row?.messageCount ?? 0;
 }
 
+export async function getDailyImageGenerationUsage(
+  db: DrizzleD1Database<typeof schema>,
+  userId: string,
+  usageDate = getUsageDate(),
+) {
+  const row = await db
+    .select({ messageCount: schema.dailyImageGenerationUsage.messageCount })
+    .from(schema.dailyImageGenerationUsage)
+    .where(
+      and(
+        eq(schema.dailyImageGenerationUsage.userId, userId),
+        eq(schema.dailyImageGenerationUsage.usageDate, usageDate),
+      ),
+    )
+    .get();
+
+  return row?.messageCount ?? 0;
+}
+
 export async function getSubscriptionSnapshot(
   db: DrizzleD1Database<typeof schema>,
   userId: string,
@@ -140,8 +175,16 @@ export async function getSubscriptionSnapshot(
   const dailyMessagesUsed = plan === "free" ? await getDailyMessageUsage(db, userId, usageDate) : 0;
   const dailyPremiumMessagesUsed =
     plan === "free" ? await getDailyPremiumMessageUsage(db, userId, usageDate) : 0;
+  const dailyImageGenerationsUsed =
+    plan === "free" ? await getDailyImageGenerationUsage(db, userId, usageDate) : 0;
 
-  return buildSubscriptionSnapshot(plan, dailyMessagesUsed, date, dailyPremiumMessagesUsed);
+  return buildSubscriptionSnapshot(
+    plan,
+    dailyMessagesUsed,
+    date,
+    dailyPremiumMessagesUsed,
+    dailyImageGenerationsUsed,
+  );
 }
 
 export async function tryIncrementDailyMessageUsage(
@@ -226,4 +269,28 @@ export async function decrementDailyPremiumMessageUsage(
     )
     .bind(now, userId, usageDate)
     .run();
+}
+
+export async function tryIncrementDailyImageGenerationUsage(
+  db: D1Database,
+  userId: string,
+  usageDate: string,
+) {
+  const now = Math.floor(Date.now() / 1000);
+  const row = await db
+    .prepare(
+      `
+        INSERT INTO daily_image_generation_usage (id, user_id, usage_date, message_count, created_at, updated_at)
+        VALUES (?, ?, ?, 1, ?, ?)
+        ON CONFLICT(user_id, usage_date) DO UPDATE SET
+          message_count = message_count + 1,
+          updated_at = excluded.updated_at
+        WHERE message_count < ?
+        RETURNING message_count
+      `,
+    )
+    .bind(crypto.randomUUID(), userId, usageDate, now, now, PLAN_LIMITS.free.dailyImageGenerations)
+    .first<{ message_count: number }>();
+
+  return row?.message_count ?? null;
 }
