@@ -74,12 +74,6 @@ cp web/.env.example web/.env
 | `POLAR_PRO_PRODUCT_ID` | The Polar product ID for your "Pro" plan.                                                  |
 | `LOCAL`                | Set to `true` for local development.                                                       |
 
-#### Frontend environment (`web/.env`)
-
-| Variable            | Description                                                            |
-| ------------------- | ---------------------------------------------------------------------- |
-| `VITE_API_BASE_URL` | The API URL the frontend calls. For local dev: `http://localhost:8787` |
-
 ### 3. Set up Polar (billing)
 
 1. Go to [polar.sh](https://polar.sh) and create an account.
@@ -177,12 +171,6 @@ cd web && pnpm build
 ```
 
 Output goes to `web/dist/`. Deploy to any static host (Cloudflare Pages, Vercel, Netlify, etc.).
-
-For production, set `VITE_API_BASE_URL` to your deployed API URL before building:
-
-```sh
-VITE_API_BASE_URL=https://api.yourdomain.com pnpm build
-```
 
 ## Lint & Format
 

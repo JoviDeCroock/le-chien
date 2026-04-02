@@ -8,7 +8,7 @@
     "mode": "smart",
   },
   "vars": {
-    "APP_URL": "https://app.example.com",
+    "APP_URL": "https://chien.resynapse.dev",
     "LOCAL": "false",
     "CF_ACCOUNT_ID": "c8a74ade336909a754b36a7379edca30",
     "CF_AI_GATEWAY_ID": "chien-gateway",
@@ -27,8 +27,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "app-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_name": "chien-db",
+      "database_id": "4d023a5c-8473-43a0-9ae4-fcc2a8a3d070",
       "migrations_dir": "drizzle/migrations",
     },
   ],

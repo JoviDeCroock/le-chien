@@ -8,8 +8,8 @@
     "deploy": "wrangler deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply app-db --local",
-    "db:migrate:remote": "wrangler d1 migrations apply app-db --remote",
+    "db:migrate:local": "wrangler d1 migrations apply chien-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply chien-db --remote",
     "db:studio": "drizzle-kit studio",
     "typecheck": "tsc --noEmit",
     "audit:contrast": "node ./scripts/audit-contrast.mjs"
