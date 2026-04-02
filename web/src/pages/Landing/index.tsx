@@ -70,8 +70,7 @@ export function Landing() {
           class="text-base sm:text-lg text-neutral-400 leading-relaxed mb-10 max-w-lg animate-fade-in"
           style={{ animationDelay: "100ms" }}
         >
-          Streaming chat with persistent memory, file retrieval, and workspaces. Powered by curated
-          open models.
+          Chat that remembers you. Pick from a range of open models, all running in the EU.
         </p>
 
         {/* CTA */}
@@ -94,23 +93,23 @@ export function Landing() {
             {[
               [
                 "Streaming chat",
-                "Fast responses from curated open models. Pick a mode — Fast, Deep, Code, Creative — not a model name.",
+                "Fast responses from open models. Pick one that fits — quick or thorough, your call.",
               ],
               [
-                "Persistent memory",
-                "Save context across conversations. Your assistant remembers what matters.",
+                "Memory",
+                "It remembers what you tell it. Preferences, context, the stuff you don't want to repeat.",
               ],
               false && [
                 "File retrieval",
-                "Upload documents, reference them in chat. Answers grounded in your data.",
+                "Drop in documents, reference them in chat. Answers grounded in your files.",
               ],
               false && [
                 "Workspaces",
-                "Personal or shared. Everything — conversations, memory, files — scoped to the workspace.",
+                "Personal or shared. Conversations, memory, files — all scoped to the workspace.",
               ],
               [
-                "Tool use",
-                "Your assistant can search, retrieve, and act. Every action is inspectable.",
+                "Tools",
+                "Math, web lookups, date/time — it can do things, not just talk. Every action is visible.",
               ],
             ]
               .filter(Boolean)
@@ -185,7 +184,7 @@ export function Landing() {
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <span class="text-sm font-bold text-white tracking-tight">le&nbsp;chien</span>
-              <p class="text-xs text-neutral-500 mt-1">AI inference &amp; data in the EU</p>
+              <p class="text-xs text-neutral-500 mt-1">All data stays in the EU</p>
             </div>
             <div class="flex gap-6 text-xs text-neutral-500">
               <a href="/auth" class="hover:text-neutral-300 transition-colors">
