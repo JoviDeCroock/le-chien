@@ -208,7 +208,7 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
           const res = await fetch(url, {
             headers: {
               "User-Agent": "le-chien/1.0 (AI Assistant)",
-              Accept: "text/html,application/xhtml+xml,text/plain,application/json",
+              Accept: "text/html,application/xhtml+xml,text/plain,text/markdown,application/json",
             },
             redirect: "follow",
           });
