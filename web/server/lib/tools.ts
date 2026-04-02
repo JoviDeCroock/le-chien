@@ -5,7 +5,7 @@ type ToolOptions = {
   onSaveMemory?: (key: string, value: string) => void;
 };
 
-export function createTools(_env: Cloudflare.Env, options: ToolOptions = {}) {
+export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
   return {
     get_current_datetime: tool({
       description: "Get the current date, time, and day of the week.",
@@ -44,6 +44,99 @@ export function createTools(_env: Cloudflare.Env, options: ToolOptions = {}) {
           return { expression, result };
         } catch (e) {
           return { expression, error: e instanceof Error ? e.message : "Invalid expression" };
+        }
+      },
+    }),
+
+    generate_image: tool({
+      description:
+        "Generate an image from a text description. Use this when the user asks you to create, draw, or generate an image, picture, or illustration.",
+      inputSchema: z.object({
+        prompt: z.string().describe("Detailed description of the image to generate"),
+      }),
+      execute: async ({ prompt }) => {
+        try {
+          const gatewayUrl = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${env.CF_AI_GATEWAY_ID}/workers-ai/@cf/black-forest-labs/flux-1-schnell`;
+          const res = await fetch(gatewayUrl, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${env.CF_API_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ prompt }),
+          });
+          if (!res.ok) {
+            return { prompt, error: `Image generation failed: HTTP ${res.status}` };
+          }
+          const data = (await res.json()) as { result: { image: string } };
+          return { prompt, image: `data:image/png;base64,${data.result.image}` };
+        } catch (e) {
+          return { prompt, error: e instanceof Error ? e.message : "Image generation failed" };
+        }
+      },
+    }),
+
+    run_javascript: tool({
+      description:
+        "Execute JavaScript code and return the result. Use this to run calculations, data transformations, string operations, or any JavaScript code the user asks about. The code runs in an isolated environment with no network or filesystem access.",
+      inputSchema: z.object({
+        code: z
+          .string()
+          .describe(
+            "The JavaScript code to execute. The last expression's value is returned as the result.",
+          ),
+      }),
+      execute: async ({ code }) => {
+        try {
+          const ALLOWED_GLOBALS: Record<string, unknown> = {
+            // Primitives & constructors
+            undefined, NaN, Infinity,
+            Object, Array, String, Number, Boolean, Symbol, BigInt,
+            Map, Set, WeakMap, WeakSet, Promise,
+            Int8Array, Uint8Array, Int16Array, Uint16Array,
+            Int32Array, Uint32Array, Float32Array, Float64Array,
+            ArrayBuffer, SharedArrayBuffer, DataView,
+            RegExp, Error, TypeError, RangeError, SyntaxError, URIError, ReferenceError,
+            // Safe builtins
+            Math, JSON, Date, Intl,
+            isNaN, isFinite, parseFloat, parseInt,
+            encodeURI, encodeURIComponent, decodeURI, decodeURIComponent,
+            // Console for debugging
+            console,
+          };
+
+          const sandbox = new Proxy(ALLOWED_GLOBALS, {
+            has: () => true,
+            get: (target, key) => {
+              if (key === Symbol.unscopables) return undefined;
+              if (key in target) return target[key as string];
+              return undefined;
+            },
+          });
+
+          const wrappedCode = `
+            with (sandbox) {
+              return (async () => {
+                ${code}
+              })();
+            }
+          `;
+          const fn = new Function("sandbox", wrappedCode);
+          const result = await fn(sandbox);
+
+          // Format the result
+          const output =
+            result === undefined
+              ? "undefined"
+              : typeof result === "object"
+                ? JSON.stringify(result, null, 2)
+                : String(result);
+          return { code, result: output };
+        } catch (e) {
+          return {
+            code,
+            error: e instanceof Error ? `${e.name}: ${e.message}` : "Execution failed",
+          };
         }
       },
     }),

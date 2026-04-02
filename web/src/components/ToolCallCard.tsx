@@ -5,6 +5,8 @@ const TOOL_LABELS: Record<string, { label: string; icon: string }> = {
   get_current_datetime: { label: "Date & Time", icon: "clock" },
   calculate: { label: "Calculate", icon: "calculator" },
   read_url: { label: "Read URL", icon: "globe" },
+  generate_image: { label: "Generate Image", icon: "image" },
+  run_javascript: { label: "Run Code", icon: "code" },
 };
 
 function ToolIcon({ type }: { type: string }) {
@@ -39,6 +41,19 @@ function ToolIcon({ type }: { type: string }) {
           />
         </>
       )}
+      {type === "image" && (
+        <>
+          <rect x="3" y="3" width="18" height="18" rx="2" {...s} />
+          <circle cx="8.5" cy="8.5" r="1.5" {...s} />
+          <path d="M21 15l-5-5L5 21" {...s} />
+        </>
+      )}
+      {type === "code" && (
+        <>
+          <polyline points="16 18 22 12 16 6" {...s} />
+          <polyline points="8 6 2 12 8 18" {...s} />
+        </>
+      )}
       {type === "search" && (
         <>
           <circle cx="11" cy="11" r="8" {...s} />
@@ -60,6 +75,16 @@ function formatResult(result: unknown): string {
   if (result === null || result === undefined) return "";
   if (typeof result === "string") return result;
   return JSON.stringify(result, null, 2);
+}
+
+function isImageResult(result: unknown): result is { image: string } {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "image" in result &&
+    typeof (result as { image: string }).image === "string" &&
+    (result as { image: string }).image.startsWith("data:image/")
+  );
 }
 
 export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
@@ -104,6 +129,16 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
         </span>
       </button>
 
+      {isImageResult(toolCall.result) && (
+        <div class="px-3 py-2">
+          <img
+            src={(toolCall.result as { image: string }).image}
+            alt={(toolCall.result as { prompt?: string }).prompt || "Generated image"}
+            class="rounded-lg max-w-full"
+          />
+        </div>
+      )}
+
       {expanded.value && (
         <div class="border-t border-neutral-700/40 px-3 py-2 space-y-2">
           {Object.keys(toolCall.args).length > 0 && (
@@ -116,7 +151,7 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
               </pre>
             </div>
           )}
-          {toolCall.result !== undefined && (
+          {toolCall.result !== undefined && !isImageResult(toolCall.result) && (
             <div>
               <span class="text-neutral-500 text-[11px] font-medium uppercase tracking-wider">
                 Result

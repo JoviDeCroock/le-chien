@@ -3,7 +3,7 @@
   "name": "le-chien",
   "main": "./server/index.ts",
   "compatibility_date": "2026-02-01",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "unsafe-eval"],
   "placement": {
     "mode": "smart",
   },
