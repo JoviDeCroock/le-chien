@@ -71,6 +71,13 @@ export const AVAILABLE_SHORTCUTS: ShortcutDefinition[] = [
     availability: "available",
   },
   {
+    id: "open-pet",
+    label: "Open pet",
+    description: "Open the sidebar to see your pet dog.",
+    keys: ["Cmd/Ctrl", "Shift", "P"],
+    availability: "available",
+  },
+  {
     id: "toggle-memory",
     label: "Toggle memory panel",
     description: "Open or close the memory panel on the right side.",

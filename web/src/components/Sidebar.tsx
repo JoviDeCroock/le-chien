@@ -1,6 +1,8 @@
 import type { Conversation } from "../models/chat";
+import type { PetState } from "../models/tamagotchi";
 import { Button } from "./ui/Button";
 import { PlusIcon, CloseIcon } from "./ui/Icons";
+import { TamagotchiWidget } from "./TamagotchiWidget";
 
 export type SidebarProps = {
   open: boolean;
@@ -10,6 +12,11 @@ export type SidebarProps = {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  pet: PetState | null;
+  petDisabled: boolean;
+  onFeedPet: () => void;
+  onPlayPet: () => void;
+  onPetDog: () => void;
 };
 
 export function Sidebar({
@@ -20,6 +27,11 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  pet,
+  petDisabled,
+  onFeedPet,
+  onPlayPet,
+  onPetDog,
 }: SidebarProps) {
   return (
     <>
@@ -65,6 +77,16 @@ export function Sidebar({
             ))
           )}
         </div>
+
+        {pet && (
+          <TamagotchiWidget
+            pet={pet}
+            onFeed={onFeedPet}
+            onPlay={onPlayPet}
+            onPet={onPetDog}
+            disabled={petDisabled}
+          />
+        )}
       </nav>
     </>
   );
