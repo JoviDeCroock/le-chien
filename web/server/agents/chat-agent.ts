@@ -324,8 +324,8 @@ When the user shares images, describe what you see and answer any questions abou
           // Build multimodal content parts
           const parts: (
             | { type: "text"; text: string }
-            | { type: "image"; image: Uint8Array; mimeType: string }
-            | { type: "file"; data: Uint8Array; mimeType: string }
+            | { type: "image"; image: Uint8Array; mediaType?: string }
+            | { type: "file"; data: Uint8Array; mediaType: string }
           )[] = [];
 
           if (m.content) {
@@ -339,9 +339,9 @@ When the user shares images, describe what you see and answer any questions abou
               const bytes = new Uint8Array(await obj.arrayBuffer());
 
               if (att.type.startsWith("image/")) {
-                parts.push({ type: "image", image: bytes, mimeType: att.type });
+                parts.push({ type: "image", image: bytes, mediaType: att.type });
               } else if (att.type === "application/pdf") {
-                parts.push({ type: "file", data: bytes, mimeType: att.type });
+                parts.push({ type: "file", data: bytes, mediaType: att.type });
               } else {
                 // Text-based files: decode and include as text
                 const text = new TextDecoder().decode(bytes);
