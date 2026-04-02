@@ -9,6 +9,8 @@ le chien supports tool calling, allowing the LLM to take actions and fetch infor
 | `get_current_datetime` | Returns current date, time, day of week, and Unix timestamp. Supports IANA timezones.                                                 | No              |
 | `calculate`            | Evaluates math expressions safely (no eval). Supports arithmetic, exponents, functions (sqrt, sin, log, etc.), and constants (PI, E). | No              |
 | `read_url`             | Fetches a URL and returns extracted text content. HTML is stripped to plain text. Truncated to 12k chars.                             | No              |
+| `generate_image`       | Generates an image from a text prompt using Cloudflare Workers AI (Flux 1 Schnell). Returns a base64 data URL rendered inline.       | AI binding       |
+| `run_javascript`       | Executes JavaScript code in an isolated environment (no network/FS). Returns the last expression's value. Requires `unsafe-eval` flag. | No              |
 
 ## Architecture
 

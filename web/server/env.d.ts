@@ -9,5 +9,6 @@ declare namespace Cloudflare {
     POLAR_WEBHOOK_SECRET: string;
     POLAR_PRO_PRODUCT_ID: string;
     OPENAI_API_KEY: string;
+    CF_API_TOKEN: string;
   }
 }
