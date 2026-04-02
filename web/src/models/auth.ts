@@ -1,5 +1,6 @@
 import { signal, computed, createModel } from "@preact/signals";
 import { authClient } from "../lib/auth";
+import { identifyUser, resetUser, trackEvent } from "../lib/posthog";
 
 export const AuthModel = createModel(() => {
   const loading = signal(true);
@@ -10,7 +11,11 @@ export const AuthModel = createModel(() => {
     loading.value = true;
     try {
       const res = await authClient.getSession();
-      user.value = res.data?.user ?? null;
+      const sessionUser = res.data?.user ?? null;
+      user.value = sessionUser;
+      if (sessionUser) {
+        identifyUser(sessionUser);
+      }
     } catch {
       user.value = null;
     } finally {
@@ -19,8 +24,10 @@ export const AuthModel = createModel(() => {
   };
 
   const signOut = async () => {
+    trackEvent("user_signed_out");
     await authClient.signOut();
     user.value = null;
+    resetUser();
   };
 
   return { loading, user, authenticated, checkSession, signOut };

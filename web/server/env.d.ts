@@ -10,5 +10,7 @@ declare namespace Cloudflare {
     POLAR_PRO_PRODUCT_ID: string;
     OPENAI_API_KEY: string;
     CF_API_TOKEN: string;
+    POSTHOG_API_KEY?: string;
+    POSTHOG_HOST?: string;
   }
 }

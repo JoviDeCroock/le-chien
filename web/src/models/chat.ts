@@ -5,6 +5,7 @@ import {
   type AgentConnection,
 } from "../lib/agent-client";
 import { authClient } from "../lib/auth";
+import { trackEvent, captureException } from "../lib/posthog";
 
 export type Conversation = {
   id: string;
@@ -131,8 +132,10 @@ export const ChatModel = createModel(() => {
       models.value = data.models;
       selectedModel.value = data.default;
       modelsLoaded.value = true;
-    } catch {
-      // Fallback — models will be empty but the user can still type
+    } catch (err) {
+      captureException(err instanceof Error ? err : new Error("Failed to fetch models"), {
+        source: "chat",
+      });
     }
   };
 
@@ -194,9 +197,13 @@ export const ChatModel = createModel(() => {
     error.value = null;
 
     try {
+      trackEvent("checkout_started", { plan: "pro" });
       await authClient.checkout({ slug: "pro" });
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to start checkout";
+      captureException(err instanceof Error ? err : new Error("Failed to start checkout"), {
+        source: "billing",
+      });
     } finally {
       checkoutPending.value = false;
     }
@@ -258,11 +265,15 @@ export const ChatModel = createModel(() => {
       conversations.value = [convo, ...conversations.value];
       activeConversationId.value = convo.id;
       messages.value = [];
+      trackEvent("conversation_created", { model: selectedModel.value });
       return convo.id;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg !== "Connection closed") {
         error.value = msg || "Failed to create conversation";
+        captureException(err instanceof Error ? err : new Error("Failed to create conversation"), {
+          source: "chat",
+        });
       }
       return null;
     }
@@ -320,6 +331,13 @@ export const ChatModel = createModel(() => {
     messages.value = [...messages.value, userMessage, assistantMessage];
     input.value = "";
     streaming.value = true;
+    const streamStartedAt = Date.now();
+
+    trackEvent("message_sent", {
+      model: selectedModel.value,
+      conversation_id: convId,
+      message_length: text.length,
+    });
 
     try {
       await agent.value!.callStream("sendMessage", [convId, text, selectedModel.value], {
@@ -371,6 +389,10 @@ export const ChatModel = createModel(() => {
           }
 
           if (meta?.blocked) {
+            trackEvent("message_blocked", {
+              reason: meta.reason,
+              plan: meta.subscription?.plan,
+            });
             messages.value = messages.value.filter(
               (message) =>
                 message.id !== optimisticUserMessageId &&
@@ -385,6 +407,11 @@ export const ChatModel = createModel(() => {
             const last = msgs[msgs.length - 1];
             messages.value = [...msgs.slice(0, -1), { ...last, id: meta.messageId }];
           }
+          trackEvent("message_completed", {
+            model: selectedModel.value,
+            conversation_id: convId,
+            duration_ms: Date.now() - streamStartedAt,
+          });
           streaming.value = false;
 
           // Refresh conversation list to get updated titles/timestamps
@@ -399,6 +426,11 @@ export const ChatModel = createModel(() => {
           // Suppress transient "Connection closed" — PartySocket will reconnect
           if (err === "Connection closed") return;
           error.value = err;
+          captureException(new Error(err), {
+            source: "chat_stream",
+            model: selectedModel.value,
+            conversation_id: convId,
+          });
           streaming.value = false;
           // Remove empty assistant message on error
           const msgs = messages.value;
@@ -413,6 +445,11 @@ export const ChatModel = createModel(() => {
       // Suppress transient "Connection closed" — PartySocket will reconnect
       if (msg === "Connection closed") return;
       error.value = msg || "Failed to send message";
+      captureException(err instanceof Error ? err : new Error("Failed to send message"), {
+        source: "chat",
+        model: selectedModel.value,
+        conversation_id: convId,
+      });
       streaming.value = false;
     }
   };
