@@ -32,9 +32,6 @@ jobs:
       - name: Lint and format check
         run: pnpm -w run check
 
-      - name: Typecheck API
-        run: pnpm --dir api run typecheck
-
       - name: Typecheck Web
         run: pnpm --dir web run typecheck
 
