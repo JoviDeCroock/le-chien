@@ -1,5 +1,6 @@
 import { Agent, callable, type StreamingResponse } from "agents";
-import { streamText, stepCountIs } from "ai";
+import { streamText, generateText, stepCountIs } from "ai";
+import { z } from "zod";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { getModel, MODELS, DEFAULT_MODEL, isPremiumModel } from "../lib/models";
@@ -195,6 +196,52 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     this.sql`DELETE FROM memories WHERE id = ${memoryId}`;
   }
 
+  /**
+   * Runs after each exchange to automatically extract memorable facts about the
+   * user. Uses a cheap/fast model so it doesn't add cost. Fire-and-forget —
+   * failures are silently ignored so they never affect the chat experience.
+   */
+  private async extractMemories(userMessage: string, assistantMessage: string) {
+    try {
+      const existing = this.sql<{ key: string; value: string }>`
+        SELECT key, value FROM memories ORDER BY updated_at DESC
+      `;
+
+      const existingBlock =
+        existing.length > 0
+          ? `\nAlready remembered:\n${existing.map((m) => `- ${m.key}: ${m.value}`).join("\n")}`
+          : "";
+
+      const extractionModel = getModel(this.env, "glm-4.7-flash");
+      const { text } = await generateText({
+        model: extractionModel,
+        system: `You extract facts about a user from their chat messages that are worth remembering for future conversations. Facts include preferences, personal details, their job, skills, name, location, interests, tools they use, etc.
+
+Rules:
+- Only extract clear, lasting facts — skip anything transient or conversational.
+- Don't duplicate what's already remembered.
+- Return a JSON array of objects with "key" and "value" fields. The key is a short label, the value is the fact.
+- If there's nothing new worth remembering, return an empty array: []
+- Return ONLY the JSON array, no other text.${existingBlock}`,
+        prompt: `User: ${userMessage}\n\nAssistant: ${assistantMessage}`,
+      });
+
+      // Parse extracted memories
+      const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
+      const parsed = z
+        .array(z.object({ key: z.string(), value: z.string() }))
+        .safeParse(JSON.parse(cleaned));
+
+      if (!parsed.success || parsed.data.length === 0) return;
+
+      for (const { key, value } of parsed.data) {
+        this.createMemory(key, value);
+      }
+    } catch {
+      // Silent failure — auto-extraction is best-effort
+    }
+  }
+
   async sendMessage(
     stream: StreamingResponse,
     conversationId: string,
@@ -374,6 +421,9 @@ Rules:
         INSERT INTO messages (id, conversation_id, role, content, tool_calls, created_at)
         VALUES (${assistantMessageId}, ${conversationId}, ${"assistant"}, ${fullContent}, ${toolCallsJson}, ${finishedAt})
       `;
+
+      // Auto-extract memories in the background (fire-and-forget)
+      this.ctx.waitUntil(this.extractMemories(content, fullContent));
 
       // Auto-title: if this is the first exchange, generate a title from user message
       const messageCount = this.sql<{ count: number }>`

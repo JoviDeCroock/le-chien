@@ -77,6 +77,18 @@ Signals-based state management for:
 - **Per-user DO storage**: Memories are scoped to the user's DO, not in D1. This keeps reads fast during chat (no network hop to D1).
 - **Auto-refresh**: The memory panel refreshes after each conversation exchange to pick up any tool-saved memories.
 
+## Automatic memory extraction
+
+After each exchange, a background LLM call (`glm-4.7-flash`) analyzes the user's message and the assistant's response for memorable facts. This runs via `ctx.waitUntil` so it never blocks or slows down the chat stream.
+
+The extraction:
+1. Loads existing memories to avoid duplicates
+2. Sends both messages to a cheap model with a focused extraction prompt
+3. Parses the JSON response and saves any new memories
+4. Fails silently — auto-extraction is best-effort
+
+This complements the `save_memory` tool: the tool handles explicit "remember this" requests, while auto-extraction catches facts the model didn't proactively save (common with smaller models).
+
 ## Future work
 
 - Workspace-scoped memories (shared across team members)
