@@ -30,6 +30,14 @@ type Message = {
   created_at: number;
 };
 
+type Memory = {
+  id: string;
+  key: string;
+  value: string;
+  created_at: number;
+  updated_at: number;
+};
+
 export class ChatAgent extends Agent<Cloudflare.Env> {
   async onStart() {
     this.sql`
@@ -54,6 +62,15 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     this.sql`
       CREATE INDEX IF NOT EXISTS idx_messages_conversation
       ON messages(conversation_id, created_at)
+    `;
+    this.sql`
+      CREATE TABLE IF NOT EXISTS memories (
+        id TEXT PRIMARY KEY,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+      )
     `;
     // Migration: add tool_calls column for existing DOs
     try {
@@ -113,6 +130,40 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     `;
   }
 
+  listMemories(): Memory[] {
+    return this.sql<Memory>`
+      SELECT id, key, value, created_at, updated_at
+      FROM memories
+      ORDER BY updated_at DESC
+    `;
+  }
+
+  createMemory(key: string, value: string): Memory {
+    const id = crypto.randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+    this.sql`
+      INSERT INTO memories (id, key, value, created_at, updated_at)
+      VALUES (${id}, ${key}, ${value}, ${now}, ${now})
+    `;
+    return { id, key, value, created_at: now, updated_at: now };
+  }
+
+  updateMemory(memoryId: string, key: string, value: string): Memory {
+    const now = Math.floor(Date.now() / 1000);
+    this.sql`
+      UPDATE memories SET key = ${key}, value = ${value}, updated_at = ${now}
+      WHERE id = ${memoryId}
+    `;
+    const rows = this
+      .sql<Memory>`SELECT id, key, value, created_at, updated_at FROM memories WHERE id = ${memoryId}`;
+    if (rows.length === 0) throw new Error("Memory not found");
+    return rows[0];
+  }
+
+  deleteMemory(memoryId: string): void {
+    this.sql`DELETE FROM memories WHERE id = ${memoryId}`;
+  }
+
   async sendMessage(
     stream: StreamingResponse,
     conversationId: string,
@@ -160,7 +211,9 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       sessionAffinity: conversationId,
     });
 
-    const tools = createTools(this.env);
+    const tools = createTools(this.env, {
+      onSaveMemory: (key, value) => this.createMemory(key, value),
+    });
 
     // Stream AI response
     let fullContent = "";
@@ -181,9 +234,11 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
         ORDER BY created_at ASC
       `;
 
-      const result = streamText({
-        model: aiModel,
-        system: `You are le chien — a sharp, warm conversationalist who happens to know a lot.
+      // Load user memories for context
+      const memories = this.sql<{ key: string; value: string }>`
+        SELECT key, value FROM memories ORDER BY updated_at DESC
+      `;
+      let systemPrompt = `You are le chien — a sharp, warm conversationalist who happens to know a lot.
 
 Talk like a knowledgeable friend, not a service desk. Use natural language: contractions, occasional humor, and real opinions when asked. Match the user's energy — if they're casual, be casual; if they're deep in a problem, focus up.
 
@@ -193,7 +248,16 @@ Format your answers in markdown — use headings, lists, code blocks, and emphas
 
 When something is genuinely interesting, show that. When you don't know, say so plainly instead of generating plausible-sounding filler.
 
-You have tools available. Use the calculate tool for math instead of computing in your head. Use get_current_datetime for date/time questions. Use read_url to fetch web content. Reach for tools when they'd give a better answer — don't announce that you're using them unless it's relevant.`,
+You have tools available. Use the calculate tool for math instead of computing in your head. Use get_current_datetime for date/time questions. Use read_url to fetch web content. Reach for tools when they'd give a better answer — don't announce that you're using them unless it's relevant.`;
+
+      if (memories.length > 0) {
+        const memoryBlock = memories.map((m) => `- ${m.key}: ${m.value}`).join("\n");
+        systemPrompt += `\n\nYou have the following memories about this user. Use them to personalize your responses when relevant:\n${memoryBlock}`;
+      }
+
+      const result = streamText({
+        model: aiModel,
+        system: systemPrompt,
         messages: history.map((m) => ({
           role: m.role as "user" | "assistant",
           content: m.content,
@@ -282,6 +346,22 @@ callable()(proto.deleteConversation, {
 callable()(proto.updateConversationTitle, {
   kind: "method",
   name: "updateConversationTitle",
+} as ClassMethodDecoratorContext);
+callable()(proto.listMemories, {
+  kind: "method",
+  name: "listMemories",
+} as ClassMethodDecoratorContext);
+callable()(proto.createMemory, {
+  kind: "method",
+  name: "createMemory",
+} as ClassMethodDecoratorContext);
+callable()(proto.updateMemory, {
+  kind: "method",
+  name: "updateMemory",
+} as ClassMethodDecoratorContext);
+callable()(proto.deleteMemory, {
+  kind: "method",
+  name: "deleteMemory",
 } as ClassMethodDecoratorContext);
 callable({ streaming: true })(proto.sendMessage, {
   kind: "method",

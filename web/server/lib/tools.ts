@@ -1,7 +1,11 @@
 import { tool } from "ai";
 import { z } from "zod";
 
-export function createTools(_env: Cloudflare.Env) {
+type ToolOptions = {
+  onSaveMemory?: (key: string, value: string) => void;
+};
+
+export function createTools(_env: Cloudflare.Env, options: ToolOptions = {}) {
   return {
     get_current_datetime: tool({
       description: "Get the current date, time, and day of the week.",
@@ -43,6 +47,27 @@ export function createTools(_env: Cloudflare.Env) {
         }
       },
     }),
+
+    ...(options.onSaveMemory
+      ? {
+          save_memory: tool({
+            description:
+              "Save a piece of information to the user's persistent memory. Use this when the user shares a preference, fact about themselves, or important context that would be useful across future conversations. Do not save trivial or one-off information.",
+            inputSchema: z.object({
+              key: z
+                .string()
+                .describe("Short label for the memory (e.g. 'Preferred language', 'Role', 'Name')"),
+              value: z
+                .string()
+                .describe("The information to remember (e.g. 'TypeScript', 'Frontend engineer')"),
+            }),
+            execute: async ({ key, value }) => {
+              options.onSaveMemory!(key, value);
+              return { saved: true, key, value };
+            },
+          }),
+        }
+      : {}),
 
     read_url: tool({
       description:

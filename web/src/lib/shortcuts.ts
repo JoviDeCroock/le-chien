@@ -70,16 +70,16 @@ export const AVAILABLE_SHORTCUTS: ShortcutDefinition[] = [
     keys: ["Shift", "Enter"],
     availability: "available",
   },
-];
-
-export const PLANNED_SHORTCUTS: ShortcutDefinition[] = [
   {
     id: "toggle-memory",
     label: "Toggle memory panel",
-    description: "Reserved for the upcoming user/workspace memory panel.",
+    description: "Open or close the memory panel on the right side.",
     keys: ["Cmd/Ctrl", "Shift", "M"],
-    availability: "planned",
+    availability: "available",
   },
+];
+
+export const PLANNED_SHORTCUTS: ShortcutDefinition[] = [
   {
     id: "open-search",
     label: "Open search",
