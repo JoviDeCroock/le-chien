@@ -180,7 +180,7 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
       ? {
           save_memory: tool({
             description:
-              "Save a piece of information to the user's persistent memory. Use this when the user shares a preference, fact about themselves, or important context that would be useful across future conversations. Do not save trivial or one-off information.",
+              "Remember something about this person for future conversations. Use when they share a preference, something about themselves, or context they'd expect you to recall next time. Skip throwaway details.",
             inputSchema: z.object({
               key: z
                 .string()
@@ -207,7 +207,7 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
         try {
           const res = await fetch(url, {
             headers: {
-              "User-Agent": "le-chien/1.0 (AI Assistant)",
+              "User-Agent": "le-chien/1.0",
               Accept: "text/html,application/xhtml+xml,text/plain,text/markdown,application/json",
             },
             redirect: "follow",

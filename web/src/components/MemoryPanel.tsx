@@ -163,8 +163,7 @@ function MemoryEmptyState({ onAdd }: { onAdd: () => void }) {
         <span class="text-lg">&#x1f9e0;</span>
       </div>
       <p class="text-xs text-neutral-400 leading-relaxed mb-3">
-        Nothing remembered yet. Save useful context so your assistant remembers across
-        conversations.
+        Nothing here yet. Add things you want le chien to remember between conversations.
       </p>
       <Button variant="secondary" size="sm" onClick={onAdd}>
         Add memory
