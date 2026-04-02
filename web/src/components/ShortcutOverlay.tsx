@@ -49,7 +49,7 @@ export function ShortcutOverlay({ open, onClose }: ShortcutOverlayProps) {
           </button>
         </div>
 
-        <div class="grid gap-6 px-5 py-5 md:grid-cols-2">
+        <div class="grid max-h-[70vh] gap-6 overflow-y-auto px-5 py-5 md:grid-cols-2">
           <ShortcutSection
             title="Available now"
             description="These shortcuts are wired into the current chat experience."
