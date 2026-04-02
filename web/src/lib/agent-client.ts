@@ -1,6 +1,10 @@
 import { AgentClient, type StreamOptions } from "agents/client";
 import { signal } from "@preact/signals";
 
+/** How long to wait after a close event before marking as disconnected.
+ *  PartySocket auto-reconnects — this grace period avoids flashing UI. */
+const RECONNECT_GRACE_MS = 4_000;
+
 export type AgentConnection = {
   client: AgentClient;
   connected: ReturnType<typeof signal<boolean>>;
@@ -16,6 +20,8 @@ export function getAgentConnection(): AgentConnection {
   if (instance) return instance;
 
   const connected = signal(false);
+  let disconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let intentionalClose = false;
 
   // Same-origin: derive host from current window location
   const host = typeof window !== "undefined" ? window.location.host : "localhost:5173";
@@ -29,10 +35,26 @@ export function getAgentConnection(): AgentConnection {
 
   // Use addEventListener since PartySocket extends WebSocket
   client.addEventListener("open", () => {
+    // Reconnected within grace period — cancel the disconnect signal
+    if (disconnectTimer) {
+      clearTimeout(disconnectTimer);
+      disconnectTimer = null;
+    }
     connected.value = true;
   });
+
   client.addEventListener("close", () => {
-    connected.value = false;
+    if (intentionalClose) {
+      connected.value = false;
+      return;
+    }
+    // Delay marking as disconnected so PartySocket can reconnect silently
+    if (!disconnectTimer) {
+      disconnectTimer = setTimeout(() => {
+        disconnectTimer = null;
+        connected.value = false;
+      }, RECONNECT_GRACE_MS);
+    }
   });
 
   async function call<T>(method: string, args: unknown[] = []): Promise<T> {
@@ -46,6 +68,11 @@ export function getAgentConnection(): AgentConnection {
   }
 
   function close() {
+    intentionalClose = true;
+    if (disconnectTimer) {
+      clearTimeout(disconnectTimer);
+      disconnectTimer = null;
+    }
     client.close();
     instance = null;
   }

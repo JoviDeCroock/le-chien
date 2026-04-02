@@ -42,7 +42,10 @@ export const MemoryModel = createModel(() => {
       const result = await getAgent().call<Memory[]>("listMemories");
       memories.value = result;
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Failed to load memories";
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg !== "Connection closed") {
+        error.value = msg || "Failed to load memories";
+      }
     } finally {
       loading.value = false;
     }
@@ -61,7 +64,10 @@ export const MemoryModel = createModel(() => {
       addValue.value = "";
       adding.value = false;
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Failed to save memory";
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg !== "Connection closed") {
+        error.value = msg || "Failed to save memory";
+      }
     }
   };
 
@@ -89,7 +95,10 @@ export const MemoryModel = createModel(() => {
       memories.value = memories.value.map((m) => (m.id === id ? updated : m));
       cancelEditing();
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Failed to update memory";
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg !== "Connection closed") {
+        error.value = msg || "Failed to update memory";
+      }
     }
   };
 
@@ -99,7 +108,10 @@ export const MemoryModel = createModel(() => {
       await getAgent().call("deleteMemory", [memoryId]);
       memories.value = memories.value.filter((m) => m.id !== memoryId);
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Failed to delete memory";
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg !== "Connection closed") {
+        error.value = msg || "Failed to delete memory";
+      }
     }
   };
 

@@ -162,8 +162,21 @@ export const ChatModel = createModel(() => {
       conversations.value = convos;
       await refreshSubscription();
     } catch {
-      // Will retry on next interaction
+      // PartySocket will reconnect — retry when connection reopens
     }
+
+    // Re-fetch conversations when reconnecting after a drop
+    conn.connected.subscribe((val) => {
+      if (val && conversations.value.length === 0) {
+        conn
+          .call<Conversation[]>("listConversations")
+          .then((convos) => {
+            conversations.value = convos;
+          })
+          .catch(() => {});
+        refreshSubscription().catch(() => {});
+      }
+    });
   };
 
   const disconnect = () => {
@@ -226,7 +239,10 @@ export const ChatModel = createModel(() => {
         return m as Message;
       });
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Failed to load conversation";
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg !== "Connection closed") {
+        error.value = msg || "Failed to load conversation";
+      }
     }
   };
 
@@ -244,7 +260,10 @@ export const ChatModel = createModel(() => {
       messages.value = [];
       return convo.id;
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Failed to create conversation";
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg !== "Connection closed") {
+        error.value = msg || "Failed to create conversation";
+      }
       return null;
     }
   };
@@ -260,7 +279,10 @@ export const ChatModel = createModel(() => {
         messages.value = [];
       }
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Failed to delete conversation";
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg !== "Connection closed") {
+        error.value = msg || "Failed to delete conversation";
+      }
     }
   };
 
@@ -374,6 +396,8 @@ export const ChatModel = createModel(() => {
             .catch(() => {});
         },
         onError: (err) => {
+          // Suppress transient "Connection closed" — PartySocket will reconnect
+          if (err === "Connection closed") return;
           error.value = err;
           streaming.value = false;
           // Remove empty assistant message on error
@@ -385,7 +409,10 @@ export const ChatModel = createModel(() => {
         },
       });
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Failed to send message";
+      const msg = err instanceof Error ? err.message : String(err);
+      // Suppress transient "Connection closed" — PartySocket will reconnect
+      if (msg === "Connection closed") return;
+      error.value = msg || "Failed to send message";
       streaming.value = false;
     }
   };
