@@ -21,12 +21,20 @@ type Conversation = {
   updated_at: number;
 };
 
+type AttachmentMeta = {
+  key: string;
+  name: string;
+  type: string;
+  size: number;
+};
+
 type Message = {
   id: string;
   conversation_id: string;
   role: string;
   content: string;
   tool_calls: string | null;
+  attachments: string | null;
   created_at: number;
 };
 
@@ -44,16 +52,16 @@ type Memory = {
  */
 const MAX_HISTORY_CHARS = 48_000; // ~12k tokens
 
-function trimHistory(
-  messages: { role: string; content: string }[],
-): { role: string; content: string }[] {
+type HistoryMessage = { role: string; content: string; attachments: string | null };
+
+function trimHistory(messages: HistoryMessage[]): HistoryMessage[] {
   // Fast path: if everything fits, send it all
   let totalChars = 0;
   for (const m of messages) totalChars += m.content.length;
   if (totalChars <= MAX_HISTORY_CHARS) return messages;
 
   // Always keep the latest messages; walk backwards until we hit the budget
-  const kept: { role: string; content: string }[] = [];
+  const kept: HistoryMessage[] = [];
   let budget = MAX_HISTORY_CHARS;
   for (let i = messages.length - 1; i >= 0; i--) {
     const cost = messages[i].content.length;
@@ -105,6 +113,12 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     } catch {
       // Column already exists — ignore
     }
+    // Migration: add attachments column for existing DOs
+    try {
+      this.sql`ALTER TABLE messages ADD COLUMN attachments TEXT`;
+    } catch {
+      // Column already exists — ignore
+    }
   }
 
   createConversation(title: string, model?: string): Conversation {
@@ -136,7 +150,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     if (conversations.length === 0) throw new Error("Conversation not found");
 
     const messages = this.sql<Message>`
-      SELECT id, conversation_id, role, content, tool_calls, created_at
+      SELECT id, conversation_id, role, content, tool_calls, attachments, created_at
       FROM messages WHERE conversation_id = ${conversationId}
       ORDER BY created_at ASC
     `;
@@ -196,6 +210,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     conversationId: string,
     content: string,
     model?: string,
+    attachmentsMeta?: AttachmentMeta[],
   ) {
     const db = drizzle(this.env.DB, { schema });
     const userId = this.name;
@@ -248,15 +263,18 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     const assistantMessageId = crypto.randomUUID();
 
     try {
+      const attachmentsJson =
+        attachmentsMeta && attachmentsMeta.length > 0 ? JSON.stringify(attachmentsMeta) : null;
+
       this.sql`
-        INSERT INTO messages (id, conversation_id, role, content, created_at)
-        VALUES (${userMessageId}, ${conversationId}, ${"user"}, ${content}, ${now})
+        INSERT INTO messages (id, conversation_id, role, content, attachments, created_at)
+        VALUES (${userMessageId}, ${conversationId}, ${"user"}, ${content}, ${attachmentsJson}, ${now})
       `;
 
       this.sql`UPDATE conversations SET updated_at = ${now} WHERE id = ${conversationId}`;
 
-      const history = this.sql<{ role: string; content: string }>`
-        SELECT role, content FROM messages
+      const history = this.sql<{ role: string; content: string; attachments: string | null }>`
+        SELECT role, content, attachments FROM messages
         WHERE conversation_id = ${conversationId}
         ORDER BY created_at ASC
       `;
@@ -275,7 +293,9 @@ Format your answers in markdown — use headings, lists, code blocks, and emphas
 
 When something is genuinely interesting, show that. When you don't know, say so plainly instead of generating plausible-sounding filler.
 
-You have tools available. Use the calculate tool for math instead of computing in your head. Use get_current_datetime for date/time questions. Use read_url to fetch web content. Use generate_image when asked to create pictures or illustrations. Use run_javascript to execute code — always run code rather than just showing it when the user asks to test or run something. Reach for tools when they'd give a better answer — don't announce that you're using them unless it's relevant.`;
+You have tools available. Use the calculate tool for math instead of computing in your head. Use get_current_datetime for date/time questions. Use read_url to fetch web content. Use generate_image when asked to create pictures or illustrations. Use run_javascript to execute code — always run code rather than just showing it when the user asks to test or run something. Reach for tools when they'd give a better answer — don't announce that you're using them unless it's relevant.
+
+When the user shares images, describe what you see and answer any questions about them. When they share documents (PDFs, text files), analyze the content and help with whatever they need.`;
 
       if (memories.length > 0) {
         const memoryBlock = memories.map((m) => `- ${m.key}: ${m.value}`).join("\n");
@@ -284,13 +304,68 @@ You have tools available. Use the calculate tool for math instead of computing i
 
       const trimmed = trimHistory(history);
 
+      // Build AI SDK messages, resolving attachments to content parts
+      const aiMessages = await Promise.all(
+        trimmed.map(async (m) => {
+          const role = m.role as "user" | "assistant";
+          let fileAttachments: AttachmentMeta[] | null = null;
+          if (m.attachments) {
+            try {
+              fileAttachments = JSON.parse(m.attachments) as AttachmentMeta[];
+            } catch {
+              // ignore
+            }
+          }
+
+          if (!fileAttachments || fileAttachments.length === 0 || role !== "user") {
+            return { role, content: m.content };
+          }
+
+          // Build multimodal content parts
+          const parts: (
+            | { type: "text"; text: string }
+            | { type: "image"; image: Uint8Array; mimeType: string }
+            | { type: "file"; data: Uint8Array; mimeType: string }
+          )[] = [];
+
+          if (m.content) {
+            parts.push({ type: "text", text: m.content });
+          }
+
+          for (const att of fileAttachments) {
+            try {
+              const obj = await this.env.UPLOADS.get(att.key);
+              if (!obj) continue;
+              const bytes = new Uint8Array(await obj.arrayBuffer());
+
+              if (att.type.startsWith("image/")) {
+                parts.push({ type: "image", image: bytes, mimeType: att.type });
+              } else if (att.type === "application/pdf") {
+                parts.push({ type: "file", data: bytes, mimeType: att.type });
+              } else {
+                // Text-based files: decode and include as text
+                const text = new TextDecoder().decode(bytes);
+                parts.push({
+                  type: "text",
+                  text: `\n\n--- File: ${att.name} ---\n${text}\n--- End of file ---`,
+                });
+              }
+            } catch {
+              parts.push({
+                type: "text",
+                text: `[Failed to load attachment: ${att.name}]`,
+              });
+            }
+          }
+
+          return { role, content: parts };
+        }),
+      );
+
       const result = streamText({
         model: aiModel,
         system: systemPrompt,
-        messages: trimmed.map((m) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        })),
+        messages: aiMessages,
         tools,
         stopWhen: stepCountIs(5),
       });

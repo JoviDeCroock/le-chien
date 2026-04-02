@@ -28,7 +28,16 @@ export type Message = {
   role: "user" | "assistant";
   content: string;
   tool_calls?: ToolCall[];
+  attachments?: Attachment[];
   created_at: number;
+};
+
+export type Attachment = {
+  key: string;
+  name: string;
+  type: string;
+  size: number;
+  uploading?: boolean;
 };
 
 export type ModelOption = {
@@ -71,6 +80,7 @@ export const ChatModel = createModel(() => {
   const connected = signal(false);
   const subscription = signal<SubscriptionStatus | null>(null);
   const checkoutPending = signal(false);
+  const attachments = signal<Attachment[]>([]);
 
   const agent = signal<AgentConnection | null>(null);
   let subscriptionResetTimer: number | null = null;
@@ -115,9 +125,16 @@ export const ChatModel = createModel(() => {
     () => subscription.value?.plan === "free" && subscription.value.usage.limitReached,
   );
 
+  const hasAttachmentsReady = computed(
+    () => attachments.value.length > 0 && attachments.value.every((a) => !a.uploading),
+  );
+
   const canSend = computed(
     () =>
-      input.value.trim().length > 0 && !streaming.value && connected.value && !inputLocked.value,
+      (input.value.trim().length > 0 || hasAttachmentsReady.value) &&
+      !streaming.value &&
+      connected.value &&
+      !inputLocked.value,
   );
 
   const activeConversation = computed(
@@ -197,10 +214,16 @@ export const ChatModel = createModel(() => {
     try {
       const result = await agent.value!.call<{
         conversation: Conversation;
-        messages: (Message & { tool_calls?: string | ToolCall[] | null })[];
+        messages: (Message & {
+          tool_calls?: string | ToolCall[] | null;
+          attachments?: string | Attachment[] | null;
+        })[];
       }>("getConversation", [conversationId]);
-      // Parse tool_calls JSON from DB storage
+      // Parse tool_calls and attachments JSON from DB storage
       messages.value = result.messages.map((m) => {
+        let toolCalls: ToolCall[] | undefined;
+        let parsedAttachments: Attachment[] | undefined;
+
         if (typeof m.tool_calls === "string") {
           try {
             const parsed = JSON.parse(m.tool_calls) as {
@@ -209,21 +232,35 @@ export const ChatModel = createModel(() => {
               args: unknown;
               result: unknown;
             }[];
-            return {
-              ...m,
-              tool_calls: parsed.map((tc) => ({
-                id: tc.id,
-                name: tc.name,
-                args: (tc.args as Record<string, unknown>) ?? {},
-                result: tc.result,
-                status: "complete" as const,
-              })),
-            };
+            toolCalls = parsed.map((tc) => ({
+              id: tc.id,
+              name: tc.name,
+              args: (tc.args as Record<string, unknown>) ?? {},
+              result: tc.result,
+              status: "complete" as const,
+            }));
           } catch {
-            return { ...m, tool_calls: undefined };
+            // ignore
           }
+        } else if (Array.isArray(m.tool_calls)) {
+          toolCalls = m.tool_calls as ToolCall[];
         }
-        return m as Message;
+
+        if (typeof m.attachments === "string") {
+          try {
+            parsedAttachments = JSON.parse(m.attachments) as Attachment[];
+          } catch {
+            // ignore
+          }
+        } else if (Array.isArray(m.attachments)) {
+          parsedAttachments = m.attachments as Attachment[];
+        }
+
+        return {
+          ...m,
+          tool_calls: toolCalls,
+          attachments: parsedAttachments,
+        } as Message;
       });
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to load conversation";
@@ -264,9 +301,48 @@ export const ChatModel = createModel(() => {
     }
   };
 
+  const uploadFile = async (file: File) => {
+    const placeholder: Attachment = {
+      key: crypto.randomUUID(),
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      uploading: true,
+    };
+    attachments.value = [...attachments.value, placeholder];
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/v1/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error: string };
+        error.value = data.error ?? "Upload failed";
+        attachments.value = attachments.value.filter((a) => a.key !== placeholder.key);
+        return;
+      }
+      const uploaded = (await res.json()) as Attachment;
+      attachments.value = attachments.value.map((a) =>
+        a.key === placeholder.key ? { ...uploaded, uploading: false } : a,
+      );
+    } catch {
+      error.value = "Upload failed";
+      attachments.value = attachments.value.filter((a) => a.key !== placeholder.key);
+    }
+  };
+
+  const removeAttachment = (key: string) => {
+    attachments.value = attachments.value.filter((a) => a.key !== key);
+  };
+
   const send = async () => {
     const text = input.value.trim();
-    if (!text || streaming.value || !agent.value) return;
+    const currentAttachments = attachments.value.filter((a) => !a.uploading);
+    if ((!text && currentAttachments.length === 0) || streaming.value || !agent.value) return;
 
     error.value = null;
 
@@ -278,11 +354,13 @@ export const ChatModel = createModel(() => {
     }
 
     // Optimistic: add user message and empty assistant message
+    const messageAttachments = currentAttachments.length > 0 ? currentAttachments : undefined;
     const userMessage: Message = {
       id: crypto.randomUUID(),
       conversation_id: convId,
       role: "user",
       content: text,
+      attachments: messageAttachments,
       created_at: Math.floor(Date.now() / 1000),
     };
     const assistantMessage: Message = {
@@ -297,93 +375,105 @@ export const ChatModel = createModel(() => {
 
     messages.value = [...messages.value, userMessage, assistantMessage];
     input.value = "";
+    attachments.value = [];
     streaming.value = true;
 
+    const attachmentMeta = messageAttachments?.map(({ key, name, type, size }) => ({
+      key,
+      name,
+      type,
+      size,
+    }));
+
     try {
-      await agent.value!.callStream("sendMessage", [convId, text, selectedModel.value], {
-        onChunk: (chunk) => {
-          const msgs = messages.value;
-          const last = msgs[msgs.length - 1];
-
-          // Handle structured tool events
-          if (typeof chunk === "object" && chunk !== null && "__event" in chunk) {
-            const event = chunk as {
-              __event: string;
-              id: string;
-              name: string;
-              args?: unknown;
-              result?: unknown;
-            };
-            if (event.__event === "tool-call") {
-              const tc: ToolCall = {
-                id: event.id,
-                name: event.name,
-                args: (event.args as Record<string, unknown>) ?? {},
-                status: "pending",
-              };
-              const existing = last.tool_calls ?? [];
-              messages.value = [...msgs.slice(0, -1), { ...last, tool_calls: [...existing, tc] }];
-            } else if (event.__event === "tool-result") {
-              const existing = last.tool_calls ?? [];
-              const updated = existing.map((tc) =>
-                tc.id === event.id
-                  ? { ...tc, result: event.result, status: "complete" as const }
-                  : tc,
-              );
-              messages.value = [...msgs.slice(0, -1), { ...last, tool_calls: updated }];
-            }
-            return;
-          }
-
-          // Regular text chunk
-          messages.value = [
-            ...msgs.slice(0, -1),
-            { ...last, content: last.content + (chunk as string) },
-          ];
-        },
-        onDone: (result) => {
-          const meta = result as SendMessageResult | undefined;
-
-          if (meta?.subscription) {
-            setSubscription(meta.subscription);
-          }
-
-          if (meta?.blocked) {
-            messages.value = messages.value.filter(
-              (message) =>
-                message.id !== optimisticUserMessageId &&
-                message.id !== optimisticAssistantMessageId,
-            );
-            streaming.value = false;
-            return;
-          }
-
-          if (meta?.messageId) {
+      await agent.value!.callStream(
+        "sendMessage",
+        [convId, text, selectedModel.value, attachmentMeta],
+        {
+          onChunk: (chunk) => {
             const msgs = messages.value;
             const last = msgs[msgs.length - 1];
-            messages.value = [...msgs.slice(0, -1), { ...last, id: meta.messageId }];
-          }
-          streaming.value = false;
 
-          // Refresh conversation list to get updated titles/timestamps
-          agent.value
-            ?.call<Conversation[]>("listConversations")
-            .then((convos) => {
-              conversations.value = convos;
-            })
-            .catch(() => {});
+            // Handle structured tool events
+            if (typeof chunk === "object" && chunk !== null && "__event" in chunk) {
+              const event = chunk as {
+                __event: string;
+                id: string;
+                name: string;
+                args?: unknown;
+                result?: unknown;
+              };
+              if (event.__event === "tool-call") {
+                const tc: ToolCall = {
+                  id: event.id,
+                  name: event.name,
+                  args: (event.args as Record<string, unknown>) ?? {},
+                  status: "pending",
+                };
+                const existing = last.tool_calls ?? [];
+                messages.value = [...msgs.slice(0, -1), { ...last, tool_calls: [...existing, tc] }];
+              } else if (event.__event === "tool-result") {
+                const existing = last.tool_calls ?? [];
+                const updated = existing.map((tc) =>
+                  tc.id === event.id
+                    ? { ...tc, result: event.result, status: "complete" as const }
+                    : tc,
+                );
+                messages.value = [...msgs.slice(0, -1), { ...last, tool_calls: updated }];
+              }
+              return;
+            }
+
+            // Regular text chunk
+            messages.value = [
+              ...msgs.slice(0, -1),
+              { ...last, content: last.content + (chunk as string) },
+            ];
+          },
+          onDone: (result) => {
+            const meta = result as SendMessageResult | undefined;
+
+            if (meta?.subscription) {
+              setSubscription(meta.subscription);
+            }
+
+            if (meta?.blocked) {
+              messages.value = messages.value.filter(
+                (message) =>
+                  message.id !== optimisticUserMessageId &&
+                  message.id !== optimisticAssistantMessageId,
+              );
+              streaming.value = false;
+              return;
+            }
+
+            if (meta?.messageId) {
+              const msgs = messages.value;
+              const last = msgs[msgs.length - 1];
+              messages.value = [...msgs.slice(0, -1), { ...last, id: meta.messageId }];
+            }
+            streaming.value = false;
+
+            // Refresh conversation list to get updated titles/timestamps
+            agent.value
+              ?.call<Conversation[]>("listConversations")
+              .then((convos) => {
+                conversations.value = convos;
+              })
+              .catch(() => {});
+          },
+          onError: (err) => {
+            error.value = err;
+            streaming.value = false;
+            // Remove empty assistant message on error
+            const msgs = messages.value;
+            const last = msgs[msgs.length - 1];
+            if (last.role === "assistant" && !last.content) {
+              messages.value = msgs.slice(0, -1);
+            }
+          },
         },
-        onError: (err) => {
-          error.value = err;
-          streaming.value = false;
-          // Remove empty assistant message on error
-          const msgs = messages.value;
-          const last = msgs[msgs.length - 1];
-          if (last.role === "assistant" && !last.content) {
-            messages.value = msgs.slice(0, -1);
-          }
-        },
-      });
+      );
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to send message";
       streaming.value = false;
@@ -418,6 +508,9 @@ export const ChatModel = createModel(() => {
     inputLocked,
     checkoutPending,
     canSend,
+    attachments,
+    uploadFile,
+    removeAttachment,
     fetchModels,
     refreshSubscription,
     connect,

@@ -25,6 +25,12 @@
     "bindings": [{ "name": "CHAT_AGENT", "class_name": "ChatAgent" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatAgent"] }],
+  "r2_buckets": [
+    {
+      "binding": "UPLOADS",
+      "bucket_name": "le-chien-uploads",
+    },
+  ],
   "d1_databases": [
     {
       "binding": "DB",

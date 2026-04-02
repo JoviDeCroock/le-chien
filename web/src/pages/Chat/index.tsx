@@ -258,6 +258,9 @@ export function Chat() {
             onInput={(v) => (chat.input.value = v)}
             onSend={() => chat.send()}
             onStop={() => chat.stop()}
+            onUpload={(file) => chat.uploadFile(file)}
+            onRemoveAttachment={(key) => chat.removeAttachment(key)}
+            attachments={chat.attachments.value}
             canSend={chat.canSend.value}
             streaming={chat.streaming.value}
             disabled={composerDisabled}

@@ -10,5 +10,6 @@ declare namespace Cloudflare {
     POLAR_PRO_PRODUCT_ID: string;
     OPENAI_API_KEY: string;
     CF_API_TOKEN: string;
+    UPLOADS: R2Bucket;
   }
 }

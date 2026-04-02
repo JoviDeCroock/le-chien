@@ -62,6 +62,34 @@ export function StopIcon(props: IconProps) {
   );
 }
 
+export function PaperclipIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path
+        d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"
+        {...stroke}
+      />
+    </Icon>
+  );
+}
+
+export function XIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M18 6L6 18M6 6l12 12" {...stroke} />
+    </Icon>
+  );
+}
+
+export function FileIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" {...stroke} />
+      <polyline points="14 2 14 8 20 8" {...stroke} />
+    </Icon>
+  );
+}
+
 export function AlertTriangleIcon(props: IconProps) {
   return (
     <Icon {...props}>
