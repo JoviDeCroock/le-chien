@@ -197,14 +197,28 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
   }
 
   /**
-   * Runs after each exchange to automatically extract memorable facts about the
-   * user. Uses a cheap/fast model so it doesn't add cost. Fire-and-forget —
-   * failures are silently ignored so they never affect the chat experience.
+   * Scheduled callback: extracts memorable facts from a conversation's full
+   * history. Debounced to 1 hour after the last message so we process each
+   * conversation once, not per-message. Updates existing memories instead of
+   * creating duplicates.
    */
-  private async extractMemories(userMessage: string, assistantMessage: string) {
+  async extractMemories(conversationId: string) {
     try {
-      const existing = this.sql<{ key: string; value: string }>`
-        SELECT key, value FROM memories ORDER BY updated_at DESC
+      const messages = this.sql<{ role: string; content: string }>`
+        SELECT role, content FROM messages
+        WHERE conversation_id = ${conversationId}
+        ORDER BY created_at ASC
+      `;
+      if (messages.length === 0) return;
+
+      // Only send user messages — the model's replies don't contain user facts
+      const userMessages = messages
+        .filter((m) => m.role === "user")
+        .map((m) => m.content)
+        .join("\n---\n");
+
+      const existing = this.sql<{ id: string; key: string; value: string }>`
+        SELECT id, key, value FROM memories ORDER BY updated_at DESC
       `;
 
       const existingBlock =
@@ -219,27 +233,64 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
 
 Rules:
 - Only extract clear, lasting facts — skip anything transient or conversational.
-- Don't duplicate what's already remembered.
-- Return a JSON array of objects with "key" and "value" fields. The key is a short label, the value is the fact.
-- If there's nothing new worth remembering, return an empty array: []
+- If a fact updates something already remembered, use action "update" with the matching key. If it's new, use "create".
+- Don't return facts that are already remembered unchanged.
+- Return a JSON array of objects with "action" ("create" or "update"), "key" (short label), and "value" (the fact).
+- If there's nothing new or changed, return an empty array: []
 - Return ONLY the JSON array, no other text.${existingBlock}`,
-        prompt: `User: ${userMessage}\n\nAssistant: ${assistantMessage}`,
+        prompt: userMessages,
       });
 
-      // Parse extracted memories
       const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
       const parsed = z
-        .array(z.object({ key: z.string(), value: z.string() }))
+        .array(
+          z.object({
+            action: z.enum(["create", "update"]),
+            key: z.string(),
+            value: z.string(),
+          }),
+        )
         .safeParse(JSON.parse(cleaned));
 
       if (!parsed.success || parsed.data.length === 0) return;
 
-      for (const { key, value } of parsed.data) {
-        this.createMemory(key, value);
+      for (const { action, key, value } of parsed.data) {
+        if (action === "update") {
+          const match = existing.find((m) => m.key.toLowerCase() === key.toLowerCase());
+          if (match) {
+            this.updateMemory(match.id, key, value);
+            continue;
+          }
+        }
+        // Deduplicate: skip if a memory with this key already exists with same value
+        const duplicate = existing.find(
+          (m) =>
+            m.key.toLowerCase() === key.toLowerCase() &&
+            m.value.toLowerCase() === value.toLowerCase(),
+        );
+        if (!duplicate) {
+          this.createMemory(key, value);
+        }
       }
     } catch {
       // Silent failure — auto-extraction is best-effort
     }
+  }
+
+  /**
+   * Schedules memory extraction for a conversation 1 hour from now.
+   * If the user sends more messages before the hour is up, the schedule
+   * is replaced (debounced) so we only process once per quiet period.
+   */
+  private async scheduleMemoryExtraction(conversationId: string) {
+    // Cancel any existing scheduled extraction for this conversation
+    const existing = await this.getSchedules();
+    for (const s of existing) {
+      if (s.callback === "extractMemories" && s.payload === conversationId) {
+        await this.cancelSchedule(s.id);
+      }
+    }
+    await this.schedule(3600, "extractMemories", conversationId);
   }
 
   async sendMessage(
@@ -422,8 +473,8 @@ Rules:
         VALUES (${assistantMessageId}, ${conversationId}, ${"assistant"}, ${fullContent}, ${toolCallsJson}, ${finishedAt})
       `;
 
-      // Auto-extract memories in the background (fire-and-forget)
-      this.ctx.waitUntil(this.extractMemories(content, fullContent));
+      // Schedule memory extraction — debounced to 1 hour after last message
+      this.scheduleMemoryExtraction(conversationId);
 
       // Auto-title: if this is the first exchange, generate a title from user message
       const messageCount = this.sql<{ count: number }>`
@@ -498,6 +549,10 @@ callable()(proto.updateMemory, {
 callable()(proto.deleteMemory, {
   kind: "method",
   name: "deleteMemory",
+} as ClassMethodDecoratorContext);
+callable()(proto.extractMemories, {
+  kind: "method",
+  name: "extractMemories",
 } as ClassMethodDecoratorContext);
 callable({ streaming: true })(proto.sendMessage, {
   kind: "method",

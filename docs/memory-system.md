@@ -79,15 +79,18 @@ Signals-based state management for:
 
 ## Automatic memory extraction
 
-After each exchange, a background LLM call (`glm-4.7-flash`) analyzes the user's message and the assistant's response for memorable facts. This runs via `ctx.waitUntil` so it never blocks or slows down the chat stream.
+After each message, a memory extraction is **scheduled for 1 hour later** using the Agents `schedule()` API. If more messages arrive in the same conversation before the hour is up, the timer resets (debounce). This means each conversation is processed once per quiet period, not per-message.
 
-The extraction:
-1. Loads existing memories to avoid duplicates
-2. Sends both messages to a cheap model with a focused extraction prompt
-3. Parses the JSON response and saves any new memories
-4. Fails silently — auto-extraction is best-effort
+When the scheduled extraction fires:
+1. Loads the **full conversation history** (all user messages) — gives richer context than a single exchange
+2. Loads existing memories and passes them to the extraction model to avoid duplicates
+3. Uses `glm-4.7-flash` (cheap/fast) to extract new or updated facts
+4. For each extracted fact:
+   - If it matches an existing memory key → **updates** the existing memory
+   - If it's a new fact → creates it (after checking no exact duplicate exists)
+5. Fails silently — auto-extraction is best-effort
 
-This complements the `save_memory` tool: the tool handles explicit "remember this" requests, while auto-extraction catches facts the model didn't proactively save (common with smaller models).
+This complements the `save_memory` tool: the tool handles explicit "remember this" requests, while auto-extraction catches facts the model didn't proactively save (especially common with smaller models).
 
 ## Future work
 
