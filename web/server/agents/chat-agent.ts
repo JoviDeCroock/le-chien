@@ -15,6 +15,7 @@ import {
   tryIncrementDailyPremiumMessageUsage,
 } from "../lib/plans";
 import { trackServerEvent, captureServerException } from "../lib/posthog";
+import { isProduction } from "../utils/isProduction";
 
 type Conversation = {
   id: string;
@@ -222,8 +223,9 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
 
     const isPremium = isPremiumModel(selectedModel);
     let premiumUsageReserved = false;
+    const enforceRateLimits = isProduction(this.env);
 
-    if (subscription.plan === "free") {
+    if (enforceRateLimits && subscription.plan === "free") {
       if (subscription.usage.limitReached) {
         stream.end({ blocked: true, reason: "daily_limit", subscription });
         return;
@@ -270,11 +272,13 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
 
     const tools = createTools(this.env, {
       onSaveMemory: (key, value) => this.createMemory(key, value),
-      rateLimit: {
-        db: this.env.DB,
-        userId,
-        plan: subscription.plan,
-      },
+      rateLimit: enforceRateLimits
+        ? {
+            db: this.env.DB,
+            userId,
+            plan: subscription.plan,
+          }
+        : undefined,
     });
 
     // Stream AI response
