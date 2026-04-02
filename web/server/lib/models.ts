@@ -21,6 +21,7 @@ type ModelMeta = {
   tag: string;
   speed: "instant" | "fast" | "moderate";
   bestFor: string;
+  premium?: boolean;
 };
 
 type WorkersAiModelSpec = ModelMeta & {
@@ -54,6 +55,7 @@ export const MODELS: Record<ModelId, ModelSpec> = {
     tag: "Conversational",
     speed: "fast",
     bestFor: "Back-and-forth discussions, brainstorming",
+    premium: true,
   },
   "llama-4-scout": {
     provider: "workers-ai",
@@ -187,6 +189,10 @@ export function getModel(
   });
 }
 
+export function isPremiumModel(modelId: ModelId): boolean {
+  return MODELS[modelId]?.premium === true;
+}
+
 /** Only returns models that are publicly exposed to users. */
 export function listModels() {
   return Object.entries(MODELS)
@@ -198,5 +204,6 @@ export function listModels() {
       tag: spec.tag,
       speed: spec.speed,
       bestFor: spec.bestFor,
+      premium: spec.premium ?? false,
     }));
 }

@@ -2,15 +2,17 @@ import { Agent, callable, type StreamingResponse } from "agents";
 import { streamText, stepCountIs } from "ai";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { getModel, MODELS, DEFAULT_MODEL } from "../lib/models";
+import { getModel, MODELS, DEFAULT_MODEL, isPremiumModel } from "../lib/models";
 import type { ModelId } from "../lib/models";
 import { createTools } from "../lib/tools";
 import {
   buildSubscriptionSnapshot,
   decrementDailyMessageUsage,
+  decrementDailyPremiumMessageUsage,
   getSubscriptionSnapshot,
   getUsageDate,
   tryIncrementDailyMessageUsage,
+  tryIncrementDailyPremiumMessageUsage,
 } from "../lib/plans";
 import { trackServerEvent, captureServerException } from "../lib/posthog";
 
@@ -218,9 +220,17 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     let subscription = await getSubscriptionSnapshot(db, userId);
     let usageReserved = false;
 
+    const isPremium = isPremiumModel(selectedModel);
+    let premiumUsageReserved = false;
+
     if (subscription.plan === "free") {
       if (subscription.usage.limitReached) {
         stream.end({ blocked: true, reason: "daily_limit", subscription });
+        return;
+      }
+
+      if (isPremium && subscription.usage.premiumLimitReached) {
+        stream.end({ blocked: true, reason: "premium_limit", subscription });
         return;
       }
 
@@ -232,7 +242,26 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       }
 
       usageReserved = true;
-      subscription = buildSubscriptionSnapshot("free", usedCount);
+
+      if (isPremium) {
+        const premiumUsedCount = await tryIncrementDailyPremiumMessageUsage(
+          this.env.DB,
+          userId,
+          usageDate,
+        );
+        if (premiumUsedCount === null) {
+          // Roll back the general message increment
+          await decrementDailyMessageUsage(this.env.DB, userId, usageDate);
+          usageReserved = false;
+          subscription = await getSubscriptionSnapshot(db, userId);
+          stream.end({ blocked: true, reason: "premium_limit", subscription });
+          return;
+        }
+        premiumUsageReserved = true;
+        subscription = buildSubscriptionSnapshot("free", usedCount, undefined, premiumUsedCount);
+      } else {
+        subscription = buildSubscriptionSnapshot("free", usedCount);
+      }
     }
 
     const aiModel = getModel(this.env, selectedModel, {
@@ -358,6 +387,9 @@ Rules:
     } catch (err) {
       if (usageReserved) {
         await decrementDailyMessageUsage(this.env.DB, userId, usageDate);
+      }
+      if (premiumUsageReserved) {
+        await decrementDailyPremiumMessageUsage(this.env.DB, userId, usageDate);
       }
       captureServerException(
         this.env,

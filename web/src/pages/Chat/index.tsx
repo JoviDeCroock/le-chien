@@ -147,18 +147,23 @@ export function Chat() {
   }
 
   const hasMessages = chat.messages.value.length > 0;
+  const sub = chat.subscription.value;
   const limitBannerMessage =
-    chat.subscription.value?.plan === "free" &&
-    chat.subscription.value.limits.dailyMessages !== null &&
-    chat.subscription.value.usage.limitReached
-      ? `You've used your ${chat.subscription.value.limits.dailyMessages} free messages for today. Upgrade to Pro for unlimited.`
-      : null;
+    sub?.plan === "free" && sub.limits.dailyMessages !== null && sub.usage.limitReached
+      ? `You've used your ${sub.limits.dailyMessages} free messages for today. Upgrade to Pro for unlimited.`
+      : sub?.plan === "free" && sub.usage.premiumLimitReached && chat.selectedModelIsPremium.value
+        ? `You've used your ${sub.limits.dailyPremiumMessages} premium model messages for today. Upgrade to Pro for unlimited premium access.`
+        : null;
   const composerDisabled = !auth.authenticated.value || chat.inputLocked.value;
+  const isPremiumLock =
+    chat.inputLocked.value && !sub?.usage.limitReached && sub?.usage.premiumLimitReached;
   const composerPlaceholder = !auth.authenticated.value
     ? "Sign in to start chatting..."
-    : chat.inputLocked.value
-      ? "Free limit reached for today. Upgrade or come back tomorrow."
-      : "Send a message...";
+    : isPremiumLock
+      ? "Premium model limit reached. Switch models or upgrade to Pro."
+      : chat.inputLocked.value
+        ? "Free limit reached for today. Upgrade or come back tomorrow."
+        : "Send a message...";
 
   return (
     <PageShell>
@@ -242,6 +247,7 @@ export function Chat() {
             }}
             disabled={chat.streaming.value}
             barRef={modelBarRef}
+            premiumLimitReached={chat.premiumLimitReached.value}
           />
 
           {/* Messages */}

@@ -39,17 +39,22 @@ export type ModelOption = {
   tag: string;
   speed: "instant" | "fast" | "moderate";
   bestFor: string;
+  premium: boolean;
 };
 
 export type SubscriptionStatus = {
   plan: "free" | "pro";
   limits: {
     dailyMessages: number | null;
+    dailyPremiumMessages: number | null;
   };
   usage: {
     dailyMessagesUsed: number;
     dailyMessagesRemaining: number | null;
     limitReached: boolean;
+    dailyPremiumMessagesUsed: number;
+    dailyPremiumMessagesRemaining: number | null;
+    premiumLimitReached: boolean;
     usageDate: string;
     resetsAt: string;
   };
@@ -58,7 +63,7 @@ export type SubscriptionStatus = {
 type SendMessageResult = {
   messageId?: string;
   blocked?: boolean;
-  reason?: "daily_limit";
+  reason?: "daily_limit" | "premium_limit";
   subscription?: SubscriptionStatus;
 };
 
@@ -115,8 +120,20 @@ export const ChatModel = createModel(() => {
     clearSubscriptionResetTimer();
   }
 
+  const premiumLimitReached = computed(
+    () =>
+      subscription.value?.plan === "free" && subscription.value.usage.premiumLimitReached === true,
+  );
+
+  const selectedModelIsPremium = computed(
+    () => models.value.find((m) => m.id === selectedModel.value)?.premium === true,
+  );
+
   const inputLocked = computed(
-    () => subscription.value?.plan === "free" && subscription.value.usage.limitReached,
+    () =>
+      subscription.value?.plan === "free" &&
+      (subscription.value.usage.limitReached ||
+        (selectedModelIsPremium.value && subscription.value.usage.premiumLimitReached)),
   );
 
   const canSend = computed(
@@ -483,6 +500,8 @@ export const ChatModel = createModel(() => {
     connected,
     subscription,
     inputLocked,
+    premiumLimitReached,
+    selectedModelIsPremium,
     checkoutPending,
     canSend,
     fetchModels,
