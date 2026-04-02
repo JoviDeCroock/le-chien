@@ -20,64 +20,26 @@ This means memories are co-located with the user's conversations — no extra D1
 
 ## API (callable methods on ChatAgent)
 
-| Method         | Args                         | Returns    | Description                |
-| -------------- | ---------------------------- | ---------- | -------------------------- |
-| `listMemories` | none                         | `Memory[]` | All memories, newest first |
-| `createMemory` | `key: string, value: string` | `Memory`   | Create a new memory entry  |
-| `updateMemory` | `id, key, value`             | `Memory`   | Update an existing memory  |
-| `deleteMemory` | `id: string`                 | `void`     | Delete a memory            |
+| Method         | Args          | Returns    | Description                |
+| -------------- | ------------- | ---------- | -------------------------- |
+| `listMemories` | none          | `Memory[]` | All memories, newest first |
+| `deleteMemory` | `id: string`  | `void`     | Delete a memory            |
+
+`createMemory` and `updateMemory` exist as internal methods (used by auto-extraction) but are not exposed as callable RPCs.
 
 ## How memories reach the AI
 
 In `sendMessage`, all memories are loaded and appended to the system prompt as a bullet list:
 
 ```
-You have the following memories about this user. Use them to personalize your responses when relevant:
+Stuff you know about this person — use it when it's relevant, ignore it when it's not:
 - Preferred language: TypeScript
 - Role: Frontend engineer at Acme
 ```
 
-## AI-initiated memory saving (tool)
-
-The AI has a `save_memory` tool registered in `createTools`. When the user shares a preference, fact, or important context, the model can call the tool directly — no separate suggestion flow needed.
-
-The tool:
-1. Appears in chat as a standard ToolCallCard (name: `save_memory`, args: key + value)
-2. Executes immediately via a callback to `ChatAgent.createMemory`
-3. Returns `{ saved: true, key, value }` so the user sees confirmation inline
-4. The frontend refreshes the memory list when streaming ends
-
-This is better than the XML-tag approach because:
-- It uses the existing tool infrastructure (no custom parsing)
-- The user sees exactly what was saved via the ToolCallCard UI
-- The AI decides autonomously when to save (like any other tool)
-- Memories can be deleted from the panel if unwanted
-
-## Frontend
-
-### MemoryModel (`web/src/models/memory.ts`)
-
-Signals-based state management for:
-- Memory list (CRUD operations via agent RPC)
-- Panel open/close state
-- Add/edit form state
-
-### Components
-
-- **MemoryPanel** (`web/src/components/MemoryPanel.tsx`): Right-side panel with memory list, add form, edit-in-place, empty state with brain icon. Matches sidebar visual patterns.
-
-### Keyboard shortcut
-
-`Cmd/Ctrl + Shift + M` toggles the memory panel. Also accessible via "Memory" link in the top bar.
-
-## Design decisions
-
-- **Tool-based saving**: The AI saves memories via the `save_memory` tool, which uses the existing tool call UI for transparency. No custom suggestion UI needed.
-- **Key-value model**: Simple and scannable. Key is the label ("Preferred language"), value is the content ("TypeScript").
-- **Per-user DO storage**: Memories are scoped to the user's DO, not in D1. This keeps reads fast during chat (no network hop to D1).
-- **Auto-refresh**: The memory panel refreshes after each conversation exchange to pick up any tool-saved memories.
-
 ## Automatic memory extraction
+
+Memories are created automatically — users don't manually add or edit them.
 
 After each message, a memory extraction is **scheduled for 1 hour later** using the Agents `schedule()` API. If more messages arrive in the same conversation before the hour is up, the timer resets (debounce). This means each conversation is processed once per quiet period, not per-message.
 
@@ -90,11 +52,31 @@ When the scheduled extraction fires:
    - If it's a new fact → creates it (after checking no exact duplicate exists)
 5. Fails silently — auto-extraction is best-effort
 
-This complements the `save_memory` tool: the tool handles explicit "remember this" requests, while auto-extraction catches facts the model didn't proactively save (especially common with smaller models).
+## Frontend
+
+### MemoryModel (`web/src/models/memory.ts`)
+
+Signals-based state management for:
+- Memory list (read + delete via agent RPC)
+- Panel open/close state
+
+### Components
+
+- **MemoryPanel** (`web/src/components/MemoryPanel.tsx`): Right-side panel with memory list and delete-on-hover. Read-only — users can view and delete memories but not create or edit them.
+
+### Keyboard shortcut
+
+`Cmd/Ctrl + Shift + M` toggles the memory panel. Also accessible via "Memory" link in the top bar.
+
+## Design decisions
+
+- **Fully automatic**: Memories are extracted automatically from conversations — no manual creation or editing. Users can only delete memories they don't want.
+- **Key-value model**: Simple and scannable. Key is the label ("Preferred language"), value is the content ("TypeScript").
+- **Per-user DO storage**: Memories are scoped to the user's DO, not in D1. This keeps reads fast during chat (no network hop to D1).
+- **Debounced extraction**: Scheduled 1 hour after last message per conversation, so we process each conversation once per quiet period instead of per-message.
 
 ## Future work
 
 - Workspace-scoped memories (shared across team members)
 - Memory search/filter in the panel
 - Memory count badge on the top bar link
-- Deduplication (don't save what's already remembered)

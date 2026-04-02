@@ -4,7 +4,6 @@ import type { Plan } from "./plans";
 import { getUsageDate, tryIncrementDailyImageGenerationUsage } from "./plans";
 
 type ToolOptions = {
-  onSaveMemory?: (key: string, value: string) => void;
   /** When set, image generation is rate-limited for free users. */
   rateLimit?: {
     db: D1Database;
@@ -192,27 +191,6 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
         }
       },
     }),
-
-    ...(options.onSaveMemory
-      ? {
-          save_memory: tool({
-            description:
-              "Remember something about this person for future conversations. Use when they share a preference, something about themselves, or context they'd expect you to recall next time. Skip throwaway details.",
-            inputSchema: z.object({
-              key: z
-                .string()
-                .describe("Short label for the memory (e.g. 'Preferred language', 'Role', 'Name')"),
-              value: z
-                .string()
-                .describe("The information to remember (e.g. 'TypeScript', 'Frontend engineer')"),
-            }),
-            execute: async ({ key, value }) => {
-              options.onSaveMemory!(key, value);
-              return { saved: true, key, value };
-            },
-          }),
-        }
-      : {}),
 
     read_url: tool({
       description:

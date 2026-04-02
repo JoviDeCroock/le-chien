@@ -369,7 +369,6 @@ Rules:
     });
 
     const tools = createTools(this.env, {
-      onSaveMemory: (key, value) => this.createMemory(key, value),
       rateLimit: enforceRateLimits
         ? {
             db: this.env.DB,
@@ -537,14 +536,6 @@ callable()(proto.updateConversationTitle, {
 callable()(proto.listMemories, {
   kind: "method",
   name: "listMemories",
-} as ClassMethodDecoratorContext);
-callable()(proto.createMemory, {
-  kind: "method",
-  name: "createMemory",
-} as ClassMethodDecoratorContext);
-callable()(proto.updateMemory, {
-  kind: "method",
-  name: "updateMemory",
 } as ClassMethodDecoratorContext);
 callable()(proto.deleteMemory, {
   kind: "method",

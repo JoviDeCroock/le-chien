@@ -43,7 +43,7 @@ export function Chat() {
     return () => chat.disconnect();
   }, [auth.authenticated.value]);
 
-  // Refresh memory list when streaming ends (AI may have saved a memory via tool)
+  // Refresh memory list when streaming ends (auto-extraction may have saved new memories)
   useEffect(() => {
     if (!chat.streaming.value && auth.authenticated.value) {
       memory.loadMemories();
@@ -293,22 +293,6 @@ export function Chat() {
           memories={memory.memories.value}
           loading={memory.loading.value}
           error={memory.error.value}
-          adding={memory.adding.value}
-          addKey={memory.addKey.value}
-          addValue={memory.addValue.value}
-          onAddKeyChange={(v) => (memory.addKey.value = v)}
-          onAddValueChange={(v) => (memory.addValue.value = v)}
-          onStartAdding={() => memory.startAdding()}
-          onCancelAdding={() => memory.cancelAdding()}
-          onCreateMemory={() => memory.createMemory()}
-          editingId={memory.editingId.value}
-          editKey={memory.editKey.value}
-          editValue={memory.editValue.value}
-          onEditKeyChange={(v) => (memory.editKey.value = v)}
-          onEditValueChange={(v) => (memory.editValue.value = v)}
-          onStartEditing={(m) => memory.startEditing(m)}
-          onCancelEditing={() => memory.cancelEditing()}
-          onSaveEdit={() => memory.saveEdit()}
           onDeleteMemory={(id) => memory.deleteMemory(id)}
         />
       </div>
