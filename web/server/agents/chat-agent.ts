@@ -63,7 +63,6 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     }
   }
 
-  @callable()
   createConversation(title: string, model?: string): Conversation {
     const id = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000);
@@ -77,7 +76,6 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     return { id, title, model: selectedModel, created_at: now, updated_at: now };
   }
 
-  @callable()
   listConversations(): Conversation[] {
     return this.sql<Conversation>`
       SELECT id, title, model, created_at, updated_at
@@ -86,7 +84,6 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     `;
   }
 
-  @callable()
   getConversation(conversationId: string): { conversation: Conversation; messages: Message[] } {
     const conversations = this.sql<Conversation>`
       SELECT id, title, model, created_at, updated_at
@@ -103,13 +100,11 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     return { conversation: conversations[0], messages };
   }
 
-  @callable()
   deleteConversation(conversationId: string): void {
     this.sql`DELETE FROM messages WHERE conversation_id = ${conversationId}`;
     this.sql`DELETE FROM conversations WHERE id = ${conversationId}`;
   }
 
-  @callable()
   updateConversationTitle(conversationId: string, title: string): void {
     const now = Math.floor(Date.now() / 1000);
     this.sql`
@@ -118,7 +113,6 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     `;
   }
 
-  @callable({ streaming: true })
   async sendMessage(
     stream: StreamingResponse,
     conversationId: string,
@@ -266,3 +260,30 @@ You have tools available. Use the calculate tool for math instead of computing i
     }
   }
 }
+
+// Apply callable metadata manually — decorator syntax isn't supported by the CF vite plugin bundler
+const proto = ChatAgent.prototype;
+callable()(proto.createConversation, {
+  kind: "method",
+  name: "createConversation",
+} as ClassMethodDecoratorContext);
+callable()(proto.listConversations, {
+  kind: "method",
+  name: "listConversations",
+} as ClassMethodDecoratorContext);
+callable()(proto.getConversation, {
+  kind: "method",
+  name: "getConversation",
+} as ClassMethodDecoratorContext);
+callable()(proto.deleteConversation, {
+  kind: "method",
+  name: "deleteConversation",
+} as ClassMethodDecoratorContext);
+callable()(proto.updateConversationTitle, {
+  kind: "method",
+  name: "updateConversationTitle",
+} as ClassMethodDecoratorContext);
+callable({ streaming: true })(proto.sendMessage, {
+  kind: "method",
+  name: "sendMessage",
+} as ClassMethodDecoratorContext);

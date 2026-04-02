@@ -20,13 +20,16 @@ app.use("/api/*", async (c, next) => {
   await next();
 });
 
-// Security response headers
+// Security response headers (skip WebSocket upgrades — status 101 can't be re-wrapped)
 app.use("/api/*", async (c, next) => {
   await next();
-  c.res.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
-  c.res.headers.set("X-Content-Type-Options", "nosniff");
-  c.res.headers.set("X-Frame-Options", "DENY");
-  c.res.headers.set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+  if (c.res.status < 200 || c.res.status > 599) return;
+  const headers = new Headers(c.res.headers);
+  headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+  c.res = new Response(c.res.body, { status: c.res.status, headers });
 });
 
 app.get("/api/billing-success", async (c) => {
