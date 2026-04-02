@@ -92,6 +92,11 @@ export function Chat() {
           event.preventDefault();
         }
 
+        if (memory.panelOpen.value) {
+          memory.panelOpen.value = false;
+          event.preventDefault();
+        }
+
         return;
       }
 
@@ -175,7 +180,13 @@ export function Chat() {
       />
 
       <div class="flex-1 flex overflow-hidden">
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <div
+          class="flex-1 flex flex-col overflow-hidden"
+          onClick={() => {
+            if (sidebarOpen.value) sidebarOpen.value = false;
+            if (memory.panelOpen.value) memory.panelOpen.value = false;
+          }}
+        >
           <TopBar
             left={
               <>
