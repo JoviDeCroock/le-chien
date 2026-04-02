@@ -23,22 +23,24 @@ still low cost. Infrastructure costs (Durable Objects, D1) are negligible at
 | Power user | 200 | ~$0.51 |
 | Degenerate | 500+ | ~$1.95 |
 
-### Quadratic Cost Risk: No History Pruning
+### History Trimming (implemented)
 
-Full conversation history is sent with every message. Token cost per message
-grows linearly with conversation length, making total conversation cost
-**quadratic** (O(n^2)).
+Conversation history is trimmed to a sliding window of ~12k tokens (~48k
+characters) before each API call. Older messages beyond this budget are dropped,
+keeping the most recent exchanges. This caps per-message input cost at ~12k
+tokens regardless of conversation length, making total conversation cost
+**linear** (O(n)) instead of quadratic.
 
 | Message # in conversation | Approx input tokens | Cost at $0.01/M |
 |--------------------------|--------------------:|----------------:|
 | 1 | 500 | $0.000005 |
 | 10 | 6,500 | $0.000065 |
-| 50 | 37,000 | $0.00037 |
-| 100 | 75,000 | $0.00075 |
+| 50 | 12,000 (capped) | $0.00012 |
+| 100 | 12,000 (capped) | $0.00012 |
+| 500 | 12,000 (capped) | $0.00012 |
 
-A power user keeping a single conversation alive for 200+ messages could cost
-$5-15/month from that conversation alone. A sliding context window or
-summarization of older messages is the single highest-leverage cost optimization.
+Long conversations no longer pose a runaway cost risk. A future improvement
+could summarize dropped messages to preserve context.
 
 ## Ad Revenue Opportunity
 

@@ -38,6 +38,33 @@ type Memory = {
   updated_at: number;
 };
 
+/**
+ * Rough token estimate: ~4 characters per token.
+ * Budget leaves room for system prompt + response.
+ */
+const MAX_HISTORY_CHARS = 48_000; // ~12k tokens
+
+function trimHistory(
+  messages: { role: string; content: string }[],
+): { role: string; content: string }[] {
+  // Fast path: if everything fits, send it all
+  let totalChars = 0;
+  for (const m of messages) totalChars += m.content.length;
+  if (totalChars <= MAX_HISTORY_CHARS) return messages;
+
+  // Always keep the latest messages; walk backwards until we hit the budget
+  const kept: { role: string; content: string }[] = [];
+  let budget = MAX_HISTORY_CHARS;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const cost = messages[i].content.length;
+    if (budget - cost < 0 && kept.length > 0) break;
+    budget -= cost;
+    kept.unshift(messages[i]);
+  }
+
+  return kept;
+}
+
 export class ChatAgent extends Agent<Cloudflare.Env> {
   async onStart() {
     this.sql`
@@ -255,10 +282,12 @@ You have tools available. Use the calculate tool for math instead of computing i
         systemPrompt += `\n\nYou have the following memories about this user. Use them to personalize your responses when relevant:\n${memoryBlock}`;
       }
 
+      const trimmed = trimHistory(history);
+
       const result = streamText({
         model: aiModel,
         system: systemPrompt,
-        messages: history.map((m) => ({
+        messages: trimmed.map((m) => ({
           role: m.role as "user" | "assistant",
           content: m.content,
         })),
