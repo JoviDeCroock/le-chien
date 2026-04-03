@@ -36,6 +36,9 @@ export type ModelOption = {
   id: string;
   name: string;
   description: string;
+  tag: string;
+  speed: "instant" | "fast" | "moderate";
+  bestFor: string;
 };
 
 export type SubscriptionStatus = {
