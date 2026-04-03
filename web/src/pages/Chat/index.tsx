@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
+import { useLocation } from "preact-iso";
 import { useSignal } from "@preact/signals";
 import { useModel } from "@preact/signals";
 import { AuthModel } from "../../models/auth";
@@ -21,6 +22,7 @@ import { UpgradeBanner } from "../../components/UpgradeBanner";
 import { MemoryPanel } from "../../components/MemoryPanel";
 
 export function Chat() {
+  const { route } = useLocation();
   const auth = useModel(AuthModel);
   const chat = useModel(ChatModel);
   const memory = useModel(MemoryModel);
@@ -34,6 +36,13 @@ export function Chat() {
     auth.checkSession();
     chat.fetchModels();
   }, []);
+
+  // Redirect to auth if not authenticated
+  useEffect(() => {
+    if (!auth.loading.value && !auth.authenticated.value) {
+      route("/auth");
+    }
+  }, [auth.loading.value, auth.authenticated.value]);
 
   useEffect(() => {
     if (auth.authenticated.value) {
@@ -141,7 +150,7 @@ export function Chat() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [chat]);
 
-  if (auth.loading.value) {
+  if (auth.loading.value || !auth.authenticated.value) {
     return <PageLoader />;
   }
 
@@ -152,12 +161,10 @@ export function Chat() {
     chat.subscription.value.usage.limitReached
       ? `You've used your ${chat.subscription.value.limits.dailyMessages} free messages for today. Upgrade to Pro for unlimited.`
       : null;
-  const composerDisabled = !auth.authenticated.value || chat.inputLocked.value;
-  const composerPlaceholder = !auth.authenticated.value
-    ? "Sign in to start chatting..."
-    : chat.inputLocked.value
-      ? "Free limit reached for today. Upgrade or come back tomorrow."
-      : "Send a message...";
+  const composerDisabled = chat.inputLocked.value;
+  const composerPlaceholder = chat.inputLocked.value
+    ? "Free limit reached for today. Upgrade or come back tomorrow."
+    : "Send a message...";
 
   return (
     <PageShell>
@@ -190,15 +197,13 @@ export function Chat() {
           <TopBar
             left={
               <>
-                {auth.authenticated.value && (
-                  <Button
-                    variant="icon"
-                    onClick={() => (sidebarOpen.value = !sidebarOpen.value)}
-                    title="Toggle sidebar (Cmd/Ctrl+Shift+S)"
-                  >
-                    <MenuIcon size={16} />
-                  </Button>
-                )}
+                <Button
+                  variant="icon"
+                  onClick={() => (sidebarOpen.value = !sidebarOpen.value)}
+                  title="Toggle sidebar (Cmd/Ctrl+Shift+S)"
+                >
+                  <MenuIcon size={16} />
+                </Button>
                 <span class="text-sm font-semibold text-white shrink-0 tracking-tight">
                   le chien
                 </span>
@@ -211,23 +216,13 @@ export function Chat() {
             }
             right={
               <>
-                {auth.authenticated.value && (
-                  <StatusDot
-                    active={chat.connected.value}
-                    title={chat.connected.value ? "Connected" : "Disconnected"}
-                  />
-                )}
-                {auth.authenticated.value && (
-                  <TextLink onClick={() => memory.togglePanel()}>Memory</TextLink>
-                )}
+                <StatusDot
+                  active={chat.connected.value}
+                  title={chat.connected.value ? "Connected" : "Disconnected"}
+                />
+                <TextLink onClick={() => memory.togglePanel()}>Memory</TextLink>
                 <TextLink onClick={() => (shortcutsOpen.value = true)}>Shortcuts</TextLink>
-                {auth.authenticated.value ? (
-                  <TextLink onClick={() => auth.signOut()}>Sign out</TextLink>
-                ) : (
-                  <TextLink as="a" href="/auth">
-                    Sign in
-                  </TextLink>
-                )}
+                <TextLink onClick={() => auth.signOut()}>Sign out</TextLink>
               </>
             }
           />

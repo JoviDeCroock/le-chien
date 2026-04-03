@@ -2,7 +2,6 @@ import { LocationProvider, Router, Route, hydrate, prerender as ssr, lazy } from
 
 import "./style.css";
 
-const Landing = lazy(() => import("./pages/Landing/index").then((module) => module.Landing));
 const Chat = lazy(() => import("./pages/Chat/index").then((module) => module.Chat));
 const Auth = lazy(() => import("./pages/Auth/index").then((module) => module.Auth));
 const NotFound = lazy(() => import("./pages/_404").then((module) => module.NotFound));
@@ -12,8 +11,7 @@ function AppContent() {
     <div class="bg-neutral-950 min-h-screen">
       <main>
         <Router>
-          <Route path="/" component={Landing} />
-          <Route path="/chat" component={Chat} />
+          <Route path="/" component={Chat} />
           <Route path="/auth" component={Auth} />
           <Route default component={NotFound} />
         </Router>

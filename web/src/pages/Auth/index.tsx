@@ -16,7 +16,7 @@ export function Auth() {
   // Redirect to chat if already authenticated
   useEffect(() => {
     if (!auth.loading.value && auth.authenticated.value) {
-      route("/chat");
+      route("/");
     }
   }, [auth.loading.value, auth.authenticated.value]);
 
@@ -28,5 +28,5 @@ export function Auth() {
     return <PageLoader />;
   }
 
-  return <AuthForm onSuccess={() => route("/chat")} />;
+  return <AuthForm onSuccess={() => route("/")} />;
 }
