@@ -6,7 +6,7 @@ export type ModelId =
   | "glm-4.7-flash"
   | "kimi-k2.5"
   | "llama-4-scout"
-  | "gpt-oss-20b"
+  | "gemma-4-26b"
   | "gpt-oss-120b"
   | "nemotron-3-120b"
   | "gpt-4.1"
@@ -51,10 +51,10 @@ export const MODELS: Record<ModelId, ModelSpec> = {
     workersAiId: "@cf/meta/llama-4-scout-17b-16e-instruct",
     description: "Solid for instructions and follow-up",
   },
-  "gpt-oss-20b": {
+  "gemma-4-26b": {
     provider: "workers-ai",
-    name: "GPT-OSS 20B",
-    workersAiId: "@cf/openai/gpt-oss-20b",
+    name: "Gemma 4 26B",
+    workersAiId: "@cf/google/gemma-4-26b-a4b-it",
     description: "Lightweight and fast",
   },
   "gpt-oss-120b": {
