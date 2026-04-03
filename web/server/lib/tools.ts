@@ -56,20 +56,15 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
       }),
       execute: async ({ prompt }) => {
         try {
-          const gatewayUrl = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${env.CF_AI_GATEWAY_ID}/workers-ai/@cf/black-forest-labs/flux-1-schnell`;
-          const res = await fetch(gatewayUrl, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${env.CF_API_TOKEN}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ prompt }),
-          });
-          if (!res.ok) {
-            return { prompt, error: `Image generation failed: HTTP ${res.status}` };
+          const result = await env.AI.run(
+            "@cf/black-forest-labs/flux-1-schnell",
+            { prompt },
+            { gateway: { id: env.CF_AI_GATEWAY_ID } },
+          ); // Fire-and-forget async call to trigger billing
+          if (!result.image) {
+            return { prompt, error: `Image generation failed` };
           }
-          const data = (await res.json()) as { result: { image: string } };
-          return { prompt, image: `data:image/png;base64,${data.result.image}` };
+          return { prompt, image: `data:image/png;base64,${result.image}` };
         } catch (e) {
           return { prompt, error: e instanceof Error ? e.message : "Image generation failed" };
         }

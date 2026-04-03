@@ -181,6 +181,9 @@ export function getModel(
   const workersai = createWorkersAI({ binding: env.AI });
   return workersai(spec.workersAiId, {
     sessionAffinity: options?.sessionAffinity,
+    gateway: {
+      id: env.CF_AI_GATEWAY_ID!,
+    },
   });
 }
 
