@@ -11,7 +11,7 @@ PostHog is integrated on both client (web) and server (API) for product analytic
 Set these environment variables (Vite):
 
 - `VITE_POSTHOG_KEY` — PostHog project API key (required to enable tracking)
-- `VITE_POSTHOG_HOST` — PostHog instance URL (defaults to `https://us.i.posthog.com`)
+- `VITE_POSTHOG_HOST` — PostHog instance URL (defaults to `https://eu.i.posthog.com`)
 
 If `VITE_POSTHOG_KEY` is not set, all tracking is silently disabled.
 
@@ -20,7 +20,7 @@ If `VITE_POSTHOG_KEY` is not set, all tracking is silently disabled.
 Set these via `wrangler secret put`:
 
 - `POSTHOG_API_KEY` — PostHog project API key (required to enable tracking)
-- `POSTHOG_HOST` — PostHog instance URL (optional, defaults to `https://us.i.posthog.com`)
+- `POSTHOG_HOST` — PostHog instance URL (optional, defaults to `https://eu.i.posthog.com`)
 
 ## Tracked Events
 

@@ -7,7 +7,7 @@ export function getPostHog(env: Cloudflare.Env): PostHog | null {
 
   if (!client) {
     client = new PostHog(env.POSTHOG_API_KEY, {
-      host: env.POSTHOG_HOST || "https://us.i.posthog.com",
+      host: env.POSTHOG_HOST || "https://eu.i.posthog.com",
       flushAt: 1,
       flushInterval: 0,
     });
