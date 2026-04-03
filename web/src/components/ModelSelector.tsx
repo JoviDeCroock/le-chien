@@ -149,9 +149,7 @@ export function ModelSelector({
                     {m.premium && (
                       <span
                         class={`text-[10px] font-semibold uppercase tracking-wider px-1 py-px rounded ${
-                          isSelected
-                            ? "bg-white/20 text-white"
-                            : "bg-amber-500/15 text-amber-400"
+                          isSelected ? "bg-white/20 text-white" : "bg-amber-500/15 text-amber-400"
                         }`}
                       >
                         Pro

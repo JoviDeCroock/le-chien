@@ -47,16 +47,6 @@ export const MODELS: Record<ModelId, ModelSpec> = {
     speed: "instant",
     bestFor: "Quick questions, everyday tasks",
   },
-  "kimi-k2.5": {
-    provider: "workers-ai",
-    name: "Converser",
-    workersAiId: "@cf/moonshotai/kimi-k2.5",
-    description: "Follows long conversations naturally",
-    tag: "Conversational",
-    speed: "fast",
-    bestFor: "Back-and-forth discussions, brainstorming",
-    premium: true,
-  },
   "llama-4-scout": {
     provider: "workers-ai",
     name: "Scout",
@@ -92,6 +82,16 @@ export const MODELS: Record<ModelId, ModelSpec> = {
     tag: "Reasoning",
     speed: "moderate",
     bestFor: "Math, logic, code, tough problems",
+  },
+  "kimi-k2.5": {
+    provider: "workers-ai",
+    name: "Converser",
+    workersAiId: "@cf/moonshotai/kimi-k2.5",
+    description: "Follows long conversations naturally",
+    tag: "Conversational",
+    speed: "fast",
+    bestFor: "Back-and-forth discussions, brainstorming",
+    premium: true,
   },
   "gpt-4.1": {
     provider: "openai",
