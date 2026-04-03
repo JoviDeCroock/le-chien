@@ -15,18 +15,22 @@ export type ModelId =
   | "o3"
   | "o4-mini";
 
-type WorkersAiModelSpec = {
-  provider: "workers-ai";
+type ModelMeta = {
   name: string;
-  workersAiId: string;
   description: string;
+  tag: string;
+  speed: "instant" | "fast" | "moderate";
+  bestFor: string;
 };
 
-type OpenAIModelSpec = {
+type WorkersAiModelSpec = ModelMeta & {
+  provider: "workers-ai";
+  workersAiId: string;
+};
+
+type OpenAIModelSpec = ModelMeta & {
   provider: "openai";
-  name: string;
   openaiId: string;
-  description: string;
 };
 
 type ModelSpec = WorkersAiModelSpec | OpenAIModelSpec;
@@ -35,69 +39,102 @@ type ModelSpec = WorkersAiModelSpec | OpenAIModelSpec;
 export const MODELS: Record<ModelId, ModelSpec> = {
   "glm-4.7-flash": {
     provider: "workers-ai",
-    name: "GLM 4.7 Flash",
+    name: "Flash",
     workersAiId: "@cf/zai-org/glm-4.7-flash",
     description: "Quick answers, good all-rounder",
+    tag: "Fastest",
+    speed: "instant",
+    bestFor: "Quick questions, everyday tasks",
   },
   "kimi-k2.5": {
     provider: "workers-ai",
-    name: "Kimi K2.5",
+    name: "Converser",
     workersAiId: "@cf/moonshotai/kimi-k2.5",
-    description: "Good at longer conversations",
+    description: "Follows long conversations naturally",
+    tag: "Conversational",
+    speed: "fast",
+    bestFor: "Back-and-forth discussions, brainstorming",
   },
   "llama-4-scout": {
     provider: "workers-ai",
-    name: "Llama 4 Scout",
+    name: "Scout",
     workersAiId: "@cf/meta/llama-4-scout-17b-16e-instruct",
-    description: "Solid for instructions and follow-up",
+    description: "Reliable and precise with instructions",
+    tag: "Balanced",
+    speed: "fast",
+    bestFor: "Following instructions, step-by-step tasks",
   },
   "gemma-4-26b": {
     provider: "workers-ai",
-    name: "Gemma 4 26B",
+    name: "Lite",
     workersAiId: "@cf/google/gemma-4-26b-a4b-it",
     description: "Lightweight and fast",
+    tag: "Lightweight",
+    speed: "instant",
+    bestFor: "Simple questions, quick lookups",
   },
   "gpt-oss-120b": {
     provider: "workers-ai",
-    name: "GPT-OSS 120B",
+    name: "Pro",
     workersAiId: "@cf/openai/gpt-oss-120b",
-    description: "Smarter, a bit slower",
+    description: "Smarter answers, takes a moment longer",
+    tag: "Smart",
+    speed: "moderate",
+    bestFor: "Complex questions, writing, analysis",
   },
   "nemotron-3-120b": {
     provider: "workers-ai",
-    name: "Nemotron 3 120B",
+    name: "Thinker",
     workersAiId: "@cf/nvidia/nemotron-3-120b-a12b",
-    description: "Strong at reasoning and code",
+    description: "Deep reasoning and problem solving",
+    tag: "Reasoning",
+    speed: "moderate",
+    bestFor: "Math, logic, code, tough problems",
   },
   "gpt-4.1": {
     provider: "openai",
     name: "GPT-4.1",
     openaiId: "gpt-4.1",
     description: "Top-tier quality across the board",
+    tag: "Premium",
+    speed: "moderate",
+    bestFor: "Everything — highest quality",
   },
   "gpt-4.1-mini": {
     provider: "openai",
     name: "GPT-4.1 Mini",
     openaiId: "gpt-4.1-mini",
     description: "Fast and sharp",
+    tag: "Fast",
+    speed: "fast",
+    bestFor: "Daily tasks, quick and capable",
   },
   "gpt-4.1-nano": {
     provider: "openai",
     name: "GPT-4.1 Nano",
     openaiId: "gpt-4.1-nano",
     description: "Fastest responses",
+    tag: "Fastest",
+    speed: "instant",
+    bestFor: "Simple questions, instant answers",
   },
   o3: {
     provider: "openai",
     name: "o3",
     openaiId: "o3",
     description: "Takes time to think through hard problems",
+    tag: "Reasoning",
+    speed: "moderate",
+    bestFor: "Hard problems, math, code",
   },
   "o4-mini": {
     provider: "openai",
     name: "o4-mini",
     openaiId: "o4-mini",
     description: "Thinks things through, but quicker",
+    tag: "Reasoning",
+    speed: "fast",
+    bestFor: "Reasoning tasks, faster",
   },
 };
 
@@ -155,5 +192,8 @@ export function listModels() {
       id,
       name: spec.name,
       description: spec.description,
+      tag: spec.tag,
+      speed: spec.speed,
+      bestFor: spec.bestFor,
     }));
 }
