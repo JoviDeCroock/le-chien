@@ -12,6 +12,7 @@ import {
   getUsageDate,
   tryIncrementDailyMessageUsage,
 } from "../lib/plans";
+import { trackServerEvent, captureServerException } from "../lib/posthog";
 
 type Conversation = {
   id: string;
@@ -346,11 +347,24 @@ Rules:
           .sql`UPDATE conversations SET title = ${title}, updated_at = ${finishedAt} WHERE id = ${conversationId}`;
       }
 
+      trackServerEvent(this.env, userId, "chat_completion", {
+        model: selectedModel,
+        conversation_id: conversationId,
+        tool_calls_count: toolCalls.length,
+        response_length: fullContent.length,
+      });
+
       stream.end({ messageId: assistantMessageId, subscription });
     } catch (err) {
       if (usageReserved) {
         await decrementDailyMessageUsage(this.env.DB, userId, usageDate);
       }
+      captureServerException(
+        this.env,
+        userId,
+        err instanceof Error ? err : new Error("Stream failed"),
+        { model: selectedModel, conversation_id: conversationId },
+      );
       stream.error(err instanceof Error ? err.message : "Stream failed");
     }
   }

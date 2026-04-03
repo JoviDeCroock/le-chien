@@ -4,6 +4,7 @@ import { useModel } from "@preact/signals";
 import { AuthModel } from "../../models/auth";
 import { ChatModel } from "../../models/chat";
 import { MemoryModel } from "../../models/memory";
+import { trackEvent } from "../../lib/posthog";
 import { PageShell, ContentContainer, PageLoader } from "../../components/ui/Layout";
 import { MenuIcon, PlusIcon } from "../../components/ui/Icons";
 import { Button } from "../../components/ui/Button";
@@ -235,7 +236,10 @@ export function Chat() {
           <ModelSelector
             models={chat.models.value}
             selected={chat.selectedModel.value}
-            onSelect={(id) => (chat.selectedModel.value = id)}
+            onSelect={(id) => {
+              chat.selectedModel.value = id;
+              trackEvent("model_selected", { model: id });
+            }}
             disabled={chat.streaming.value}
             barRef={modelBarRef}
           />

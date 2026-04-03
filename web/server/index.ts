@@ -8,6 +8,7 @@ import { chatRoutes } from "./routes/chat";
 import { Bindings, Variables } from "./types";
 import { isProduction } from "./utils/isProduction";
 import { getAppOrigin } from "./utils/urls";
+import { trackServerEvent } from "./lib/posthog";
 import * as schema from "./db/schema";
 
 export { ChatAgent } from "./agents/chat-agent";
@@ -109,6 +110,11 @@ app.get("/api/billing-success", async (c) => {
         updatedAt: now,
       },
     });
+
+  trackServerEvent(c.env, checkout.externalCustomerId, "subscription_activated", {
+    plan: "pro",
+    polar_subscription_id: activeSubscription.id,
+  });
 
   return c.redirect(`${getAppOrigin(c.env)}/?billing=success`);
 });
