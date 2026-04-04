@@ -26,11 +26,11 @@ export function Sidebar({
   return (
     <>
       {/* Backdrop */}
-      <div class="fixed inset-0 bg-black/40 z-20 sm:hidden" onClick={onClose} />
+      <div class="fixed inset-0 bg-black/40 z-20" onClick={onClose} />
 
       {/* Panel */}
       <nav
-        class="fixed sm:relative z-30 h-full w-64 shrink-0 bg-neutral-900 border-r border-neutral-800/60 flex flex-col"
+        class="fixed z-30 h-full w-64 shrink-0 bg-neutral-900 border-r border-neutral-800/60 flex flex-col"
         aria-label="Conversations"
       >
         {/* Header */}
