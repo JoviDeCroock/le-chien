@@ -41,9 +41,7 @@ function buildAuth(env: Env) {
     plugins: [
       polar({
         client: polarClient,
-        // We disable automatic customer creation because we want to control when customers are created in Polar
-        // this also allows your auth to work without a working polar key.
-        createCustomerOnSignUp: false,
+        createCustomerOnSignUp: true,
         use: [
           checkout({
             authenticatedUsersOnly: true,
