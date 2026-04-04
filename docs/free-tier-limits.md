@@ -26,6 +26,13 @@ The free plan now uses a hard server-side daily message counter with a soft UX b
 - The limit is enforced inside the tool's `execute` — if the counter is exhausted, the tool returns an error message (no image is generated).
 - Usage is tracked in a separate `daily_image_generation_usage` D1 table.
 
+## Web search
+
+- The `web_search` tool checks a per-user daily counter before calling the Tavily API.
+- Free plan: 5 web searches per UTC day. Pro: unlimited.
+- The limit is enforced inside the tool's `execute` — if the counter is exhausted, the tool returns an error message (no search is performed).
+- Usage is tracked in a separate `daily_web_search_usage` D1 table.
+
 ## Checkout UX note
 
 - Polar checkout and checkout-success redirects now return to `/` because the app does not have a dedicated `/billing` route yet.

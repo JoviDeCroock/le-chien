@@ -8,6 +8,7 @@ type PlanLimits = {
   dailyMessages: number | null;
   dailyPremiumMessages: number | null;
   dailyImageGenerations: number | null;
+  dailyWebSearches: number | null;
 };
 
 export type SubscriptionSnapshot = {
@@ -23,6 +24,9 @@ export type SubscriptionSnapshot = {
     dailyImageGenerationsUsed: number;
     dailyImageGenerationsRemaining: number | null;
     imageGenerationLimitReached: boolean;
+    dailyWebSearchesUsed: number;
+    dailyWebSearchesRemaining: number | null;
+    webSearchLimitReached: boolean;
     usageDate: string;
     resetsAt: string;
   };
@@ -33,11 +37,13 @@ export const PLAN_LIMITS = {
     dailyMessages: 20,
     dailyPremiumMessages: 5,
     dailyImageGenerations: 5,
+    dailyWebSearches: 5,
   },
   pro: {
     dailyMessages: null,
     dailyPremiumMessages: null,
     dailyImageGenerations: null,
+    dailyWebSearches: null,
   },
 } as const;
 
@@ -58,6 +64,7 @@ export function buildSubscriptionSnapshot(
   date = new Date(),
   dailyPremiumMessagesUsed = 0,
   dailyImageGenerationsUsed = 0,
+  dailyWebSearchesUsed = 0,
 ): SubscriptionSnapshot {
   const limits = PLAN_LIMITS[plan];
   const dailyMessagesRemaining =
@@ -70,6 +77,10 @@ export function buildSubscriptionSnapshot(
     limits.dailyImageGenerations === null
       ? null
       : Math.max(limits.dailyImageGenerations - dailyImageGenerationsUsed, 0);
+  const dailyWebSearchesRemaining =
+    limits.dailyWebSearches === null
+      ? null
+      : Math.max(limits.dailyWebSearches - dailyWebSearchesUsed, 0);
 
   return {
     plan,
@@ -88,6 +99,10 @@ export function buildSubscriptionSnapshot(
       imageGenerationLimitReached:
         limits.dailyImageGenerations !== null &&
         dailyImageGenerationsUsed >= limits.dailyImageGenerations,
+      dailyWebSearchesUsed,
+      dailyWebSearchesRemaining,
+      webSearchLimitReached:
+        limits.dailyWebSearches !== null && dailyWebSearchesUsed >= limits.dailyWebSearches,
       usageDate: getUsageDate(date),
       resetsAt: getUsageResetAt(date),
     },
@@ -165,6 +180,25 @@ export async function getDailyImageGenerationUsage(
   return row?.messageCount ?? 0;
 }
 
+export async function getDailyWebSearchUsage(
+  db: DrizzleD1Database<typeof schema>,
+  userId: string,
+  usageDate = getUsageDate(),
+) {
+  const row = await db
+    .select({ messageCount: schema.dailyWebSearchUsage.messageCount })
+    .from(schema.dailyWebSearchUsage)
+    .where(
+      and(
+        eq(schema.dailyWebSearchUsage.userId, userId),
+        eq(schema.dailyWebSearchUsage.usageDate, usageDate),
+      ),
+    )
+    .get();
+
+  return row?.messageCount ?? 0;
+}
+
 export async function getSubscriptionSnapshot(
   db: DrizzleD1Database<typeof schema>,
   userId: string,
@@ -177,6 +211,8 @@ export async function getSubscriptionSnapshot(
     plan === "free" ? await getDailyPremiumMessageUsage(db, userId, usageDate) : 0;
   const dailyImageGenerationsUsed =
     plan === "free" ? await getDailyImageGenerationUsage(db, userId, usageDate) : 0;
+  const dailyWebSearchesUsed =
+    plan === "free" ? await getDailyWebSearchUsage(db, userId, usageDate) : 0;
 
   return buildSubscriptionSnapshot(
     plan,
@@ -184,6 +220,7 @@ export async function getSubscriptionSnapshot(
     date,
     dailyPremiumMessagesUsed,
     dailyImageGenerationsUsed,
+    dailyWebSearchesUsed,
   );
 }
 
@@ -290,6 +327,30 @@ export async function tryIncrementDailyImageGenerationUsage(
       `,
     )
     .bind(crypto.randomUUID(), userId, usageDate, now, now, PLAN_LIMITS.free.dailyImageGenerations)
+    .first<{ message_count: number }>();
+
+  return row?.message_count ?? null;
+}
+
+export async function tryIncrementDailyWebSearchUsage(
+  db: D1Database,
+  userId: string,
+  usageDate: string,
+) {
+  const now = Math.floor(Date.now() / 1000);
+  const row = await db
+    .prepare(
+      `
+        INSERT INTO daily_web_search_usage (id, user_id, usage_date, message_count, created_at, updated_at)
+        VALUES (?, ?, ?, 1, ?, ?)
+        ON CONFLICT(user_id, usage_date) DO UPDATE SET
+          message_count = message_count + 1,
+          updated_at = excluded.updated_at
+        WHERE message_count < ?
+        RETURNING message_count
+      `,
+    )
+    .bind(crypto.randomUUID(), userId, usageDate, now, now, PLAN_LIMITS.free.dailyWebSearches)
     .first<{ message_count: number }>();
 
   return row?.message_count ?? null;

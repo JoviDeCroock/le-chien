@@ -9,6 +9,7 @@
 | Messages/day | 20 |
 | Premium model messages/day | 5 |
 | Image generations/day | 5 |
+| Web searches/day | 5 |
 | Available models | All (premium models gated by premium message limit) |
 
 ### Pro ($8/month, or $6/month billed yearly at $72/year)
@@ -18,6 +19,7 @@
 | Messages/day | Unlimited |
 | Premium model messages/day | Unlimited |
 | Image generations/day | Unlimited |
+| Web searches/day | Unlimited |
 | Available models | All |
 
 ## Why $8/month

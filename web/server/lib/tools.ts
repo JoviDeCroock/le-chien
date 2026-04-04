@@ -2,7 +2,11 @@ import { tool } from "ai";
 import puppeteer from "@cloudflare/puppeteer";
 import { z } from "zod";
 import type { Plan } from "./plans";
-import { getUsageDate, tryIncrementDailyImageGenerationUsage } from "./plans";
+import {
+  getUsageDate,
+  tryIncrementDailyImageGenerationUsage,
+  tryIncrementDailyWebSearchUsage,
+} from "./plans";
 
 type ToolOptions = {
   onSaveMemory?: (key: string, value: string) => void;
@@ -250,6 +254,20 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
             }),
             execute: async ({ query, count }) => {
               try {
+                // Enforce web search limit for free users
+                if (options.rateLimit?.plan === "free") {
+                  const { db, userId } = options.rateLimit;
+                  const usageDate = getUsageDate();
+                  const used = await tryIncrementDailyWebSearchUsage(db, userId, usageDate);
+                  if (used === null) {
+                    return {
+                      query,
+                      error:
+                        "You've reached your daily web search limit on the free plan. Upgrade to Pro for unlimited web searches.",
+                    };
+                  }
+                }
+
                 const res = await fetch("https://api.tavily.com/search", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
