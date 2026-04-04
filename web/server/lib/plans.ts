@@ -37,13 +37,13 @@ export const PLAN_LIMITS = {
     dailyMessages: 20,
     dailyPremiumMessages: 5,
     dailyImageGenerations: 5,
-    dailyWebSearches: 5,
+    dailyWebSearches: 3,
   },
   pro: {
     dailyMessages: null,
     dailyPremiumMessages: null,
     dailyImageGenerations: null,
-    dailyWebSearches: null,
+    dailyWebSearches: 50,
   },
 } as const;
 
@@ -211,8 +211,7 @@ export async function getSubscriptionSnapshot(
     plan === "free" ? await getDailyPremiumMessageUsage(db, userId, usageDate) : 0;
   const dailyImageGenerationsUsed =
     plan === "free" ? await getDailyImageGenerationUsage(db, userId, usageDate) : 0;
-  const dailyWebSearchesUsed =
-    plan === "free" ? await getDailyWebSearchUsage(db, userId, usageDate) : 0;
+  const dailyWebSearchesUsed = await getDailyWebSearchUsage(db, userId, usageDate);
 
   return buildSubscriptionSnapshot(
     plan,
@@ -336,7 +335,10 @@ export async function tryIncrementDailyWebSearchUsage(
   db: D1Database,
   userId: string,
   usageDate: string,
+  plan: Plan,
 ) {
+  const limit = PLAN_LIMITS[plan].dailyWebSearches;
+  if (limit === null) return 1; // unlimited
   const now = Math.floor(Date.now() / 1000);
   const row = await db
     .prepare(
@@ -350,7 +352,7 @@ export async function tryIncrementDailyWebSearchUsage(
         RETURNING message_count
       `,
     )
-    .bind(crypto.randomUUID(), userId, usageDate, now, now, PLAN_LIMITS.free.dailyWebSearches)
+    .bind(crypto.randomUUID(), userId, usageDate, now, now, limit)
     .first<{ message_count: number }>();
 
   return row?.message_count ?? null;

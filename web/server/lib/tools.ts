@@ -254,16 +254,18 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
             }),
             execute: async ({ query, count }) => {
               try {
-                // Enforce web search limit for free users
-                if (options.rateLimit?.plan === "free") {
-                  const { db, userId } = options.rateLimit;
+                // Enforce web search limit for all plans
+                if (options.rateLimit) {
+                  const { db, userId, plan } = options.rateLimit;
                   const usageDate = getUsageDate();
-                  const used = await tryIncrementDailyWebSearchUsage(db, userId, usageDate);
+                  const used = await tryIncrementDailyWebSearchUsage(db, userId, usageDate, plan);
                   if (used === null) {
                     return {
                       query,
                       error:
-                        "You've reached your daily web search limit on the free plan. Upgrade to Pro for unlimited web searches.",
+                        plan === "free"
+                          ? "You've reached your daily web search limit on the free plan. Upgrade to Pro for more web searches."
+                          : "You've reached your daily web search limit. Your limit resets at midnight UTC.",
                     };
                   }
                 }
