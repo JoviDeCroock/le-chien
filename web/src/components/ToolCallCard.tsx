@@ -78,6 +78,13 @@ function formatResult(result: unknown): string {
   return JSON.stringify(result, null, 2);
 }
 
+function formatResultSummary(result: unknown): string {
+  if (result === null || result === undefined) return "";
+  if (isImageResult(result)) return "";
+  const text = typeof result === "string" ? result : JSON.stringify(result);
+  return text.length > 120 ? text.slice(0, 120) + "…" : text;
+}
+
 function isImageResult(result: unknown): result is { image: string } {
   return (
     typeof result === "object" &&
@@ -93,6 +100,7 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
   const meta = TOOL_LABELS[toolCall.name] ?? { label: toolCall.name, icon: "search" };
   const isPending = toolCall.status === "pending";
   const argsSummary = formatArgs(toolCall.args);
+  const resultSummary = !isPending ? formatResultSummary(toolCall.result) : "";
 
   return (
     <div class="my-2 rounded-lg border border-neutral-700/40 bg-neutral-900/60 overflow-hidden text-xs">
@@ -129,6 +137,14 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
           </svg>
         </span>
       </button>
+
+      {!expanded.value && resultSummary && (
+        <div class="px-3 pb-2 -mt-1">
+          <pre class="text-neutral-400 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all line-clamp-3">
+            {resultSummary}
+          </pre>
+        </div>
+      )}
 
       {isImageResult(toolCall.result) && (
         <div class="px-3 py-2">
