@@ -31,32 +31,32 @@ const DIFFERENTIATORS = [
       "Streaming responses, curated model modes, and clean controls keep the product useful for daily use instead of occasional demos.",
   },
   {
-    title: "It earns trust in the open",
+    title: "It stays clear instead of cluttered",
     description:
-      "Tool calls are visible, premium limits are clear, and the product is positioned around EU-hosted infrastructure.",
+      "Tool calls are visible, pricing is easy to understand, and the interface stays focused on the conversation.",
   },
 ];
 
 const COMPARISON_ROWS = [
   {
     label: "Context",
-    other: "Starts cold too often",
-    chien: "Remembers useful details when they matter",
+    other: "Forgets you too quickly",
+    chien: "Carries useful details forward",
   },
   {
     label: "Model choice",
-    other: "Either hidden or overwhelming",
-    chien: "Curated modes for speed, balance, and depth",
+    other: "Too hidden or too fiddly",
+    chien: "Simple modes for speed, balance, and depth",
   },
   {
     label: "Actions",
-    other: "Opaque or buried",
+    other: "Hard to trust",
     chien: "Inspectable tool calls directly in chat",
   },
   {
-    label: "Data posture",
-    other: "Often vague",
-    chien: "Clear EU-hosted positioning",
+    label: "Feel",
+    other: "Busy or overbuilt",
+    chien: "Focused, calm, and pleasant to use",
   },
 ];
 
@@ -133,7 +133,7 @@ export function Landing() {
           <div class="flex items-center gap-3">
             <span class="text-base font-bold tracking-tight text-white">le&nbsp;chien</span>
             <span class="hidden text-xs uppercase tracking-[0.18em] text-neutral-400 sm:inline">
-              Open-model workspace
+              AI chat, done cleanly
             </span>
           </div>
           <div class="flex items-center gap-3">
@@ -162,20 +162,20 @@ export function Landing() {
                 style={{ animationDelay: "40ms" }}
               >
                 <span class="h-2 w-2 rounded-full bg-violet-500" />
-                Chat, memory, and tools around strong open models
+                Fast chat with memory when you want it
               </div>
               <h1
                 class="animate-fade-in text-4xl font-bold tracking-tight text-white text-balance sm:text-6xl"
                 style={{ letterSpacing: "-0.04em", lineHeight: "0.96", animationDelay: "90ms" }}
               >
-                Stop re-explaining yourself to AI.
+                A chat app you actually want to keep open.
               </h1>
               <p
                 class="mt-6 max-w-2xl animate-fade-in text-base leading-8 text-neutral-400 sm:text-lg"
                 style={{ animationDelay: "140ms" }}
               >
-                le chien is an AI workspace for people who want fast chat, persistent context,
-                visible tool use, and a cleaner path to working with open models every day.
+                le chien is a clean AI chat app with fast replies, model modes that make sense,
+                and memory that saves you from repeating yourself.
               </p>
               <div
                 class="mt-8 flex animate-fade-in flex-col gap-3 sm:flex-row"
@@ -199,24 +199,24 @@ export function Landing() {
                 style={{ animationDelay: "240ms" }}
               >
                 <div class="rounded-xl border border-neutral-900 bg-neutral-900/70 p-4">
-                  <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Hosted</div>
-                  <div class="mt-2 text-lg font-semibold text-white">EU infrastructure</div>
+                  <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Speed</div>
+                  <div class="mt-2 text-lg font-semibold text-white">Fast replies</div>
                   <p class="mt-1 text-sm leading-6 text-neutral-400">
-                    Clear regional positioning instead of vague data language.
+                    Built to feel useful in the middle of a normal workday.
                   </p>
                 </div>
                 <div class="rounded-xl border border-neutral-900 bg-neutral-900/70 p-4">
-                  <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Starts at</div>
+                  <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Pricing</div>
                   <div class="mt-2 text-lg font-semibold text-white">$0</div>
                   <p class="mt-1 text-sm leading-6 text-neutral-400">
-                    Free plan includes daily access to every model mode.
+                    Free to start, with a simple upgrade when you want more.
                   </p>
                 </div>
                 <div class="rounded-xl border border-neutral-900 bg-neutral-900/70 p-4">
-                  <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Upgrade</div>
-                  <div class="mt-2 text-lg font-semibold text-white">$8/mo</div>
+                  <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Memory</div>
+                  <div class="mt-2 text-lg font-semibold text-white">Built in</div>
                   <p class="mt-1 text-sm leading-6 text-neutral-400">
-                    Unlimited messages, premium models, and image generations.
+                    Preferences and recurring context can stick around instead of resetting.
                   </p>
                 </div>
               </div>
@@ -230,9 +230,9 @@ export function Landing() {
                 <div class="flex items-center justify-between gap-4">
                   <div>
                     <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">
-                      Live workspace feel
+                      Inside the app
                     </div>
-                    <div class="mt-1 text-lg font-semibold text-white">A chat surface that keeps up</div>
+                    <div class="mt-1 text-lg font-semibold text-white">A chat surface that stays out of your way</div>
                   </div>
                   <div class="rounded-full border border-violet-600/30 bg-violet-600/10 px-3 py-1 text-xs font-medium text-violet-300">
                     Streaming
@@ -323,11 +323,11 @@ export function Landing() {
               <div>
                 <SectionLabel>Why it lands</SectionLabel>
                 <h2 class="max-w-xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                  More useful than a bare chat box, without the enterprise theater.
+                  A better everyday chat experience.
                 </h2>
                 <p class="mt-4 max-w-lg text-base leading-8 text-neutral-400">
-                  The value is not just model access. It is the surrounding product: memory,
-                  inspectable actions, clean pricing, and a workspace that gets better after day one.
+                  The appeal is simple: it is fast, easy to read, easy to steer, and it gets more
+                  helpful as it learns the details worth keeping.
                 </p>
                 <div class="mt-8 space-y-4">
                   {DIFFERENTIATORS.map((item) => (
@@ -341,9 +341,9 @@ export function Landing() {
 
               <div class="rounded-2xl border border-neutral-800 bg-neutral-900">
                 <div class="border-b border-neutral-800 px-5 py-4">
-                  <SectionLabel>Compared to typical AI chat</SectionLabel>
+                  <SectionLabel>What feels better</SectionLabel>
                   <p class="max-w-xl text-sm leading-6 text-neutral-400">
-                    The pitch is simple: less stateless prompting, more durable working context.
+                    The point is not more complexity. It is a smoother chat app that stays useful.
                   </p>
                 </div>
                 <div class="divide-y divide-neutral-800">
@@ -370,10 +370,10 @@ export function Landing() {
             <SectionLabel>Workflow</SectionLabel>
             <div class="mb-10 flex max-w-3xl flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <h2 class="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                A homepage that shows how the product actually works.
+                Simple enough for daily use, strong enough when you need more.
               </h2>
               <p class="max-w-lg text-sm leading-6 text-neutral-400">
-                The assistant should feel stronger every week, not just every prompt.
+                Most of the value comes from making normal chat feel smoother and less repetitive.
               </p>
             </div>
             <div class="grid gap-4 lg:grid-cols-3">
@@ -411,8 +411,8 @@ export function Landing() {
                 </h2>
               </div>
               <p class="max-w-lg text-sm leading-6 text-neutral-400">
-                Pro undercuts the $20 incumbents and keeps the main upgrade trigger tied to usage,
-                not to hiding the product.
+                Pro keeps the good parts unlimited instead of turning the app into a maze of locked
+                features.
               </p>
             </div>
 
@@ -472,8 +472,8 @@ export function Landing() {
                 <div class="mt-6 rounded-xl border border-neutral-800 bg-neutral-950 p-4">
                   <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Positioning</div>
                   <p class="mt-2 text-sm leading-6 text-neutral-300">
-                    Lower than ChatGPT Plus or Claude Pro, but with a sharper focus on open models
-                    and durable context.
+                    Cheap enough to try, clear enough to understand, and pleasant enough to keep
+                    using.
                   </p>
                 </div>
               </div>
@@ -488,11 +488,11 @@ export function Landing() {
                 <div>
                   <SectionLabel>Final push</SectionLabel>
                   <h2 class="max-w-2xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                    If you want open-model chat to feel like a working environment, start here.
+                    If you want AI chat to feel fast, clear, and personal, start here.
                   </h2>
                   <p class="mt-4 max-w-2xl text-base leading-8 text-neutral-400">
-                    Use the free tier to see whether memory, tool visibility, and faster model
-                    choice make the assistant more useful in your actual workflow.
+                    Start on free, get a feel for the product, and upgrade only if you want the
+                    limits to disappear.
                   </p>
                 </div>
                 <div class="flex flex-col gap-3 sm:flex-row">
@@ -519,7 +519,7 @@ export function Landing() {
         <div class="mx-auto flex max-w-6xl flex-col gap-4 text-sm text-neutral-400 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <span class="font-semibold tracking-tight text-white">le&nbsp;chien</span>
-            <p class="mt-1">Fast chat, durable context, EU-hosted positioning.</p>
+            <p class="mt-1">Fast chat, useful memory, and a cleaner interface.</p>
           </div>
           <div class="flex gap-5">
             <a href="/auth" class="transition-colors hover:text-neutral-300">
