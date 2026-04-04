@@ -139,10 +139,11 @@ export function Landing() {
                 €0<span class="text-sm font-normal text-neutral-500">/mo</span>
               </div>
               <ul class="space-y-2.5 text-sm text-neutral-400">
-                <PricingFeature>Daily message limit</PricingFeature>
+                <PricingFeature>20 messages per day</PricingFeature>
+                <PricingFeature>5 premium model messages per day</PricingFeature>
+                <PricingFeature>5 image generations per day</PricingFeature>
                 <PricingFeature>All model modes</PricingFeature>
                 <PricingFeature>Persistent memory</PricingFeature>
-                <PricingFeature>1 personal workspace</PricingFeature>
               </ul>
               <a
                 href="/auth"
@@ -158,13 +159,14 @@ export function Landing() {
                 Pro
               </div>
               <div class="text-2xl font-bold text-white mb-4 tracking-tight">
-                €12<span class="text-sm font-normal text-neutral-500">/mo</span>
+                €8<span class="text-sm font-normal text-neutral-500">/mo</span>
               </div>
               <ul class="space-y-2.5 text-sm text-neutral-400">
                 <PricingFeature>Unlimited messages</PricingFeature>
+                <PricingFeature>Unlimited premium models</PricingFeature>
+                <PricingFeature>Unlimited image generations</PricingFeature>
                 <PricingFeature>All model modes</PricingFeature>
                 <PricingFeature>File upload &amp; retrieval</PricingFeature>
-                <PricingFeature>Shared workspaces</PricingFeature>
                 <PricingFeature>Priority inference</PricingFeature>
               </ul>
               <a
