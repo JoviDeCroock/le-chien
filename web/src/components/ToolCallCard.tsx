@@ -7,6 +7,7 @@ const TOOL_LABELS: Record<string, { label: string; icon: string }> = {
   read_url: { label: "Read URL", icon: "globe" },
   generate_image: { label: "Generate Image", icon: "image" },
   run_javascript: { label: "Run Code", icon: "code" },
+  web_search: { label: "Web Search", icon: "search" },
 };
 
 function ToolIcon({ type }: { type: string }) {

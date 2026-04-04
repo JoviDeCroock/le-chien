@@ -225,6 +225,49 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
         }
       : {}),
 
+    ...(extras.has("web_search") && env.TAVILY_API_KEY
+      ? {
+          web_search: tool({
+            description:
+              "Search the web for current information. Use this for questions about recent events, products, people, or anything that benefits from up-to-date information.",
+            inputSchema: z.object({
+              query: z.string().describe("The search query"),
+              count: z.number().optional().default(5).describe("Number of results (1-10)"),
+            }),
+            execute: async ({ query, count }) => {
+              try {
+                const res = await fetch("https://api.tavily.com/search", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    api_key: env.TAVILY_API_KEY,
+                    query,
+                    max_results: Math.min(count, 10),
+                    include_answer: true,
+                  }),
+                });
+                if (!res.ok) return { query, error: `Tavily API error: HTTP ${res.status}` };
+                const data = (await res.json()) as {
+                  answer?: string;
+                  results: { title: string; url: string; content: string }[];
+                };
+                return {
+                  query,
+                  answer: data.answer,
+                  results: data.results.map((r) => ({
+                    title: r.title,
+                    url: r.url,
+                    snippet: r.content,
+                  })),
+                };
+              } catch (e) {
+                return { query, error: e instanceof Error ? e.message : "Search failed" };
+              }
+            },
+          }),
+        }
+      : {}),
+
     ...(extras.has("read_url")
       ? {
           read_url: tool({

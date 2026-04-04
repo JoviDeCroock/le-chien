@@ -95,6 +95,15 @@ export function GlobeIcon(props: IconProps) {
   );
 }
 
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="8" {...stroke} />
+      <path d="M21 21l-4.35-4.35" {...stroke} />
+    </Icon>
+  );
+}
+
 export function ChevronUpIcon(props: IconProps) {
   return (
     <Icon {...props}>

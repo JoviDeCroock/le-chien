@@ -1,7 +1,15 @@
 import { useRef, useEffect, useCallback } from "preact/hooks";
 import { useSignal } from "@preact/signals";
 import { ContentContainer, BarSection } from "./ui/Layout";
-import { SendIcon, StopIcon, MicIcon, ImageIcon, GlobeIcon, ChevronUpIcon } from "./ui/Icons";
+import {
+  SendIcon,
+  StopIcon,
+  MicIcon,
+  ImageIcon,
+  GlobeIcon,
+  SearchIcon,
+  ChevronUpIcon,
+} from "./ui/Icons";
 import type { ExtraTool } from "../models/chat";
 
 const SpeechRecognition =
@@ -12,6 +20,7 @@ const SpeechRecognition =
 const EXTRA_TOOLS: { id: ExtraTool; label: string; icon: typeof ImageIcon }[] = [
   { id: "generate_image", label: "Image generation", icon: ImageIcon },
   { id: "read_url", label: "Web access", icon: GlobeIcon },
+  { id: "web_search", label: "Web search", icon: SearchIcon },
 ];
 
 export function ChatInput({
