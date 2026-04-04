@@ -199,7 +199,10 @@ export function Chat() {
                 {auth.authenticated.value && (
                   <Button
                     variant="icon"
-                    onClick={() => (sidebarOpen.value = !sidebarOpen.value)}
+                    onClick={(e: Event) => {
+                      e.stopPropagation();
+                      sidebarOpen.value = !sidebarOpen.value;
+                    }}
                     title="Toggle sidebar (Cmd/Ctrl+Shift+S)"
                   >
                     <MenuIcon size={16} />
@@ -209,7 +212,14 @@ export function Chat() {
                   le chien
                 </span>
                 {hasMessages && (
-                  <Button variant="icon" onClick={chat.clear} title="New chat (Cmd/Ctrl+N)">
+                  <Button
+                    variant="icon"
+                    onClick={(e: Event) => {
+                      e.stopPropagation();
+                      chat.clear();
+                    }}
+                    title="New chat (Cmd/Ctrl+N)"
+                  >
                     <PlusIcon size={14} />
                   </Button>
                 )}
@@ -224,11 +234,32 @@ export function Chat() {
                   />
                 )}
                 {auth.authenticated.value && (
-                  <TextLink onClick={() => memory.togglePanel()}>Memory</TextLink>
+                  <TextLink
+                    onClick={(e: Event) => {
+                      e.stopPropagation();
+                      memory.togglePanel();
+                    }}
+                  >
+                    Memory
+                  </TextLink>
                 )}
-                <TextLink onClick={() => (shortcutsOpen.value = true)}>Shortcuts</TextLink>
+                <TextLink
+                  onClick={(e: Event) => {
+                    e.stopPropagation();
+                    shortcutsOpen.value = true;
+                  }}
+                >
+                  Shortcuts
+                </TextLink>
                 {auth.authenticated.value ? (
-                  <TextLink onClick={() => auth.signOut()}>Sign out</TextLink>
+                  <TextLink
+                    onClick={(e: Event) => {
+                      e.stopPropagation();
+                      auth.signOut();
+                    }}
+                  >
+                    Sign out
+                  </TextLink>
                 ) : (
                   <TextLink as="a" href="/auth">
                     Sign in
