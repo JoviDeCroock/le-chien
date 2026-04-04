@@ -11,7 +11,7 @@ export function EmptyState() {
       </div>
       <h2 class="text-xl font-semibold text-white mb-2 tracking-tight">le chien</h2>
       <p class="text-sm text-neutral-400 max-w-xs text-center leading-relaxed">
-        Pick a model above and start chatting. All models run on Cloudflare Workers AI.
+        Pick a model above and start a conversation.
       </p>
     </div>
   );

@@ -29,7 +29,7 @@ export function ShortcutOverlay({ open, onClose }: ShortcutOverlayProps) {
         aria-labelledby="shortcut-overlay-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <div class="flex items-center justify-between border-b border-neutral-800/60 px-5 py-4">
+        <div class="flex items-center justify-between border-b border-neutral-800 px-5 py-4">
           <div>
             <h2 id="shortcut-overlay-title" class="text-base font-semibold text-white">
               Keyboard shortcuts
@@ -62,7 +62,7 @@ export function ShortcutOverlay({ open, onClose }: ShortcutOverlayProps) {
           />
         </div>
 
-        <div class="border-t border-neutral-800/60 px-5 py-3 text-xs text-neutral-400">
+        <div class="border-t border-neutral-800 px-5 py-3 text-xs text-neutral-400">
           Press{" "}
           <kbd class="rounded-md border border-neutral-700 bg-neutral-800 px-1.5 py-0.5 text-neutral-200">
             Esc

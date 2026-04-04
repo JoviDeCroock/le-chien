@@ -243,11 +243,6 @@ export function Chat() {
                     Memory
                   </TextLink>
                 )}
-                {auth.authenticated.value && (
-                  <TextLink as="a" href="/billing">
-                    Billing
-                  </TextLink>
-                )}
                 <TextLink
                   onClick={(e: Event) => {
                     e.stopPropagation();
@@ -256,16 +251,24 @@ export function Chat() {
                 >
                   Shortcuts
                 </TextLink>
-                {auth.authenticated.value ? (
-                  <TextLink
-                    onClick={(e: Event) => {
-                      e.stopPropagation();
-                      auth.signOut();
-                    }}
-                  >
-                    Sign out
-                  </TextLink>
-                ) : (
+                {auth.authenticated.value && (
+                  <>
+                    <span class="w-px h-3.5 bg-neutral-800" />
+                    <TextLink as="a" href="/billing">
+                      Billing
+                    </TextLink>
+                    <TextLink
+                      onClick={(e: Event) => {
+                        e.stopPropagation();
+                        auth.signOut();
+                      }}
+                      class="text-neutral-500"
+                    >
+                      Sign out
+                    </TextLink>
+                  </>
+                )}
+                {!auth.authenticated.value && (
                   <TextLink as="a" href="/auth">
                     Sign in
                   </TextLink>

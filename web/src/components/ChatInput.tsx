@@ -150,7 +150,7 @@ export function ChatInput({
   return (
     <BarSection border="top">
       <ContentContainer class="py-3">
-        <div class="flex items-end gap-2 bg-neutral-900 rounded-xl border border-neutral-800/80 focus-within:border-violet-600/30 transition-colors px-3 py-2">
+        <div class="flex items-end gap-2 bg-neutral-900 rounded-xl border border-neutral-800 focus-within:border-violet-600/40 transition-colors px-3 py-2">
           <textarea
             ref={resolvedTextareaRef}
             value={value}

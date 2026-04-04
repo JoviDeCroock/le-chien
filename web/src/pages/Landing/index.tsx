@@ -7,22 +7,22 @@ import { AuthModel } from "../../models/auth";
 const COMPARISON_ROWS = [
   {
     label: "Context",
-    other: "Forgets you every session",
+    other: "Resets every session",
     chien: "Persistent memory carries details forward",
   },
   {
     label: "Models",
-    other: "One model, take it or leave it",
+    other: "Single model per tier",
     chien: "Six modes — pick speed, balance, or depth per thread",
   },
   {
     label: "Tools",
-    other: "Invisible orchestration",
+    other: "Runs behind the scenes",
     chien: "Every tool call visible and reviewable",
   },
   {
     label: "Feel",
-    other: "Busy, overbuilt",
+    other: "Feature-packed interface",
     chien: "Focused on the conversation",
   },
 ];
@@ -105,7 +105,7 @@ export function Landing() {
                 class="mt-6 max-w-lg animate-fade-in text-base leading-7 text-neutral-400"
                 style={{ animationDelay: "80ms" }}
               >
-                Six model modes, persistent memory, visible tool calls. Free to start, $8/mo when
+                Six model modes, persistent memory, visible tool calls. Free to start, €8/mo when
                 you want unlimited.
               </p>
               <div class="mt-8 flex animate-fade-in gap-3" style={{ animationDelay: "140ms" }}>
@@ -227,7 +227,7 @@ export function Landing() {
                   Free
                 </div>
                 <div class="mt-3 text-4xl font-bold tracking-tight text-white">
-                  $0<span class="text-base font-normal text-neutral-500">/mo</span>
+                  €0<span class="text-base font-normal text-neutral-500">/mo</span>
                 </div>
                 <ul class="mt-6 space-y-3 text-sm text-neutral-400">
                   <PricingFeature>20 messages per day</PricingFeature>
@@ -249,7 +249,7 @@ export function Landing() {
                   Pro
                 </div>
                 <div class="mt-3 text-4xl font-bold tracking-tight text-white">
-                  $8<span class="text-base font-normal text-neutral-500">/mo</span>
+                  €8<span class="text-base font-normal text-neutral-500">/mo</span>
                 </div>
                 <ul class="mt-6 space-y-3 text-sm text-neutral-400">
                   <PricingFeature>Unlimited messages</PricingFeature>

@@ -86,7 +86,7 @@ export function ModelSelector({
   const displayModel = hovered ?? selectedModel;
 
   return (
-    <BarSection class="border-b border-neutral-800/40 bg-neutral-950/80">
+    <BarSection class="bg-neutral-950/80">
       <ContentContainer class="py-3">
         <div class="flex flex-col gap-2">
           {/* Model cards */}
@@ -123,7 +123,7 @@ export function ModelSelector({
                     ${
                       isSelected
                         ? "bg-violet-600/15 text-violet-300 border border-violet-500/40 shadow-[0_0_16px_rgba(124,58,237,0.12)]"
-                        : "bg-neutral-900/60 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/80 border border-neutral-800/50"
+                        : "bg-neutral-900/60 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/80 border border-neutral-800"
                     }
                     disabled:opacity-50 disabled:cursor-not-allowed
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50

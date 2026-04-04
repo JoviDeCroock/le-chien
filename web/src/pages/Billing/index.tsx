@@ -78,14 +78,19 @@ export function Billing() {
   return (
     <div class="min-h-screen bg-neutral-950 font-sans text-neutral-300">
       {/* Top bar */}
-      <nav class="flex items-center justify-between px-6 py-4 max-w-2xl mx-auto">
-        <a href="/chat" class="text-sm text-neutral-400 hover:text-white transition-colors">
-          &larr; Back to chat
-        </a>
-        <span class="text-white text-base font-bold tracking-tight">le&nbsp;chien</span>
+      <nav class="border-b border-neutral-800">
+        <div class="flex items-center justify-between h-12 px-4 max-w-3xl mx-auto">
+          <div class="flex items-center gap-3">
+            <a href="/chat" class="text-xs text-neutral-400 hover:text-white transition-colors">
+              &larr; Back
+            </a>
+            <span class="w-px h-3.5 bg-neutral-800" />
+            <span class="text-sm font-semibold text-white tracking-tight">le&nbsp;chien</span>
+          </div>
+        </div>
       </nav>
 
-      <div class="max-w-2xl mx-auto px-6 pt-8 pb-24">
+      <div class="max-w-3xl mx-auto px-4 pt-8 pb-24">
         <h1 class="text-2xl font-bold text-white tracking-tight mb-8">Billing</h1>
 
         {billing.error.value && !snap ? (
@@ -122,7 +127,7 @@ export function Billing() {
                 </div>
                 <div class="text-right shrink-0">
                   <div class="text-2xl font-bold text-white tracking-tight">
-                    {snap.plan === "pro" ? "€12" : "€0"}
+                    {snap.plan === "pro" ? "€8" : "€0"}
                     <span class="text-sm font-normal text-neutral-500">/mo</span>
                   </div>
                 </div>
@@ -199,7 +204,7 @@ export function Billing() {
                 />
                 <PlanCard
                   name="Pro"
-                  price="€12"
+                  price="€8"
                   features={[
                     "Unlimited messages",
                     "Unlimited premium models",

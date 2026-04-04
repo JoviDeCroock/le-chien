@@ -100,9 +100,9 @@ export function BarSection({
   class?: string;
 }) {
   const borders = {
-    bottom: "border-b border-neutral-800/60",
-    top: "border-t border-neutral-800/60",
-    both: "border-y border-neutral-800/60",
+    bottom: "border-b border-neutral-800",
+    top: "border-t border-neutral-800",
+    both: "border-y border-neutral-800",
   };
   return (
     <div class={`shrink-0 ${borders[border]} bg-neutral-950 ${className ?? ""}`.trim()}>

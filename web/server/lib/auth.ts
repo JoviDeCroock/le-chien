@@ -41,7 +41,7 @@ function buildAuth(env: Env) {
     plugins: [
       polar({
         client: polarClient,
-        createCustomerOnSignUp: true,
+        createCustomerOnSignUp: isProduction(env),
         use: [
           checkout({
             authenticatedUsersOnly: true,

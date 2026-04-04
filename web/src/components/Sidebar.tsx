@@ -21,20 +21,26 @@ export function Sidebar({
   onNew,
   onDelete,
 }: SidebarProps) {
-  if (!open) return null;
-
   return (
     <>
       {/* Backdrop */}
-      <div class="fixed inset-0 bg-black/40 z-20" onClick={onClose} />
+      <div
+        class={`fixed inset-0 z-20 transition-opacity duration-200 ${
+          open ? "bg-black/40 pointer-events-auto" : "bg-black/0 pointer-events-none"
+        }`}
+        onClick={onClose}
+      />
 
       {/* Panel */}
       <nav
-        class="fixed z-30 h-full w-64 shrink-0 bg-neutral-900 border-r border-neutral-800/60 flex flex-col"
+        class={`fixed z-30 h-full w-64 shrink-0 bg-neutral-900 border-r border-neutral-800 flex flex-col transition-transform duration-200 ease-out ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
         aria-label="Conversations"
+        aria-hidden={!open}
       >
         {/* Header */}
-        <div class="h-12 shrink-0 flex items-center justify-between px-3 border-b border-neutral-800/60">
+        <div class="h-12 shrink-0 flex items-center justify-between px-3 border-b border-neutral-800">
           <span class="text-xs font-medium text-neutral-400 uppercase tracking-wider">
             Conversations
           </span>
