@@ -1,6 +1,7 @@
 import type { Memory } from "../models/memory";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
+import { Skeleton } from "./ui/Layout";
 import { CloseIcon, PlusIcon } from "./ui/Icons";
 
 export type MemoryPanelProps = {
@@ -126,7 +127,7 @@ export function MemoryPanel({
           {loading ? (
             <div class="space-y-2 px-3 py-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} class="h-14 rounded-lg bg-neutral-800/50 animate-pulse" />
+                <Skeleton key={i} class="h-14" />
               ))}
             </div>
           ) : memories.length === 0 ? (
