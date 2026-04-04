@@ -72,7 +72,7 @@ type SendMessageResult = {
 };
 
 /** Tool IDs that are gated behind the extras dropdown. */
-export type ExtraTool = "generate_image" | "read_url";
+export type ExtraTool = "generate_image" | "read_url" | "web_search";
 
 export const ChatModel = createModel(() => {
   const conversations = signal<Conversation[]>([]);

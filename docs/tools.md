@@ -11,6 +11,7 @@ le chien supports tool calling, allowing the LLM to take actions and fetch infor
 | `read_url`             | Fetches a URL and returns extracted text content. HTML is stripped to plain text. Truncated to 12k chars.                             | No              |
 | `generate_image`       | Generates an image from a text prompt using Cloudflare Workers AI (Flux 1 Schnell). Returns a base64 data URL rendered inline.       | AI binding       |
 | `run_javascript`       | Executes JavaScript code in an isolated environment (no network/FS). Returns the last expression's value. Requires `unsafe-eval` flag. | No              |
+| `web_search`           | Searches the web via Tavily API. Returns titles, URLs, snippets, and an AI-generated answer. Gated behind extras dropdown.            | TAVILY_API_KEY   |
 
 ## Architecture
 
