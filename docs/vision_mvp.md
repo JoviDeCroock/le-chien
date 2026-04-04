@@ -80,12 +80,25 @@ The MVP should support:
 - billing
 - personal and shared workspaces
 - role-based access
+- integrations with external systems users already work in
 
 ### Actions
 
 - tool use inside chat
 - inspectable tool calls
 - approval for mutating actions
+
+### Initial integrations
+
+- Notion
+- Slack
+- Gmail
+- Google Calendar
+- Sentry
+- PostHog
+
+See [MVP Integrations](./integrations-mvp.md) for the intended capability
+surface and prioritization.
 
 ## Principles
 
