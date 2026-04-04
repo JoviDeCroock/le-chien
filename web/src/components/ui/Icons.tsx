@@ -72,6 +72,37 @@ export function MicIcon(props: IconProps) {
   );
 }
 
+export function ImageIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" {...stroke} />
+      <circle cx="8.5" cy="8.5" r="1.5" {...stroke} />
+      <path d="M21 15l-5-5L5 21" {...stroke} />
+    </Icon>
+  );
+}
+
+export function GlobeIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="10" {...stroke} />
+      <path d="M2 12h20" {...stroke} />
+      <path
+        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+        {...stroke}
+      />
+    </Icon>
+  );
+}
+
+export function ChevronUpIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M18 15l-6-6-6 6" {...stroke} />
+    </Icon>
+  );
+}
+
 export function AlertTriangleIcon(props: IconProps) {
   return (
     <Icon {...props}>
