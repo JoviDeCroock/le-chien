@@ -5,6 +5,8 @@ import { getUsageDate, tryIncrementDailyImageGenerationUsage } from "./plans";
 
 type ToolOptions = {
   onSaveMemory?: (key: string, value: string) => void;
+  onUpdateMemory?: (id: string, key: string, value: string) => void;
+  existingMemories?: () => { id: string; key: string; value: string }[];
   /** When set, image generation is rate-limited for free users. */
   rateLimit?: {
     db: D1Database;
@@ -208,7 +210,7 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
       ? {
           save_memory: tool({
             description:
-              "Remember something about this person for future conversations. Use when they share a preference, something about themselves, or context they'd expect you to recall next time. Skip throwaway details.",
+              "Remember something about this person for future conversations. Use when they share a preference, something about themselves, or context they'd expect you to recall next time. Skip throwaway details. Check existing memories first to avoid duplicates — if a memory with the same key exists, update the value instead of creating a new one.",
             inputSchema: z.object({
               key: z
                 .string()
@@ -218,6 +220,15 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
                 .describe("The information to remember (e.g. 'TypeScript', 'Frontend engineer')"),
             }),
             execute: async ({ key, value }) => {
+              const existing = options.existingMemories?.();
+              const duplicate = existing?.find((m) => m.key.toLowerCase() === key.toLowerCase());
+              if (duplicate) {
+                if (duplicate.value.toLowerCase() === value.toLowerCase()) {
+                  return { saved: false, reason: "duplicate", key, value };
+                }
+                options.onUpdateMemory!(duplicate.id, key, value);
+                return { saved: true, updated: true, key, value };
+              }
               options.onSaveMemory!(key, value);
               return { saved: true, key, value };
             },

@@ -339,22 +339,6 @@ export function Chat() {
           memories={memory.memories.value}
           loading={memory.loading.value}
           error={memory.error.value}
-          adding={memory.adding.value}
-          addKey={memory.addKey.value}
-          addValue={memory.addValue.value}
-          onAddKeyChange={(v) => (memory.addKey.value = v)}
-          onAddValueChange={(v) => (memory.addValue.value = v)}
-          onStartAdding={() => memory.startAdding()}
-          onCancelAdding={() => memory.cancelAdding()}
-          onCreateMemory={() => memory.createMemory()}
-          editingId={memory.editingId.value}
-          editKey={memory.editKey.value}
-          editValue={memory.editValue.value}
-          onEditKeyChange={(v) => (memory.editKey.value = v)}
-          onEditValueChange={(v) => (memory.editValue.value = v)}
-          onStartEditing={(m) => memory.startEditing(m)}
-          onCancelEditing={() => memory.cancelEditing()}
-          onSaveEdit={() => memory.saveEdit()}
           onDeleteMemory={(id) => memory.deleteMemory(id)}
         />
       </div>
