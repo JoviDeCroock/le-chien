@@ -1,7 +1,7 @@
 import { signal, createModel } from "@preact/signals";
 import { authClient } from "../lib/auth";
 import { trackEvent, captureException } from "../lib/posthog";
-import type { SubscriptionSnapshot } from "../../server/lib/plans";
+import { buildSubscriptionSnapshot, type SubscriptionSnapshot } from "../../server/lib/plans";
 
 export const BillingModel = createModel(() => {
   const loading = signal(true);
@@ -13,7 +13,11 @@ export const BillingModel = createModel(() => {
     loading.value = true;
     error.value = null;
     try {
-      const res = await fetch("/api/subscription");
+      const res = await fetch("/api/v1/subscription");
+      if (res.status === 404) {
+        snapshot.value = buildSubscriptionSnapshot("free", 0);
+        return;
+      }
       if (!res.ok) throw new Error("Failed to load billing info");
       snapshot.value = await res.json();
     } catch (err) {
