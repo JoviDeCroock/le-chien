@@ -46,25 +46,45 @@ export function Card({
   );
 }
 
-/** Full-screen centered loader with pulsing dot. */
+/** Full-screen centered loader with breathing violet glow. */
 export function PageLoader({ label = "Loading" }: { label?: string }) {
   return (
     <div class="h-screen bg-neutral-950 flex items-center justify-center">
-      <div class="flex items-center gap-3">
-        <div class="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
-        <span class="text-neutral-400 text-sm tracking-wide">{label}</span>
+      <div class="flex flex-col items-center gap-5">
+        <div class="relative flex items-center justify-center">
+          <div class="w-2.5 h-2.5 rounded-full bg-violet-500 animate-loader-breathe" />
+        </div>
+        <span class="text-neutral-500 text-xs tracking-widest uppercase font-medium">{label}</span>
       </div>
     </div>
   );
 }
 
-/** Three pulsing dots — used as streaming/typing indicator. */
+/** Three sequentially fading dots — used as streaming/typing indicator. */
 export function StreamingDots() {
   return (
-    <div class="flex items-center gap-1 py-1 px-1">
-      <span class="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-[pulse_1.4s_ease-in-out_infinite]" />
-      <span class="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-[pulse_1.4s_ease-in-out_0.2s_infinite]" />
-      <span class="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-[pulse_1.4s_ease-in-out_0.4s_infinite]" />
+    <div class="flex items-center gap-1.5 py-1 px-1">
+      <span
+        class="w-1.5 h-1.5 rounded-full bg-neutral-400"
+        style="animation: dot-fade 1.4s ease-in-out infinite"
+      />
+      <span
+        class="w-1.5 h-1.5 rounded-full bg-neutral-400"
+        style="animation: dot-fade 1.4s ease-in-out 0.2s infinite"
+      />
+      <span
+        class="w-1.5 h-1.5 rounded-full bg-neutral-400"
+        style="animation: dot-fade 1.4s ease-in-out 0.4s infinite"
+      />
+    </div>
+  );
+}
+
+/** Skeleton placeholder with shimmer effect. */
+export function Skeleton({ class: className }: { class?: string }) {
+  return (
+    <div class={`rounded-lg bg-neutral-800/50 relative overflow-hidden ${className ?? ""}`.trim()}>
+      <div class="absolute inset-0 animate-shimmer" />
     </div>
   );
 }
