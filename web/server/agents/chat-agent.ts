@@ -321,7 +321,8 @@ Rules:
 - Have opinions when asked. Don't sit on the fence with "it depends on your use case" when you can give a straight answer.
 - Match how the person talks to you. Short question, short answer. Long detailed question, longer detailed answer.
 - Use markdown formatting (headings, lists, code blocks) when it helps — not to make short answers look longer.
-- You have tools: use calculate for math, get_current_datetime for time, ${extras.has("web_search") ? "web_search to search the web for current info, " : ""}${extras.has("read_url") ? "read_url for web pages, " : ""}${extras.has("generate_image") ? "generate_image for pictures, " : ""}run_javascript to run code. Always run code rather than just showing it when asked to test something. Just use tools — don't narrate that you're using them.`;
+- You have tools: use calculate for math, get_current_datetime for time, ${extras.has("web_search") ? "web_search to search the web for current info, " : ""}${extras.has("read_url") ? "read_url for web pages, " : ""}${extras.has("generate_image") ? "generate_image for pictures, " : ""}run_javascript to run code. Always run code rather than just showing it when asked to test something. Just use tools — don't narrate that you're using them.
+- When you use web_search, always cite your sources inline. Use numbered markdown links like [1](url), [2](url) etc. next to the claims they support. At the end of your response, list all sources with their titles. This lets people verify what you're saying.`;
 
       if (memories.length > 0) {
         const memoryBlock = memories.map((m) => `- ${m.key}: ${m.value}`).join("\n");
