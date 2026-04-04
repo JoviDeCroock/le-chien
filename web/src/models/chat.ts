@@ -71,6 +71,9 @@ type SendMessageResult = {
   subscription?: SubscriptionStatus;
 };
 
+/** Tool IDs that are gated behind the extras dropdown. */
+export type ExtraTool = "generate_image" | "read_url";
+
 export const ChatModel = createModel(() => {
   const conversations = signal<Conversation[]>([]);
   const activeConversationId = signal<string | null>(null);
@@ -84,6 +87,7 @@ export const ChatModel = createModel(() => {
   const connected = signal(false);
   const subscription = signal<SubscriptionStatus | null>(null);
   const checkoutPending = signal(false);
+  const enabledExtras = signal<ExtraTool[]>([]);
 
   const agent = signal<AgentConnection | null>(null);
   let subscriptionResetTimer: number | null = null;
@@ -364,106 +368,110 @@ export const ChatModel = createModel(() => {
     });
 
     try {
-      await agent.value!.callStream("sendMessage", [convId, text, selectedModel.value], {
-        onChunk: (chunk) => {
-          const msgs = messages.value;
-          const last = msgs[msgs.length - 1];
-
-          // Handle structured tool events
-          if (typeof chunk === "object" && chunk !== null && "__event" in chunk) {
-            const event = chunk as {
-              __event: string;
-              id: string;
-              name: string;
-              args?: unknown;
-              result?: unknown;
-            };
-            if (event.__event === "tool-call") {
-              const tc: ToolCall = {
-                id: event.id,
-                name: event.name,
-                args: (event.args as Record<string, unknown>) ?? {},
-                status: "pending",
-              };
-              const existing = last.tool_calls ?? [];
-              messages.value = [...msgs.slice(0, -1), { ...last, tool_calls: [...existing, tc] }];
-            } else if (event.__event === "tool-result") {
-              const existing = last.tool_calls ?? [];
-              const updated = existing.map((tc) =>
-                tc.id === event.id
-                  ? { ...tc, result: event.result, status: "complete" as const }
-                  : tc,
-              );
-              messages.value = [...msgs.slice(0, -1), { ...last, tool_calls: updated }];
-            }
-            return;
-          }
-
-          // Regular text chunk
-          messages.value = [
-            ...msgs.slice(0, -1),
-            { ...last, content: last.content + (chunk as string) },
-          ];
-        },
-        onDone: (result) => {
-          const meta = result as SendMessageResult | undefined;
-
-          if (meta?.subscription) {
-            setSubscription(meta.subscription);
-          }
-
-          if (meta?.blocked) {
-            trackEvent("message_blocked", {
-              reason: meta.reason,
-              plan: meta.subscription?.plan,
-            });
-            messages.value = messages.value.filter(
-              (message) =>
-                message.id !== optimisticUserMessageId &&
-                message.id !== optimisticAssistantMessageId,
-            );
-            streaming.value = false;
-            return;
-          }
-
-          if (meta?.messageId) {
+      await agent.value!.callStream(
+        "sendMessage",
+        [convId, text, selectedModel.value, enabledExtras.value],
+        {
+          onChunk: (chunk) => {
             const msgs = messages.value;
             const last = msgs[msgs.length - 1];
-            messages.value = [...msgs.slice(0, -1), { ...last, id: meta.messageId }];
-          }
-          trackEvent("message_completed", {
-            model: selectedModel.value,
-            conversation_id: convId,
-            duration_ms: Date.now() - streamStartedAt,
-          });
-          streaming.value = false;
 
-          // Refresh conversation list to get updated titles/timestamps
-          agent.value
-            ?.call<Conversation[]>("listConversations")
-            .then((convos) => {
-              conversations.value = convos;
-            })
-            .catch(() => {});
+            // Handle structured tool events
+            if (typeof chunk === "object" && chunk !== null && "__event" in chunk) {
+              const event = chunk as {
+                __event: string;
+                id: string;
+                name: string;
+                args?: unknown;
+                result?: unknown;
+              };
+              if (event.__event === "tool-call") {
+                const tc: ToolCall = {
+                  id: event.id,
+                  name: event.name,
+                  args: (event.args as Record<string, unknown>) ?? {},
+                  status: "pending",
+                };
+                const existing = last.tool_calls ?? [];
+                messages.value = [...msgs.slice(0, -1), { ...last, tool_calls: [...existing, tc] }];
+              } else if (event.__event === "tool-result") {
+                const existing = last.tool_calls ?? [];
+                const updated = existing.map((tc) =>
+                  tc.id === event.id
+                    ? { ...tc, result: event.result, status: "complete" as const }
+                    : tc,
+                );
+                messages.value = [...msgs.slice(0, -1), { ...last, tool_calls: updated }];
+              }
+              return;
+            }
+
+            // Regular text chunk
+            messages.value = [
+              ...msgs.slice(0, -1),
+              { ...last, content: last.content + (chunk as string) },
+            ];
+          },
+          onDone: (result) => {
+            const meta = result as SendMessageResult | undefined;
+
+            if (meta?.subscription) {
+              setSubscription(meta.subscription);
+            }
+
+            if (meta?.blocked) {
+              trackEvent("message_blocked", {
+                reason: meta.reason,
+                plan: meta.subscription?.plan,
+              });
+              messages.value = messages.value.filter(
+                (message) =>
+                  message.id !== optimisticUserMessageId &&
+                  message.id !== optimisticAssistantMessageId,
+              );
+              streaming.value = false;
+              return;
+            }
+
+            if (meta?.messageId) {
+              const msgs = messages.value;
+              const last = msgs[msgs.length - 1];
+              messages.value = [...msgs.slice(0, -1), { ...last, id: meta.messageId }];
+            }
+            trackEvent("message_completed", {
+              model: selectedModel.value,
+              conversation_id: convId,
+              duration_ms: Date.now() - streamStartedAt,
+            });
+            streaming.value = false;
+
+            // Refresh conversation list to get updated titles/timestamps
+            agent.value
+              ?.call<Conversation[]>("listConversations")
+              .then((convos) => {
+                conversations.value = convos;
+              })
+              .catch(() => {});
+          },
+          onError: (err) => {
+            // Suppress transient "Connection closed" — PartySocket will reconnect
+            if (err === "Connection closed") return;
+            error.value = err;
+            captureException(new Error(err), {
+              source: "chat_stream",
+              model: selectedModel.value,
+              conversation_id: convId,
+            });
+            streaming.value = false;
+            // Remove empty assistant message on error
+            const msgs = messages.value;
+            const last = msgs[msgs.length - 1];
+            if (last.role === "assistant" && !last.content) {
+              messages.value = msgs.slice(0, -1);
+            }
+          },
         },
-        onError: (err) => {
-          // Suppress transient "Connection closed" — PartySocket will reconnect
-          if (err === "Connection closed") return;
-          error.value = err;
-          captureException(new Error(err), {
-            source: "chat_stream",
-            model: selectedModel.value,
-            conversation_id: convId,
-          });
-          streaming.value = false;
-          // Remove empty assistant message on error
-          const msgs = messages.value;
-          const last = msgs[msgs.length - 1];
-          if (last.role === "assistant" && !last.content) {
-            messages.value = msgs.slice(0, -1);
-          }
-        },
-      });
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       // Suppress transient "Connection closed" — PartySocket will reconnect
@@ -507,6 +515,7 @@ export const ChatModel = createModel(() => {
     premiumLimitReached,
     selectedModelIsPremium,
     checkoutPending,
+    enabledExtras,
     canSend,
     fetchModels,
     refreshSubscription,

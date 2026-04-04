@@ -284,6 +284,13 @@ export function Chat() {
             disabled={composerDisabled}
             placeholder={composerPlaceholder}
             textareaRef={composerRef}
+            enabledExtras={chat.enabledExtras.value}
+            onToggleExtra={(id) => {
+              const current = chat.enabledExtras.value;
+              chat.enabledExtras.value = current.includes(id)
+                ? current.filter((t) => t !== id)
+                : [...current, id];
+            }}
           />
         </div>
 

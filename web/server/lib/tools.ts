@@ -11,9 +11,13 @@ type ToolOptions = {
     userId: string;
     plan: Plan;
   };
+  /** Which expensive tools the user has opted into for this message. */
+  enabledExtras?: string[];
 };
 
 export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
+  const extras = new Set(options.enabledExtras ?? []);
+
   return {
     get_current_datetime: tool({
       description: "Get the current date, time, and day of the week.",
@@ -56,42 +60,49 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
       },
     }),
 
-    generate_image: tool({
-      description:
-        "Generate an image from a text description. Use this when the user asks you to create, draw, or generate an image, picture, or illustration.",
-      inputSchema: z.object({
-        prompt: z.string().describe("Detailed description of the image to generate"),
-      }),
-      execute: async ({ prompt }) => {
-        try {
-          // Enforce image generation limit for free users
-          if (options.rateLimit?.plan === "free") {
-            const { db, userId } = options.rateLimit;
-            const usageDate = getUsageDate();
-            const count = await tryIncrementDailyImageGenerationUsage(db, userId, usageDate);
-            if (count === null) {
-              return {
-                prompt,
-                error:
-                  "You've reached your daily image generation limit on the free plan. Upgrade to Pro for unlimited image generation.",
-              };
-            }
-          }
+    ...(extras.has("generate_image")
+      ? {
+          generate_image: tool({
+            description:
+              "Generate an image from a text description. Use this when the user asks you to create, draw, or generate an image, picture, or illustration.",
+            inputSchema: z.object({
+              prompt: z.string().describe("Detailed description of the image to generate"),
+            }),
+            execute: async ({ prompt }) => {
+              try {
+                // Enforce image generation limit for free users
+                if (options.rateLimit?.plan === "free") {
+                  const { db, userId } = options.rateLimit;
+                  const usageDate = getUsageDate();
+                  const count = await tryIncrementDailyImageGenerationUsage(db, userId, usageDate);
+                  if (count === null) {
+                    return {
+                      prompt,
+                      error:
+                        "You've reached your daily image generation limit on the free plan. Upgrade to Pro for unlimited image generation.",
+                    };
+                  }
+                }
 
-          const result = await env.AI.run(
-            "@cf/black-forest-labs/flux-1-schnell",
-            { prompt },
-            { gateway: { id: env.CF_AI_GATEWAY_ID } },
-          );
-          if (!result.image) {
-            return { prompt, error: `Image generation failed` };
-          }
-          return { prompt, image: `data:image/png;base64,${result.image}` };
-        } catch (e) {
-          return { prompt, error: e instanceof Error ? e.message : "Image generation failed" };
+                const result = await env.AI.run(
+                  "@cf/black-forest-labs/flux-1-schnell",
+                  { prompt },
+                  { gateway: { id: env.CF_AI_GATEWAY_ID } },
+                );
+                if (!result.image) {
+                  return { prompt, error: `Image generation failed` };
+                }
+                return { prompt, image: `data:image/png;base64,${result.image}` };
+              } catch (e) {
+                return {
+                  prompt,
+                  error: e instanceof Error ? e.message : "Image generation failed",
+                };
+              }
+            },
+          }),
         }
-      },
-    }),
+      : {}),
 
     run_javascript: tool({
       description:
@@ -214,38 +225,43 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
         }
       : {}),
 
-    read_url: tool({
-      description:
-        "Fetch and read the text content of a web page. Returns extracted text with HTML tags stripped. Useful for reading articles, docs, or any public URL.",
-      inputSchema: z.object({
-        url: z.url().describe("The URL to fetch"),
-      }),
-      execute: async ({ url }) => {
-        try {
-          const res = await fetch(url, {
-            headers: {
-              "User-Agent": "le-chien/1.0",
-              Accept: "text/html,application/xhtml+xml,text/plain,text/markdown,application/json",
+    ...(extras.has("read_url")
+      ? {
+          read_url: tool({
+            description:
+              "Fetch and read the text content of a web page. Returns extracted text with HTML tags stripped. Useful for reading articles, docs, or any public URL.",
+            inputSchema: z.object({
+              url: z.url().describe("The URL to fetch"),
+            }),
+            execute: async ({ url }) => {
+              try {
+                const res = await fetch(url, {
+                  headers: {
+                    "User-Agent": "le-chien/1.0",
+                    Accept:
+                      "text/html,application/xhtml+xml,text/plain,text/markdown,application/json",
+                  },
+                  redirect: "follow",
+                });
+                if (!res.ok) return { url, error: `HTTP ${res.status}: ${res.statusText}` };
+
+                const contentType = res.headers.get("content-type") || "";
+                const raw = await res.text();
+
+                // If HTML, strip tags to get readable text
+                const text = contentType.includes("html") ? htmlToText(raw) : raw;
+
+                const maxLen = 12000;
+                const truncated =
+                  text.length > maxLen ? text.slice(0, maxLen) + "\n...[truncated]" : text;
+                return { url, content: truncated, length: text.length };
+              } catch (e) {
+                return { url, error: e instanceof Error ? e.message : "Failed to fetch URL" };
+              }
             },
-            redirect: "follow",
-          });
-          if (!res.ok) return { url, error: `HTTP ${res.status}: ${res.statusText}` };
-
-          const contentType = res.headers.get("content-type") || "";
-          const raw = await res.text();
-
-          // If HTML, strip tags to get readable text
-          const text = contentType.includes("html") ? htmlToText(raw) : raw;
-
-          const maxLen = 12000;
-          const truncated =
-            text.length > maxLen ? text.slice(0, maxLen) + "\n...[truncated]" : text;
-          return { url, content: truncated, length: text.length };
-        } catch (e) {
-          return { url, error: e instanceof Error ? e.message : "Failed to fetch URL" };
+          }),
         }
-      },
-    }),
+      : {}),
   };
 }
 
