@@ -15,6 +15,7 @@ import {
   tryIncrementDailyPremiumMessageUsage,
 } from "../lib/plans";
 import { trackServerEvent, captureServerException } from "../lib/posthog";
+import { trackInferenceCost } from "../lib/polar-events";
 import { isProduction } from "../utils/isProduction";
 
 type Conversation = {
@@ -391,6 +392,17 @@ Rules:
         tool_calls_count: toolCalls.length,
         response_length: fullContent.length,
       });
+
+      const usage = await result.usage;
+      if (usage.inputTokens != null && usage.outputTokens != null) {
+        trackInferenceCost(this.env, userId, {
+          model: selectedModel,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          totalTokens: usage.totalTokens ?? usage.inputTokens + usage.outputTokens,
+          conversationId,
+        });
+      }
 
       stream.end({ messageId: assistantMessageId, subscription });
     } catch (err) {
