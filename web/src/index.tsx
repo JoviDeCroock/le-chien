@@ -8,6 +8,7 @@ import "./style.css";
 const Landing = lazy(() => import("./pages/Landing/index").then((module) => module.Landing));
 const Chat = lazy(() => import("./pages/Chat/index").then((module) => module.Chat));
 const Auth = lazy(() => import("./pages/Auth/index").then((module) => module.Auth));
+const Billing = lazy(() => import("./pages/Billing/index").then((module) => module.Billing));
 const NotFound = lazy(() => import("./pages/_404").then((module) => module.NotFound));
 
 function PageViewTracker() {
@@ -48,6 +49,7 @@ function AppContent() {
           <Route path="/" component={Landing} />
           <Route path="/chat" component={Chat} />
           <Route path="/auth" component={Auth} />
+          <Route path="/billing" component={Billing} />
           <Route default component={NotFound} />
         </Router>
       </main>
