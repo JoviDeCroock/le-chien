@@ -243,6 +243,11 @@ export function Chat() {
                     Memory
                   </TextLink>
                 )}
+                {auth.authenticated.value && (
+                  <TextLink as="a" href="/billing">
+                    Billing
+                  </TextLink>
+                )}
                 <TextLink
                   onClick={(e: Event) => {
                     e.stopPropagation();
