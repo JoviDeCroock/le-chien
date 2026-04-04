@@ -73,6 +73,7 @@ export const MODELS: Record<ModelId, ModelSpec> = {
     tag: "Smart",
     speed: "moderate",
     bestFor: "Complex questions, writing, analysis",
+    premium: true,
   },
   "nemotron-3-120b": {
     provider: "workers-ai",
@@ -82,6 +83,7 @@ export const MODELS: Record<ModelId, ModelSpec> = {
     tag: "Reasoning",
     speed: "moderate",
     bestFor: "Math, logic, code, tough problems",
+    premium: true,
   },
   "kimi-k2.5": {
     provider: "workers-ai",
