@@ -108,7 +108,9 @@ function PricingFeature({ children }: { children: ComponentChildren }) {
 
 function SectionLabel({ children }: { children: ComponentChildren }) {
   return (
-    <div class="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-neutral-400">{children}</div>
+    <div class="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-neutral-400">
+      {children}
+    </div>
   );
 }
 
@@ -174,8 +176,8 @@ export function Landing() {
                 class="mt-6 max-w-2xl animate-fade-in text-base leading-8 text-neutral-400 sm:text-lg"
                 style={{ animationDelay: "140ms" }}
               >
-                le chien is a clean AI chat app with fast replies, model modes that make sense,
-                and memory that saves you from repeating yourself.
+                le chien is a clean AI chat app with fast replies, model modes that make sense, and
+                memory that saves you from repeating yourself.
               </p>
               <div
                 class="mt-8 flex animate-fade-in flex-col gap-3 sm:flex-row"
@@ -232,7 +234,9 @@ export function Landing() {
                     <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">
                       Inside the app
                     </div>
-                    <div class="mt-1 text-lg font-semibold text-white">A chat surface that stays out of your way</div>
+                    <div class="mt-1 text-lg font-semibold text-white">
+                      A chat surface that stays out of your way
+                    </div>
                   </div>
                   <div class="rounded-full border border-violet-600/30 bg-violet-600/10 px-3 py-1 text-xs font-medium text-violet-300">
                     Streaming
@@ -243,7 +247,9 @@ export function Landing() {
               <div class="space-y-5 p-5">
                 <div class="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
                   <div class="flex items-center justify-between gap-3">
-                    <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Model modes</div>
+                    <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                      Model modes
+                    </div>
                     <div class="text-xs text-neutral-400">Switch per thread</div>
                   </div>
                   <div class="mt-3 flex flex-wrap gap-2 text-sm">
@@ -302,12 +308,18 @@ export function Landing() {
                     <div class="mt-1 text-sm text-neutral-400">Free plan baseline</div>
                   </div>
                   <div class="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                    <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Premium use</div>
+                    <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                      Premium use
+                    </div>
                     <div class="mt-2 text-2xl font-semibold tracking-tight text-white">5/day</div>
-                    <div class="mt-1 text-sm text-neutral-400">Try premium models before upgrading</div>
+                    <div class="mt-1 text-sm text-neutral-400">
+                      Try premium models before upgrading
+                    </div>
                   </div>
                   <div class="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                    <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Image gen</div>
+                    <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                      Image gen
+                    </div>
                     <div class="mt-2 text-2xl font-semibold tracking-tight text-white">5/day</div>
                     <div class="mt-1 text-sm text-neutral-400">Included on free</div>
                   </div>
@@ -331,7 +343,10 @@ export function Landing() {
                 </p>
                 <div class="mt-8 space-y-4">
                   {DIFFERENTIATORS.map((item) => (
-                    <div key={item.title} class="rounded-xl border border-neutral-900 bg-neutral-900/70 p-4">
+                    <div
+                      key={item.title}
+                      class="rounded-xl border border-neutral-900 bg-neutral-900/70 p-4"
+                    >
                       <h3 class="text-base font-semibold text-white">{item.title}</h3>
                       <p class="mt-2 text-sm leading-6 text-neutral-400">{item.description}</p>
                     </div>
@@ -378,7 +393,10 @@ export function Landing() {
             </div>
             <div class="grid gap-4 lg:grid-cols-3">
               {WORKFLOW.map((item) => (
-                <div key={item.step} class="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
+                <div
+                  key={item.step}
+                  class="rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
+                >
                   <div class="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400">
                     Step {item.step}
                   </div>
@@ -392,7 +410,10 @@ export function Landing() {
             </div>
             <div class="mt-6 grid gap-4 lg:grid-cols-3">
               {PILLARS.map((item) => (
-                <div key={item.label} class="rounded-xl border border-neutral-900 bg-neutral-900/70 p-4">
+                <div
+                  key={item.label}
+                  class="rounded-xl border border-neutral-900 bg-neutral-900/70 p-4"
+                >
                   <div class="text-sm font-medium text-white">{item.label}</div>
                   <p class="mt-2 text-sm leading-6 text-neutral-400">{item.description}</p>
                 </div>
@@ -418,7 +439,9 @@ export function Landing() {
 
             <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_280px]">
               <div class="rounded-2xl border border-neutral-800 bg-neutral-900 p-6 sm:p-8">
-                <div class="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Free</div>
+                <div class="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                  Free
+                </div>
                 <div class="mt-3 text-4xl font-bold tracking-tight text-white">
                   $0<span class="text-base font-normal text-neutral-400">/mo</span>
                 </div>
@@ -441,7 +464,9 @@ export function Landing() {
               </div>
 
               <div class="rounded-2xl border border-violet-600/35 bg-neutral-900 p-6 sm:p-8">
-                <div class="text-sm font-semibold uppercase tracking-[0.18em] text-violet-300">Pro</div>
+                <div class="text-sm font-semibold uppercase tracking-[0.18em] text-violet-300">
+                  Pro
+                </div>
                 <div class="mt-3 text-4xl font-bold tracking-tight text-white">
                   $8<span class="text-base font-normal text-neutral-400">/mo</span>
                 </div>
@@ -464,13 +489,17 @@ export function Landing() {
               </div>
 
               <div class="rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
-                <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Yearly option</div>
+                <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                  Yearly option
+                </div>
                 <div class="mt-3 text-3xl font-semibold tracking-tight text-white">$72</div>
                 <p class="mt-2 text-sm leading-6 text-neutral-400">
                   Equivalent to $6 per month when billed yearly.
                 </p>
                 <div class="mt-6 rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                  <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">Positioning</div>
+                  <div class="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                    Positioning
+                  </div>
                   <p class="mt-2 text-sm leading-6 text-neutral-300">
                     Cheap enough to try, clear enough to understand, and pleasant enough to keep
                     using.
