@@ -21,6 +21,7 @@ type ModelMeta = {
   tag: string;
   speed: "instant" | "fast" | "moderate";
   bestFor: string;
+  premium?: boolean;
 };
 
 type WorkersAiModelSpec = ModelMeta & {
@@ -45,15 +46,6 @@ export const MODELS: Record<ModelId, ModelSpec> = {
     tag: "Fastest",
     speed: "instant",
     bestFor: "Quick questions, everyday tasks",
-  },
-  "kimi-k2.5": {
-    provider: "workers-ai",
-    name: "Converser",
-    workersAiId: "@cf/moonshotai/kimi-k2.5",
-    description: "Follows long conversations naturally",
-    tag: "Conversational",
-    speed: "fast",
-    bestFor: "Back-and-forth discussions, brainstorming",
   },
   "llama-4-scout": {
     provider: "workers-ai",
@@ -90,6 +82,16 @@ export const MODELS: Record<ModelId, ModelSpec> = {
     tag: "Reasoning",
     speed: "moderate",
     bestFor: "Math, logic, code, tough problems",
+  },
+  "kimi-k2.5": {
+    provider: "workers-ai",
+    name: "Converser",
+    workersAiId: "@cf/moonshotai/kimi-k2.5",
+    description: "Follows long conversations naturally",
+    tag: "Conversational",
+    speed: "fast",
+    bestFor: "Back-and-forth discussions, brainstorming",
+    premium: true,
   },
   "gpt-4.1": {
     provider: "openai",
@@ -187,6 +189,10 @@ export function getModel(
   });
 }
 
+export function isPremiumModel(modelId: ModelId): boolean {
+  return MODELS[modelId]?.premium === true;
+}
+
 /** Only returns models that are publicly exposed to users. */
 export function listModels() {
   return Object.entries(MODELS)
@@ -198,5 +204,6 @@ export function listModels() {
       tag: spec.tag,
       speed: spec.speed,
       bestFor: spec.bestFor,
+      premium: spec.premium ?? false,
     }));
 }

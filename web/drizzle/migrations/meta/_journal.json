@@ -22,6 +22,20 @@
       "when": 1774785797444,
       "tag": "0002_easy_jasper_sitwell",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1775111796847,
+      "tag": "0003_elite_black_bolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1775112274762,
+      "tag": "0004_red_piledriver",
+      "breakpoints": true
     }
   ]
 }

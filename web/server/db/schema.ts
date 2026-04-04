@@ -94,3 +94,37 @@ export const dailyMessageUsage = sqliteTable(
   },
   (t) => [uniqueIndex("daily_message_usage_user_date_unique_idx").on(t.userId, t.usageDate)],
 );
+
+export const dailyPremiumMessageUsage = sqliteTable(
+  "daily_premium_message_usage",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    usageDate: text("usage_date").notNull(),
+    messageCount: integer("message_count").notNull().default(0),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("daily_premium_message_usage_user_date_unique_idx").on(t.userId, t.usageDate),
+  ],
+);
+
+export const dailyImageGenerationUsage = sqliteTable(
+  "daily_image_generation_usage",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    usageDate: text("usage_date").notNull(),
+    messageCount: integer("message_count").notNull().default(0),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("daily_image_generation_usage_user_date_unique_idx").on(t.userId, t.usageDate),
+  ],
+);

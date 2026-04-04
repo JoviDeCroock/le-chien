@@ -9,6 +9,7 @@ export type Model = {
   tag: string;
   speed: "instant" | "fast" | "moderate";
   bestFor: string;
+  premium: boolean;
 };
 
 const speedConfig = {
@@ -38,12 +39,14 @@ export function ModelSelector({
   onSelect,
   disabled,
   barRef,
+  premiumLimitReached,
 }: {
   models: Model[];
   selected: string;
   onSelect: (id: string) => void;
   disabled?: boolean;
   barRef?: RefObject<HTMLDivElement>;
+  premiumLimitReached?: boolean;
 }) {
   const hoveredId = useSignal<string | null>(null);
 
@@ -96,6 +99,7 @@ export function ModelSelector({
           >
             {models.map((m) => {
               const isSelected = selected === m.id;
+              const isPremiumDisabled = m.premium && premiumLimitReached && !isSelected;
               return (
                 <button
                   key={m.id}
@@ -108,7 +112,7 @@ export function ModelSelector({
                       models.findIndex((model) => model.id === m.id),
                     )
                   }
-                  disabled={disabled}
+                  disabled={disabled || isPremiumDisabled}
                   role="radio"
                   aria-checked={isSelected}
                   tabIndex={isSelected ? 0 : -1}
@@ -142,6 +146,15 @@ export function ModelSelector({
                     >
                       {m.tag}
                     </span>
+                    {m.premium && (
+                      <span
+                        class={`text-[10px] font-semibold uppercase tracking-wider px-1 py-px rounded ${
+                          isSelected ? "bg-white/20 text-white" : "bg-amber-500/15 text-amber-400"
+                        }`}
+                      >
+                        Pro
+                      </span>
+                    )}
                   </div>
                   <div
                     class={`${
