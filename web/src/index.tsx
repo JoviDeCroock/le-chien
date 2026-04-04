@@ -1,5 +1,13 @@
-import { LocationProvider, Router, Route, hydrate, prerender as ssr, lazy } from "preact-iso";
-import { useLocation } from "preact-iso";
+import { render } from "preact";
+import {
+  LocationProvider,
+  Router,
+  Route,
+  hydrate,
+  prerender as ssr,
+  lazy,
+  useLocation,
+} from "preact-iso";
 import { useEffect, useErrorBoundary } from "preact/hooks";
 import { initPostHog, trackPageView, captureException } from "./lib/posthog";
 
@@ -71,7 +79,13 @@ if (typeof window !== "undefined") {
   if (!appElement) {
     throw new Error("App element not found");
   }
-  hydrate(<App />, appElement);
+
+  if (location.pathname === "/") {
+    hydrate(<App />, appElement);
+  } else {
+    appElement.innerHTML = "";
+    render(<App />, appElement);
+  }
 }
 
 export async function prerender(data: Record<string, unknown>) {
