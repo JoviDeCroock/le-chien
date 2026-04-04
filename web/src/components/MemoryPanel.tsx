@@ -59,11 +59,11 @@ export function MemoryPanel({
   return (
     <>
       {/* Backdrop (mobile) */}
-      <div class="fixed inset-0 bg-black/40 z-20 sm:hidden" onClick={onClose} />
+      <div class="fixed inset-0 bg-black/40 z-20" onClick={onClose} />
 
       {/* Panel */}
       <aside
-        class="fixed sm:relative right-0 z-30 h-full w-72 shrink-0 bg-neutral-900 border-l border-neutral-800/60 flex flex-col"
+        class="fixed right-0 z-30 h-full w-72 shrink-0 bg-neutral-900 border-l border-neutral-800/60 flex flex-col"
         aria-label="Memory"
       >
         {/* Header */}
