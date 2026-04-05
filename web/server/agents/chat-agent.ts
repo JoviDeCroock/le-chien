@@ -344,6 +344,12 @@ Rules:
 
       for await (const part of result.fullStream) {
         switch (part.type) {
+          case "reasoning-delta":
+            stream.send({
+              __event: "reasoning",
+              text: part.text,
+            });
+            break;
           case "text-delta":
             fullContent += part.text;
             stream.send(part.text);
