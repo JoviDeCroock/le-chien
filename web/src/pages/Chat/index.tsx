@@ -324,6 +324,10 @@ export function Chat() {
             placeholder={composerPlaceholder}
             textareaRef={composerRef}
             enabledExtras={chat.enabledExtras.value}
+            disabledExtras={[
+              ...(sub?.usage.imageGenerationLimitReached ? ["generate_image" as const] : []),
+              ...(sub?.usage.webSearchLimitReached ? ["web_search" as const] : []),
+            ]}
             onToggleExtra={(id) => {
               const current = chat.enabledExtras.value;
               chat.enabledExtras.value = current.includes(id)

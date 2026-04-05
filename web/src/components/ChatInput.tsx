@@ -46,6 +46,7 @@ export function ChatInput({
   placeholder?: string;
   textareaRef?: { current: HTMLTextAreaElement | null };
   enabledExtras: ExtraTool[];
+  disabledExtras?: ExtraTool[];
   onToggleExtra: (id: ExtraTool) => void;
 }) {
   const fallbackRef = useRef<HTMLTextAreaElement>(null);
@@ -227,25 +228,37 @@ export function ChatInput({
                 </div>
                 {EXTRA_TOOLS.map(({ id, label, icon: ToolIcon }) => {
                   const active = enabledExtras.includes(id);
+                  const limitReached = disabledExtras?.includes(id) ?? false;
                   return (
                     <button
                       key={id}
-                      onClick={() => onToggleExtra(id)}
+                      onClick={() => !limitReached && onToggleExtra(id)}
+                      disabled={limitReached}
                       class={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                        active
-                          ? "text-white bg-violet-600/10"
-                          : "text-neutral-400 hover:text-white hover:bg-neutral-800/60"
+                        limitReached
+                          ? "text-neutral-600 cursor-not-allowed"
+                          : active
+                            ? "text-white bg-violet-600/10"
+                            : "text-neutral-400 hover:text-white hover:bg-neutral-800/60"
                       }`}
+                      title={limitReached ? "Daily limit reached" : undefined}
                     >
                       <ToolIcon size={14} />
-                      <span class="flex-1 text-left">{label}</span>
-                      <div
-                        class={`w-7 h-4 rounded-full transition-colors duration-150 flex items-center ${
-                          active ? "bg-violet-600 justify-end" : "bg-neutral-700 justify-start"
-                        }`}
-                      >
-                        <div class="w-3 h-3 bg-white rounded-full mx-0.5" />
-                      </div>
+                      <span class="flex-1 text-left">
+                        {label}
+                        {limitReached && (
+                          <span class="text-[11px] text-neutral-600 ml-1">— limit reached</span>
+                        )}
+                      </span>
+                      {!limitReached && (
+                        <div
+                          class={`w-7 h-4 rounded-full transition-colors duration-150 flex items-center ${
+                            active ? "bg-violet-600 justify-end" : "bg-neutral-700 justify-start"
+                          }`}
+                        >
+                          <div class="w-3 h-3 bg-white rounded-full mx-0.5" />
+                        </div>
+                      )}
                     </button>
                   );
                 })}
