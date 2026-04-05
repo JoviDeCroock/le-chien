@@ -22,6 +22,8 @@ type ToolOptions = {
   enabledExtras?: string[];
   /** When true, the image generation tool is excluded entirely. */
   imageGenerationLimitReached?: boolean;
+  /** When true, the web search tool is excluded entirely. */
+  webSearchLimitReached?: boolean;
 };
 
 export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
@@ -243,7 +245,7 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
         }
       : {}),
 
-    ...(extras.has("web_search") && env.TAVILY_API_KEY
+    ...(extras.has("web_search") && env.TAVILY_API_KEY && !options.webSearchLimitReached
       ? {
           web_search: tool({
             description:
