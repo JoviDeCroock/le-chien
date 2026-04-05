@@ -95,6 +95,77 @@ function isImageResult(result: unknown): result is { image: string } {
   );
 }
 
+type WebSearchResult = {
+  query: string;
+  answer?: string;
+  results: { title: string; url: string; snippet: string }[];
+};
+
+function isWebSearchResult(result: unknown): result is WebSearchResult {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "results" in result &&
+    Array.isArray((result as WebSearchResult).results) &&
+    (result as WebSearchResult).results.length > 0 &&
+    "url" in (result as WebSearchResult).results[0]
+  );
+}
+
+function getDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+function WebSearchSources({ result }: { result: WebSearchResult }) {
+  return (
+    <div class="px-3 pb-2 space-y-1.5">
+      {result.results.map((r, i) => (
+        <a
+          key={r.url}
+          href={r.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-start gap-2.5 px-2.5 py-2 rounded-md bg-neutral-800/50 border border-neutral-700/30 hover:border-neutral-600/50 hover:bg-neutral-800/80 transition-colors duration-75 group"
+        >
+          <span class="shrink-0 w-5 h-5 rounded bg-neutral-700/60 text-neutral-400 text-[10px] font-medium flex items-center justify-center mt-0.5">
+            {i + 1}
+          </span>
+          <div class="min-w-0 flex-1">
+            <div class="text-neutral-300 text-[12px] font-medium leading-tight truncate group-hover:text-violet-400 transition-colors duration-75">
+              {r.title}
+            </div>
+            <div class="text-neutral-500 text-[11px] mt-0.5 truncate">{getDomain(r.url)}</div>
+            {r.snippet && (
+              <div class="text-neutral-500 text-[11px] mt-1 line-clamp-2 leading-relaxed">
+                {r.snippet}
+              </div>
+            )}
+          </div>
+          <svg
+            width={12}
+            height={12}
+            viewBox="0 0 24 24"
+            fill="none"
+            class="shrink-0 text-neutral-600 group-hover:text-neutral-400 transition-colors duration-75 mt-1"
+          >
+            <path
+              d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
   const expanded = useSignal(false);
   const meta = TOOL_LABELS[toolCall.name] ?? { label: toolCall.name, icon: "search" };
@@ -138,7 +209,13 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
         </span>
       </button>
 
-      {!expanded.value && resultSummary && (
+      {/* Web search: show source cards instead of raw JSON */}
+      {!isPending && isWebSearchResult(toolCall.result) && (
+        <WebSearchSources result={toolCall.result} />
+      )}
+
+      {/* Non-web-search collapsed preview */}
+      {!expanded.value && resultSummary && !isWebSearchResult(toolCall.result) && (
         <div class="px-3 pb-2 -mt-1">
           <pre class="text-neutral-400 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all line-clamp-3">
             {resultSummary}
@@ -168,16 +245,18 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
               </pre>
             </div>
           )}
-          {toolCall.result !== undefined && !isImageResult(toolCall.result) && (
-            <div>
-              <span class="text-neutral-500 text-[11px] font-medium uppercase tracking-wider">
-                Result
-              </span>
-              <pre class="mt-1 text-neutral-400 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
-                {formatResult(toolCall.result)}
-              </pre>
-            </div>
-          )}
+          {toolCall.result !== undefined &&
+            !isImageResult(toolCall.result) &&
+            !isWebSearchResult(toolCall.result) && (
+              <div>
+                <span class="text-neutral-500 text-[11px] font-medium uppercase tracking-wider">
+                  Result
+                </span>
+                <pre class="mt-1 text-neutral-400 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                  {formatResult(toolCall.result)}
+                </pre>
+              </div>
+            )}
         </div>
       )}
     </div>
