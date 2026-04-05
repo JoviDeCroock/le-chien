@@ -13,6 +13,8 @@ type ToolOptions = {
   };
   /** Which expensive tools the user has opted into for this message. */
   enabledExtras?: string[];
+  /** When true, the image generation tool is excluded entirely. */
+  imageGenerationLimitReached?: boolean;
 };
 
 export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
@@ -60,7 +62,7 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
       },
     }),
 
-    ...(extras.has("generate_image")
+    ...(extras.has("generate_image") && !options.imageGenerationLimitReached
       ? {
           generate_image: tool({
             description:
