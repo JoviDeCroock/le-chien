@@ -39,32 +39,28 @@ You have the following memories about this user. Use them to personalize your re
 
 ## AI-initiated memory saving (tool)
 
-The AI has a `save_memory` tool registered in `createTools`. When the user shares a preference, fact, or important context, the model can call the tool directly — no separate suggestion flow needed.
+Memory creation is **exclusively AI-driven** — users cannot manually create or edit memories. The AI has a `save_memory` tool registered in `createTools` and is instructed via the system prompt to proactively save noteworthy information (name, role, preferences, tech stack, goals, etc.).
 
 The tool:
 1. Appears in chat as a standard ToolCallCard (name: `save_memory`, args: key + value)
-2. Executes immediately via a callback to `ChatAgent.createMemory`
-3. Returns `{ saved: true, key, value }` so the user sees confirmation inline
-4. The frontend refreshes the memory list when streaming ends
+2. **Deduplicates** before saving: checks existing memories by key (case-insensitive). If a match exists with the same value, it skips. If the value differs, it updates the existing memory instead of creating a new one.
+3. Executes via callbacks to `ChatAgent.createMemory` or `ChatAgent.updateMemory`
+4. Returns `{ saved: true, key, value }` (or `{ saved: false, reason: "duplicate" }`) so the user sees confirmation inline
+5. The frontend refreshes the memory list when streaming ends
 
-This is better than the XML-tag approach because:
-- It uses the existing tool infrastructure (no custom parsing)
-- The user sees exactly what was saved via the ToolCallCard UI
-- The AI decides autonomously when to save (like any other tool)
-- Memories can be deleted from the panel if unwanted
+Users can only **view** and **delete** memories from the panel. The `createMemory` and `updateMemory` methods are no longer exposed as callable RPCs — they're only invoked server-side by the tool.
 
 ## Frontend
 
 ### MemoryModel (`web/src/models/memory.ts`)
 
 Signals-based state management for:
-- Memory list (CRUD operations via agent RPC)
+- Memory list (load + delete via agent RPC)
 - Panel open/close state
-- Add/edit form state
 
 ### Components
 
-- **MemoryPanel** (`web/src/components/MemoryPanel.tsx`): Right-side panel with memory list, add form, edit-in-place, empty state with brain icon. Matches sidebar visual patterns.
+- **MemoryPanel** (`web/src/components/MemoryPanel.tsx`): Right-side panel with memory list, delete buttons, empty state with brain icon. No add/edit forms — memories are created automatically by the AI.
 
 ### Keyboard shortcut
 
@@ -72,6 +68,8 @@ Signals-based state management for:
 
 ## Design decisions
 
+- **AI-only creation**: Users don't create memories — the AI captures noteworthy info automatically. Users can delete memories they don't want.
+- **Deduplication**: The `save_memory` tool checks existing memories by key before saving. Exact duplicates are skipped; changed values update the existing memory in-place.
 - **Tool-based saving**: The AI saves memories via the `save_memory` tool, which uses the existing tool call UI for transparency. No custom suggestion UI needed.
 - **Key-value model**: Simple and scannable. Key is the label ("Preferred language"), value is the content ("TypeScript").
 - **Per-user DO storage**: Memories are scoped to the user's DO, not in D1. This keeps reads fast during chat (no network hop to D1).
@@ -82,4 +80,3 @@ Signals-based state management for:
 - Workspace-scoped memories (shared across team members)
 - Memory search/filter in the panel
 - Memory count badge on the top bar link
-- Deduplication (don't save what's already remembered)

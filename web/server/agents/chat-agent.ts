@@ -276,6 +276,11 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
 
     const tools = createTools(this.env, {
       onSaveMemory: (key, value) => this.createMemory(key, value),
+      onUpdateMemory: (id, key, value) => this.updateMemory(id, key, value),
+      existingMemories: () =>
+        this.sql<{ id: string; key: string; value: string }>`
+          SELECT id, key, value FROM memories ORDER BY updated_at DESC
+        `,
       rateLimit: enforceRateLimits
         ? {
             db: this.env.DB,
@@ -322,7 +327,8 @@ Rules:
 - Match how the person talks to you. Short question, short answer. Long detailed question, longer detailed answer.
 - Use markdown formatting (headings, lists, code blocks) when it helps — not to make short answers look longer.
 - You have tools: use calculate for math, get_current_datetime for time, ${extras.has("web_search") ? "web_search to search the web for current info, " : ""}${extras.has("read_url") ? "read_url for web pages, " : ""}${extras.has("generate_image") ? "generate_image for pictures, " : ""}run_javascript to run code. Always run code rather than just showing it when asked to test something. Just use tools — don't narrate that you're using them.
-- When you use web_search, always cite your sources inline. Use numbered markdown links like [1](url), [2](url) etc. next to the claims they support. At the end of your response, list all sources with their titles. This lets people verify what you're saying.`;
+- When you use web_search, always cite your sources inline. Use numbered markdown links like [1](url), [2](url) etc. next to the claims they support. At the end of your response, list all sources with their titles. This lets people verify what you're saying.
+- Proactively use save_memory when the person shares something worth remembering: their name, role, preferences, projects, tech stack, goals, or any context they'd expect you to know next time. Don't save throwaway details or things only relevant to the current question. Before saving, check the existing memories listed below — if a memory with the same topic already exists, update it instead of creating a duplicate. Never save two memories about the same thing.`;
 
       if (memories.length > 0) {
         const memoryBlock = memories.map((m) => `- ${m.key}: ${m.value}`).join("\n");
@@ -453,14 +459,6 @@ callable()(proto.updateConversationTitle, {
 callable()(proto.listMemories, {
   kind: "method",
   name: "listMemories",
-} as ClassMethodDecoratorContext);
-callable()(proto.createMemory, {
-  kind: "method",
-  name: "createMemory",
-} as ClassMethodDecoratorContext);
-callable()(proto.updateMemory, {
-  kind: "method",
-  name: "updateMemory",
 } as ClassMethodDecoratorContext);
 callable()(proto.deleteMemory, {
   kind: "method",
