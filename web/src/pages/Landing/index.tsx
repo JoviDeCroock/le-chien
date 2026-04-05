@@ -187,7 +187,7 @@ export function Landing() {
               What feels different.
             </h2>
             <div class="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900">
-              <div class="hidden grid-cols-[100px_1fr_1fr] border-b border-neutral-800 px-5 py-3 sm:grid">
+              <div class="hidden grid-cols-[100px_1fr_1fr] gap-4 border-b border-neutral-800 px-5 py-3 sm:grid">
                 <div />
                 <div class="text-xs font-medium uppercase tracking-[0.18em] text-neutral-500">
                   Others
