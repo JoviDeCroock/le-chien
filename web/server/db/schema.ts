@@ -112,6 +112,28 @@ export const dailyPremiumMessageUsage = sqliteTable(
   ],
 );
 
+// ── Integrations ─────────────────────────────────────────────
+
+export const integration = sqliteTable(
+  "integration",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(), // 'google'
+    accessToken: text("access_token").notNull(),
+    refreshToken: text("refresh_token").notNull(),
+    scope: text("scope").notNull(),
+    accessTokenExpiresAt: integer("access_token_expires_at", { mode: "timestamp" }).notNull(),
+    providerAccountId: text("provider_account_id"), // e.g. Google user email
+    providerAccountName: text("provider_account_name"), // e.g. display name
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  (t) => [uniqueIndex("integration_user_provider_unique_idx").on(t.userId, t.provider)],
+);
+
 export const dailyImageGenerationUsage = sqliteTable(
   "daily_image_generation_usage",
   {

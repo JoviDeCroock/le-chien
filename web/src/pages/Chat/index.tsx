@@ -254,6 +254,9 @@ export function Chat() {
                 {auth.authenticated.value && (
                   <>
                     <span class="w-px h-3.5 bg-neutral-800" />
+                    <TextLink as="a" href="/integrations">
+                      Integrations
+                    </TextLink>
                     <TextLink as="a" href="/billing">
                       Billing
                     </TextLink>

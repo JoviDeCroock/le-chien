@@ -8,6 +8,9 @@ const TOOL_LABELS: Record<string, { label: string; icon: string }> = {
   generate_image: { label: "Generate Image", icon: "image" },
   run_javascript: { label: "Run Code", icon: "code" },
   web_search: { label: "Web Search", icon: "search" },
+  google_drive_search: { label: "Drive Search", icon: "drive" },
+  google_drive_list: { label: "Drive Files", icon: "drive" },
+  google_drive_read: { label: "Read Drive File", icon: "drive" },
 };
 
 function ToolIcon({ type }: { type: string }) {
@@ -59,6 +62,13 @@ function ToolIcon({ type }: { type: string }) {
         <>
           <circle cx="11" cy="11" r="8" {...s} />
           <path d="M21 21l-4.35-4.35" {...s} />
+        </>
+      )}
+      {type === "drive" && (
+        <>
+          <path d="M12 2L2 19.5h8l2-3.5" {...s} />
+          <path d="M12 2l10 17.5h-8l-2-3.5" {...s} />
+          <path d="M6 16h12" {...s} />
         </>
       )}
     </svg>
@@ -166,6 +176,102 @@ function WebSearchSources({ result }: { result: WebSearchResult }) {
   );
 }
 
+type DriveSearchResult = {
+  results: { id: string; name: string; type: string; modified?: string; url?: string }[];
+};
+
+type DriveListResult = {
+  files: { id: string; name: string; type: string; modified?: string; url?: string }[];
+};
+
+function isDriveSearchResult(result: unknown): result is DriveSearchResult {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "results" in result &&
+    Array.isArray((result as DriveSearchResult).results) &&
+    (result as DriveSearchResult).results.length > 0 &&
+    "name" in (result as DriveSearchResult).results[0]
+  );
+}
+
+function isDriveListResult(result: unknown): result is DriveListResult {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "files" in result &&
+    Array.isArray((result as DriveListResult).files) &&
+    (result as DriveListResult).files.length > 0
+  );
+}
+
+function DriveFileList({
+  files,
+}: {
+  files: { name: string; type: string; modified?: string; url?: string }[];
+}) {
+  return (
+    <div class="px-3 pb-2 space-y-1.5">
+      {files.map((f) => {
+        const inner = (
+          <>
+            <div class="min-w-0 flex-1">
+              <div class="text-neutral-300 text-[12px] font-medium leading-tight truncate group-hover:text-violet-400 transition-colors duration-75">
+                {f.name}
+              </div>
+              <div class="text-neutral-500 text-[11px] mt-0.5 flex items-center gap-2">
+                <span>{f.type}</span>
+                {f.modified && (
+                  <>
+                    <span class="text-neutral-700">&middot;</span>
+                    <span>{new Date(f.modified).toLocaleDateString()}</span>
+                  </>
+                )}
+              </div>
+            </div>
+            {f.url && (
+              <svg
+                width={12}
+                height={12}
+                viewBox="0 0 24 24"
+                fill="none"
+                class="shrink-0 text-neutral-600 group-hover:text-neutral-400 transition-colors duration-75 mt-1"
+              >
+                <path
+                  d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            )}
+          </>
+        );
+
+        return f.url ? (
+          <a
+            key={f.name}
+            href={f.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex items-start gap-2.5 px-2.5 py-2 rounded-md bg-neutral-800/50 border border-neutral-700/30 hover:border-neutral-600/50 hover:bg-neutral-800/80 transition-colors duration-75 group"
+          >
+            {inner}
+          </a>
+        ) : (
+          <div
+            key={f.name}
+            class="flex items-start gap-2.5 px-2.5 py-2 rounded-md bg-neutral-800/50 border border-neutral-700/30"
+          >
+            {inner}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
   const expanded = useSignal(false);
   const meta = TOOL_LABELS[toolCall.name] ?? { label: toolCall.name, icon: "search" };
@@ -212,6 +318,14 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
       {/* Web search: show source cards instead of raw JSON */}
       {!isPending && isWebSearchResult(toolCall.result) && (
         <WebSearchSources result={toolCall.result} />
+      )}
+
+      {/* Drive: show file cards */}
+      {!isPending && isDriveSearchResult(toolCall.result) && (
+        <DriveFileList files={toolCall.result.results} />
+      )}
+      {!isPending && isDriveListResult(toolCall.result) && (
+        <DriveFileList files={toolCall.result.files} />
       )}
 
       {/* Non-web-search collapsed preview */}

@@ -3,6 +3,7 @@ import puppeteer from "@cloudflare/puppeteer";
 import { z } from "zod";
 import type { Plan } from "./plans";
 import { getUsageDate, tryIncrementDailyImageGenerationUsage } from "./plans";
+import { createGoogleDriveTools } from "./google-drive-tools";
 
 type ToolOptions = {
   onSaveMemory?: (key: string, value: string) => void;
@@ -18,6 +19,8 @@ type ToolOptions = {
   enabledExtras?: string[];
   /** When true, the image generation tool is excluded entirely. */
   imageGenerationLimitReached?: boolean;
+  /** When provided, Google Drive tools are available. */
+  googleAccessToken?: () => Promise<string | null>;
 };
 
 export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
@@ -280,6 +283,10 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
             },
           }),
         }
+      : {}),
+
+    ...(options.googleAccessToken
+      ? createGoogleDriveTools({ getAccessToken: options.googleAccessToken })
       : {}),
 
     ...(extras.has("read_url")
