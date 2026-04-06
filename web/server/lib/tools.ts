@@ -1,4 +1,5 @@
 import { tool } from "ai";
+import puppeteer from "@cloudflare/puppeteer";
 import { z } from "zod";
 import type { Plan } from "./plans";
 import { getUsageDate, tryIncrementDailyImageGenerationUsage } from "./plans";
@@ -285,11 +286,17 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
       ? {
           read_url: tool({
             description:
-              "Fetch and read the text content of a web page. Returns extracted text with HTML tags stripped. Useful for reading articles, docs, or any public URL.",
+              "Fetch and read the text content of a web page. Returns extracted text with HTML tags stripped. Useful for reading articles, docs, or any public URL. Falls back to browser rendering for JS-heavy or bot-protected pages.",
             inputSchema: z.object({
               url: z.url().describe("The URL to fetch"),
             }),
             execute: async ({ url }) => {
+              const maxLen = 12000;
+
+              const truncate = (text: string) =>
+                text.length > maxLen ? text.slice(0, maxLen) + "\n...[truncated]" : text;
+
+              // -- Attempt 1: plain fetch --
               try {
                 const res = await fetch(url, {
                   headers: {
@@ -299,20 +306,47 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
                   },
                   redirect: "follow",
                 });
-                if (!res.ok) return { url, error: `HTTP ${res.status}: ${res.statusText}` };
 
-                const contentType = res.headers.get("content-type") || "";
-                const raw = await res.text();
+                if (res.ok) {
+                  const contentType = res.headers.get("content-type") || "";
+                  const raw = await res.text();
+                  const text = contentType.includes("html") ? htmlToText(raw) : raw;
+                  // If we got meaningful content, return it
+                  if (text.trim().length > 100) {
+                    return { url, content: truncate(text), length: text.length };
+                  }
+                }
+                // Fall through to browser rendering on non-ok or empty content
+              } catch {
+                // Fall through to browser rendering
+              }
 
-                // If HTML, strip tags to get readable text
-                const text = contentType.includes("html") ? htmlToText(raw) : raw;
+              // -- Attempt 2: Cloudflare Browser Rendering --
+              if (!env.BROWSER) {
+                return { url, error: "Fetch failed and browser rendering is not available" };
+              }
 
-                const maxLen = 12000;
-                const truncated =
-                  text.length > maxLen ? text.slice(0, maxLen) + "\n...[truncated]" : text;
-                return { url, content: truncated, length: text.length };
+              try {
+                const browser = await puppeteer.launch(env.BROWSER);
+                const page = await browser.newPage();
+                try {
+                  await page.goto(url, { waitUntil: "networkidle0", timeout: 15000 });
+                  const html = await page.content();
+                  const text = htmlToText(html);
+                  return {
+                    url,
+                    content: truncate(text),
+                    length: text.length,
+                    method: "browser",
+                  };
+                } finally {
+                  await browser.close();
+                }
               } catch (e) {
-                return { url, error: e instanceof Error ? e.message : "Failed to fetch URL" };
+                return {
+                  url,
+                  error: e instanceof Error ? e.message : "Browser rendering failed",
+                };
               }
             },
           }),
@@ -530,19 +564,35 @@ function evaluateMath(expr: string): number {
 }
 
 function htmlToText(html: string): string {
-  return html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|h[1-6]|li|tr)>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return (
+    html
+      // Remove noise elements: scripts, styles, nav, footer, header, aside, ads
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "")
+      .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, "")
+      .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, "")
+      .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, "")
+      .replace(/<svg[^>]*>[\s\S]*?<\/svg>/gi, "")
+      .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, "")
+      // Convert structural elements to newlines
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|h[1-6]|li|tr|article|section|blockquote)>/gi, "\n")
+      // Strip remaining tags
+      .replace(/<[^>]+>/g, " ")
+      // Decode common entities
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&#x2F;/g, "/")
+      // Normalize whitespace
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n[ \t]+/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+  );
 }

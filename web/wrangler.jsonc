@@ -21,6 +21,9 @@
   "ai": {
     "binding": "AI",
   },
+  "browser": {
+    "binding": "BROWSER",
+  },
   "durable_objects": {
     "bindings": [{ "name": "CHAT_AGENT", "class_name": "ChatAgent" }],
   },
