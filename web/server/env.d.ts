@@ -13,6 +13,8 @@ declare namespace Cloudflare {
     POSTHOG_API_KEY?: string;
     POSTHOG_HOST?: string;
     TAVILY_API_KEY?: string;
+    MICROSOFT_CLIENT_ID?: string;
+    MICROSOFT_CLIENT_SECRET?: string;
     BROWSER?: Fetcher;
   }
 }

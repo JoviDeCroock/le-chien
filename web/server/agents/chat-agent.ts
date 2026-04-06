@@ -17,6 +17,7 @@ import {
 import { trackServerEvent, captureServerException } from "../lib/posthog";
 import { trackInferenceCost } from "../lib/polar-events";
 import { isProduction } from "../utils/isProduction";
+import { getValidAccessToken } from "../lib/microsoft";
 
 type Conversation = {
   id: string;
@@ -270,6 +271,11 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
 
     const extras = new Set(enabledExtras ?? []);
 
+    // Fetch Microsoft access token if user has a connection and opted in
+    const microsoftToken = extras.has("microsoft_365")
+      ? await getValidAccessToken(this.env.DB, this.env, userId)
+      : null;
+
     const aiModel = getModel(this.env, selectedModel, {
       sessionAffinity: conversationId,
     });
@@ -291,6 +297,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       enabledExtras: enabledExtras ?? [],
       imageGenerationLimitReached:
         enforceRateLimits && subscription.usage.imageGenerationLimitReached,
+      microsoftAccessToken: microsoftToken,
     });
 
     // Stream AI response
@@ -328,7 +335,7 @@ Rules:
 - Have opinions when asked. Don't sit on the fence with "it depends on your use case" when you can give a straight answer.
 - Match how the person talks to you. Short question, short answer. Long detailed question, longer detailed answer.
 - Use markdown formatting (headings, lists, code blocks) when it helps — not to make short answers look longer.
-- You have tools: use calculate for math, get_current_datetime for time, ${extras.has("web_search") ? "web_search to search the web for current info, " : ""}${extras.has("read_url") ? "read_url for web pages, " : ""}${extras.has("generate_image") ? "generate_image for pictures, " : ""}run_javascript to run code. Always run code rather than just showing it when asked to test something. Just use tools — don't narrate that you're using them.
+- You have tools: use calculate for math, get_current_datetime for time, ${extras.has("web_search") ? "web_search to search the web for current info, " : ""}${extras.has("read_url") ? "read_url for web pages, " : ""}${extras.has("generate_image") ? "generate_image for pictures, " : ""}${microsoftToken ? "microsoft_search_files to search OneDrive/SharePoint files, microsoft_read_file to read file contents, microsoft_search_teams to search Teams messages, " : ""}run_javascript to run code. Always run code rather than just showing it when asked to test something. Just use tools — don't narrate that you're using them.
 - When you use web_search, always cite your sources inline. Use numbered markdown links like [1](url), [2](url) etc. next to the claims they support. At the end of your response, list all sources with their titles. This lets people verify what you're saying.
 - Proactively use save_memory when the person shares something worth remembering: their name, role, preferences, projects, tech stack, goals, or any context they'd expect you to know next time. Don't save throwaway details or things only relevant to the current question. Before saving, check the existing memories listed below — if a memory with the same topic already exists, update it instead of creating a duplicate. Never save two memories about the same thing.`;
 

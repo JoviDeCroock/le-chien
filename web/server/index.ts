@@ -5,6 +5,7 @@ import { getAgentByName } from "agents";
 import { createAuth } from "./lib/auth";
 import { subscription } from "./routes/subscription";
 import { chatRoutes } from "./routes/chat";
+import { microsoftRoutes, microsoftCallbackHandler } from "./routes/microsoft";
 import { Bindings, Variables } from "./types";
 import { isProduction } from "./utils/isProduction";
 import { getAppOrigin } from "./utils/urls";
@@ -119,6 +120,9 @@ app.get("/api/billing-success", async (c) => {
   return c.redirect(`${getAppOrigin(c.env)}/?billing=success`);
 });
 
+// Microsoft OAuth callback (public — state parameter authenticates the user)
+app.get("/api/microsoft/callback", (c) => microsoftCallbackHandler(c));
+
 // Mount BetterAuth handler
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
   try {
@@ -154,6 +158,9 @@ app.route("/api/v1/subscription", subscription);
 
 // Chat
 app.route("/api/v1/chat", chatRoutes);
+
+// Microsoft integration
+app.route("/api/v1/microsoft", microsoftRoutes);
 
 // Agent WebSocket — forwards to per-user Durable Object
 app.all("/api/v1/agent", async (c) => {

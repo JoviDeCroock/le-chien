@@ -112,6 +112,16 @@ export function ChevronUpIcon(props: IconProps) {
   );
 }
 
+export function BuildingIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 21h18" {...stroke} />
+      <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" {...stroke} />
+      <path d="M9 7h1m5 0h-1m-4 4h1m5 0h-1m-4 4h1m5 0h-1" {...stroke} />
+    </Icon>
+  );
+}
+
 export function AlertTriangleIcon(props: IconProps) {
   return (
     <Icon {...props}>

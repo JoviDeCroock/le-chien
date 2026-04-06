@@ -257,6 +257,9 @@ export function Chat() {
                     <TextLink as="a" href="/billing">
                       Billing
                     </TextLink>
+                    <TextLink as="a" href="/integrations">
+                      Integrations
+                    </TextLink>
                     <TextLink
                       onClick={(e: Event) => {
                         e.stopPropagation();

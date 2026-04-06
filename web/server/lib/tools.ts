@@ -3,6 +3,7 @@ import puppeteer from "@cloudflare/puppeteer";
 import { z } from "zod";
 import type { Plan } from "./plans";
 import { getUsageDate, tryIncrementDailyImageGenerationUsage } from "./plans";
+import { createMicrosoftTools } from "./microsoft-tools";
 
 type ToolOptions = {
   onSaveMemory?: (key: string, value: string) => void;
@@ -18,6 +19,8 @@ type ToolOptions = {
   enabledExtras?: string[];
   /** When true, the image generation tool is excluded entirely. */
   imageGenerationLimitReached?: boolean;
+  /** When set, Microsoft 365 tools are available. */
+  microsoftAccessToken?: string | null;
 };
 
 export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
@@ -351,6 +354,10 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
             },
           }),
         }
+      : {}),
+
+    ...(extras.has("microsoft_365") && options.microsoftAccessToken
+      ? createMicrosoftTools(options.microsoftAccessToken)
       : {}),
   };
 }

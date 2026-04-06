@@ -112,6 +112,28 @@ export const dailyPremiumMessageUsage = sqliteTable(
   ],
 );
 
+// ── Microsoft Integration ────────────────────────────────────
+
+export const microsoftConnection = sqliteTable(
+  "microsoft_connection",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    microsoftUserId: text("microsoft_user_id").notNull(),
+    displayName: text("display_name"),
+    email: text("email"),
+    accessToken: text("access_token").notNull(),
+    refreshToken: text("refresh_token").notNull(),
+    accessTokenExpiresAt: integer("access_token_expires_at", { mode: "timestamp" }).notNull(),
+    scopes: text("scopes").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  (t) => [uniqueIndex("microsoft_connection_user_unique_idx").on(t.userId)],
+);
+
 export const dailyImageGenerationUsage = sqliteTable(
   "daily_image_generation_usage",
   {

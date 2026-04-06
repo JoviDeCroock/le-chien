@@ -9,6 +9,7 @@ import {
   GlobeIcon,
   SearchIcon,
   ChevronUpIcon,
+  BuildingIcon,
 } from "./ui/Icons";
 import type { ExtraTool } from "../models/chat";
 
@@ -21,6 +22,7 @@ const EXTRA_TOOLS: { id: ExtraTool; label: string; icon: typeof ImageIcon }[] = 
   { id: "generate_image", label: "Image generation", icon: ImageIcon },
   { id: "read_url", label: "Web access", icon: GlobeIcon },
   { id: "web_search", label: "Web search", icon: SearchIcon },
+  { id: "microsoft_365", label: "Microsoft 365", icon: BuildingIcon },
 ];
 
 export function ChatInput({
