@@ -28,6 +28,7 @@ export type Message = {
   conversation_id: string;
   role: "user" | "assistant";
   content: string;
+  reasoning?: string;
   tool_calls?: ToolCall[];
   created_at: number;
 };
@@ -380,15 +381,23 @@ export const ChatModel = createModel(() => {
             if (typeof chunk === "object" && chunk !== null && "__event" in chunk) {
               const event = chunk as {
                 __event: string;
-                id: string;
-                name: string;
+                id?: string;
+                name?: string;
+                text?: string;
                 args?: unknown;
                 result?: unknown;
               };
+              if (event.__event === "reasoning") {
+                messages.value = [
+                  ...msgs.slice(0, -1),
+                  { ...last, reasoning: (last.reasoning ?? "") + (event.text ?? "") },
+                ];
+                return;
+              }
               if (event.__event === "tool-call") {
                 const tc: ToolCall = {
-                  id: event.id,
-                  name: event.name,
+                  id: event.id!,
+                  name: event.name!,
                   args: (event.args as Record<string, unknown>) ?? {},
                   status: "pending",
                 };

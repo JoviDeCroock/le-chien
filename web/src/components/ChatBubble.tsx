@@ -8,6 +8,8 @@ export function ChatBubble({ message, streaming }: { message: Message; streaming
   const isStreaming = streaming && !isUser && !message.content;
   const isActiveAssistant = streaming && !isUser && message.content !== "";
   const hasToolCalls = message.tool_calls && message.tool_calls.length > 0;
+  const hasReasoning = !!message.reasoning;
+  const isStreamingReasoning = streaming && hasReasoning && !message.content;
 
   return (
     <div class={`flex ${isUser ? "justify-end" : "justify-start"} mb-3 animate-fade-in`}>
@@ -21,6 +23,19 @@ export function ChatBubble({ message, streaming }: { message: Message; streaming
           }
         `}
       >
+        {hasReasoning && (
+          <details class="mb-2" open={isStreamingReasoning}>
+            <summary class="cursor-pointer text-xs text-neutral-500 hover:text-neutral-400 select-none flex items-center gap-1">
+              {isStreamingReasoning && (
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+              )}
+              Thinking
+            </summary>
+            <div class="mt-1 pl-3 border-l-2 border-neutral-700/40 text-xs text-neutral-500 leading-relaxed">
+              <Markdown className="markdown-body">{message.reasoning!}</Markdown>
+            </div>
+          </details>
+        )}
         {hasToolCalls && (
           <div class="mb-1">
             {message.tool_calls!.map((tc) => (
@@ -28,7 +43,7 @@ export function ChatBubble({ message, streaming }: { message: Message; streaming
             ))}
           </div>
         )}
-        {isStreaming && !hasToolCalls ? (
+        {isStreaming && !hasToolCalls && !hasReasoning ? (
           <StreamingDots />
         ) : (
           message.content &&
