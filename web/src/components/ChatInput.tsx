@@ -34,6 +34,7 @@ export function ChatInput({
   placeholder,
   textareaRef,
   enabledExtras,
+  disabledExtras,
   onToggleExtra,
 }: {
   value: string;
