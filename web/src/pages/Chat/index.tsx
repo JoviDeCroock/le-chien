@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
+import { useLocation } from "preact-iso";
 import { useSignal } from "@preact/signals";
 import { useModel } from "@preact/signals";
 import { AuthModel } from "../../models/auth";
@@ -22,11 +23,12 @@ import { ErrorBanner } from "../../components/ErrorBanner";
 import { UpgradeBanner } from "../../components/UpgradeBanner";
 import { MemoryPanel } from "../../components/MemoryPanel";
 
-export function Chat() {
+export function Chat({ conversationId }: { conversationId?: string }) {
   const auth = useModel(AuthModel);
   const chat = useModel(ChatModel);
   const memory = useModel(MemoryModel);
   const tamagotchi = useModel(TamagotchiModel);
+  const { route } = useLocation();
   const messagesEnd = useRef<HTMLDivElement>(null);
   const modelBarRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -54,6 +56,27 @@ export function Chat() {
       memory.loadMemories();
     }
   }, [chat.streaming.value]);
+
+  // URL → model: apply conversation selection from the route
+  useEffect(() => {
+    if (!auth.authenticated.value || !chat.connected.value) return;
+    const active = chat.activeConversationId.value;
+    if (conversationId && conversationId !== active) {
+      chat.selectConversation(conversationId);
+    } else if (!conversationId && active) {
+      chat.clear();
+    }
+  }, [conversationId, chat.connected.value, auth.authenticated.value]);
+
+  // Model → URL: keep the path in sync when state changes (e.g. after creating a new conversation)
+  useEffect(() => {
+    const active = chat.activeConversationId.value;
+    if (active && active !== conversationId) {
+      route(`/chat/${active}`, true);
+    } else if (!active && conversationId) {
+      route("/chat", true);
+    }
+  }, [chat.activeConversationId.value, conversationId]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -119,7 +142,7 @@ export function Chat() {
       if (!hasCommandModifier) return;
 
       if (key === "n" && !event.shiftKey) {
-        chat.clear();
+        route("/chat");
         composerRef.current?.focus();
         event.preventDefault();
         return;
@@ -151,7 +174,7 @@ export function Chat() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [chat]);
+  }, [chat, route]);
 
   if (auth.loading.value) {
     return <PageLoader />;
@@ -186,11 +209,11 @@ export function Chat() {
         conversations={chat.conversations.value}
         activeId={chat.activeConversationId.value}
         onSelect={(id) => {
-          chat.selectConversation(id);
+          route(`/chat/${id}`);
           sidebarOpen.value = false;
         }}
         onNew={() => {
-          chat.clear();
+          route("/chat");
           sidebarOpen.value = false;
         }}
         onDelete={(id) => chat.deleteConversation(id)}
@@ -232,7 +255,7 @@ export function Chat() {
                     variant="icon"
                     onClick={(e: Event) => {
                       e.stopPropagation();
-                      chat.clear();
+                      route("/chat");
                     }}
                     title="New chat (Cmd/Ctrl+N)"
                   >

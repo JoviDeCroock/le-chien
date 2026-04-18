@@ -31,6 +31,14 @@ Chat state is managed by a per-user Durable Object (`ChatAgent`) using the Cloud
 - The chat Durable Object is now requested with `jurisdiction: "eu"`, which is a real Cloudflare Durable Objects jurisdiction constraint.
 - This protects where the DO state runs and persists, but it does not make Workers AI inference EU-only.
 
+### URL routing
+
+- The chat route is `/chat/:conversationId?` (preact-iso).
+- `web/src/pages/Chat/index.tsx` wires two effects to keep URL and model state in sync:
+  - URL → model: when the `conversationId` param changes, call `selectConversation(id)` (or `clear()` when empty). Gated on `connected` so the agent is ready to fetch.
+  - Model → URL: when `activeConversationId` changes (e.g. `createConversation` during `send()`), `route()` with `replace=true` so we don't pollute history when the server assigns the id.
+- Sidebar selection, the TopBar "new chat" button, the sidebar "new chat" button, and the `Cmd/Ctrl+N` shortcut all drive through `route()` — the effect then applies the state change.
+
 ### Frontend
 
 - `AgentClient` from `agents/client` (vanilla JS, no React dependency) connects via WebSocket
