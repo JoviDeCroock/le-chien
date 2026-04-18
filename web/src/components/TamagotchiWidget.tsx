@@ -35,7 +35,7 @@ type TamagotchiWidgetProps = {
 
 export function TamagotchiWidget({ pet, onFeed, onPlay, onPet, disabled }: TamagotchiWidgetProps) {
   return (
-    <div class="shrink-0 border-t border-neutral-800/60 px-3 py-3 space-y-2">
+    <div class="px-3 py-3 space-y-2">
       {/* Dog + name */}
       <div class="flex items-center gap-2">
         <TamagotchiDog mood={pet.mood} size={36} />
