@@ -291,6 +291,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       enabledExtras: enabledExtras ?? [],
       imageGenerationLimitReached:
         enforceRateLimits && subscription.usage.imageGenerationLimitReached,
+      webSearchLimitReached: enforceRateLimits && subscription.usage.webSearchLimitReached,
     });
 
     // Stream AI response

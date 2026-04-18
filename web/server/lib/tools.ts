@@ -2,7 +2,11 @@ import { tool } from "ai";
 import puppeteer from "@cloudflare/puppeteer";
 import { z } from "zod";
 import type { Plan } from "./plans";
-import { getUsageDate, tryIncrementDailyImageGenerationUsage } from "./plans";
+import {
+  getUsageDate,
+  tryIncrementDailyImageGenerationUsage,
+  tryIncrementDailyWebSearchUsage,
+} from "./plans";
 
 type ToolOptions = {
   onSaveMemory?: (key: string, value: string) => void;
@@ -18,6 +22,8 @@ type ToolOptions = {
   enabledExtras?: string[];
   /** When true, the image generation tool is excluded entirely. */
   imageGenerationLimitReached?: boolean;
+  /** When true, the web search tool is excluded entirely. */
+  webSearchLimitReached?: boolean;
 };
 
 export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
@@ -239,7 +245,7 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
         }
       : {}),
 
-    ...(extras.has("web_search") && env.TAVILY_API_KEY
+    ...(extras.has("web_search") && env.TAVILY_API_KEY && !options.webSearchLimitReached
       ? {
           web_search: tool({
             description:
@@ -250,6 +256,22 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
             }),
             execute: async ({ query, count }) => {
               try {
+                // Enforce web search limit for all plans
+                if (options.rateLimit) {
+                  const { db, userId, plan } = options.rateLimit;
+                  const usageDate = getUsageDate();
+                  const used = await tryIncrementDailyWebSearchUsage(db, userId, usageDate, plan);
+                  if (used === null) {
+                    return {
+                      query,
+                      error:
+                        plan === "free"
+                          ? "You've reached your daily web search limit on the free plan. Upgrade to Pro for more web searches."
+                          : "You've reached your daily web search limit. Your limit resets at midnight UTC.",
+                    };
+                  }
+                }
+
                 const res = await fetch("https://api.tavily.com/search", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
