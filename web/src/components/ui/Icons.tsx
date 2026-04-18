@@ -115,12 +115,16 @@ export function ChevronUpIcon(props: IconProps) {
 export function DogIcon(props: IconProps) {
   return (
     <Icon {...props}>
-      <path d="M10 5.5C10 4.12 8.88 3 7.5 3S5 4.12 5 5.5V8l-1 1v3h4" {...stroke} />
-      <path d="M14 5.5C14 4.12 15.12 3 16.5 3S19 4.12 19 5.5V8l1 1v3h-4" {...stroke} />
-      <path d="M8 12v5a3 3 0 0 0 3 3h2a3 3 0 0 0 3-3v-5" {...stroke} />
-      <circle cx="9" cy="9" r="1" fill="currentColor" />
-      <circle cx="15" cy="9" r="1" fill="currentColor" />
-      <path d="M11 13h2l-1 1.5L11 13z" fill="currentColor" />
+      <path d="M6.5 7.5C4 7 3 10 4.5 13.5C5.5 12.5 6.5 11.8 7 11" {...stroke} />
+      <path d="M17.5 7.5C20 7 21 10 19.5 13.5C18.5 12.5 17.5 11.8 17 11" {...stroke} />
+      <path
+        d="M7 9C7 5.5 9.2 4 12 4C14.8 4 17 5.5 17 9V13.5C17 16.8 14.8 19 12 19C9.2 19 7 16.8 7 13.5Z"
+        {...stroke}
+      />
+      <circle cx="10" cy="10.5" r="0.9" fill="currentColor" />
+      <circle cx="14" cy="10.5" r="0.9" fill="currentColor" />
+      <path d="M11 13.5H13L12 15Z" fill="currentColor" />
+      <path d="M10.5 16C11 16.8 13 16.8 13.5 16" {...stroke} />
     </Icon>
   );
 }
