@@ -112,20 +112,20 @@ export function ChevronUpIcon(props: IconProps) {
   );
 }
 
-export function DogIcon(props: IconProps) {
+export function DogIcon({ size = 16, class: className, ...props }: IconProps) {
+  // Font Awesome Free v7.2.0 — CC BY 4.0 (https://fontawesome.com/license/free)
   return (
-    <Icon {...props}>
-      <path d="M7 8.5C4.5 8 3 11 4.5 14.5C5.5 13.5 6.5 12.5 7 11.5" {...stroke} />
-      <path d="M17 8.5C19.5 8 21 11 19.5 14.5C18.5 13.5 17.5 12.5 17 11.5" {...stroke} />
-      <path
-        d="M7 10C7 6 9.2 4.5 12 4.5C14.8 4.5 17 6 17 10V13.5C17 16.8 15 18.8 12 18.8C9 18.8 7 16.8 7 13.5Z"
-        {...stroke}
-      />
-      <path d="M9.3 10.8C9.7 10.1 10.4 10.1 10.8 10.8" {...stroke} stroke-width="1.5" />
-      <path d="M13.2 10.8C13.6 10.1 14.3 10.1 14.7 10.8" {...stroke} stroke-width="1.5" />
-      <circle cx="12" cy="13.2" r="0.75" fill="currentColor" />
-      <path d="M10.2 14.8C11 16.2 13 16.2 13.8 14.8" {...stroke} stroke-width="1.5" />
-    </Icon>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 640 640"
+      fill="currentColor"
+      class={className}
+      {...props}
+    >
+      <path d="M64 176C80.6 176 94.2 188.6 95.8 204.7L96.1 211.3C97.8 227.4 111.4 240 128 240L307.1 240L448 300.4L448 544C448 561.7 433.7 576 416 576L384 576C366.3 576 352 561.7 352 544L352 412.7C328 425 300.8 432 272 432C243.2 432 216 425 192 412.7L192 544C192 561.7 177.7 576 160 576L128 576C110.3 576 96 561.7 96 544L96 298.4C58.7 285.2 32 249.8 32 208C32 190.3 46.3 176 64 176zM387.8 32C395.5 32 402.7 35.6 407.4 41.8L424 64L476.1 64C488.8 64 501 69.1 510 78.1L528 96L584 96C597.3 96 608 106.7 608 120L608 144C608 188.2 572.2 224 528 224L464 224L457 252L332.3 198.6L363.9 51.4C366.3 40.1 376.2 32 387.8 32zM480 108C469 108 460 117 460 128C460 139 469 148 480 148C491 148 500 139 500 128C500 117 491 108 480 108z" />
+    </svg>
   );
 }
 
