@@ -1,4 +1,5 @@
 import { useSignal } from "@preact/signals";
+import { Show } from "@preact/signals/utils";
 import type { ToolCall } from "../models/chat";
 
 const TOOL_LABELS: Record<string, { label: string; icon: string }> = {
@@ -233,7 +234,7 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
         </div>
       )}
 
-      {expanded.value && (
+      <Show when={expanded}>
         <div class="border-t border-neutral-700/40 px-3 py-2 space-y-2">
           {Object.keys(toolCall.args).length > 0 && (
             <div>
@@ -258,7 +259,7 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
               </div>
             )}
         </div>
-      )}
+      </Show>
     </div>
   );
 }
