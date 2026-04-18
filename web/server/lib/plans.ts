@@ -35,8 +35,8 @@ export type SubscriptionSnapshot = {
 export const PLAN_LIMITS = {
   free: {
     dailyMessages: 20,
-    dailyPremiumMessages: 5,
-    dailyImageGenerations: 5,
+    dailyPremiumMessages: 3,
+    dailyImageGenerations: 3,
     dailyWebSearches: 3,
   },
   pro: {
