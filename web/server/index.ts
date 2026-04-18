@@ -5,6 +5,7 @@ import { getAgentByName } from "agents";
 import { createAuth } from "./lib/auth";
 import { subscription } from "./routes/subscription";
 import { chatRoutes } from "./routes/chat";
+import { ttsRoutes } from "./routes/tts";
 import { Bindings, Variables } from "./types";
 import { isProduction } from "./utils/isProduction";
 import { getAppOrigin } from "./utils/urls";
@@ -154,6 +155,9 @@ app.route("/api/v1/subscription", subscription);
 
 // Chat
 app.route("/api/v1/chat", chatRoutes);
+
+// Text-to-speech (read-aloud)
+app.route("/api/v1/tts", ttsRoutes);
 
 // Agent WebSocket — forwards to per-user Durable Object
 app.all("/api/v1/agent", async (c) => {
