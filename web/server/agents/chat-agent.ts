@@ -251,16 +251,15 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     const lastInteraction = Math.max(row.last_fed, row.last_played, row.last_petted);
     const elapsedHours = (now - row.updated_at) / 3600;
 
-    let hunger = Math.max(0, row.hunger - elapsedHours * 4);
-    let happiness = Math.max(0, row.happiness - elapsedHours * 3);
+    const hunger = Math.max(0, row.hunger - elapsedHours * 4);
+    const happiness = Math.max(0, row.happiness - elapsedHours * 3);
 
-    const hoursSinceInteraction = (now - lastInteraction) / 3600;
-    let energy: number;
-    if (hoursSinceInteraction > 2) {
-      energy = Math.min(100, row.energy + (elapsedHours - 2) * 3);
-    } else {
-      energy = Math.max(0, row.energy - elapsedHours * 2);
-    }
+    // Split elapsed window into active (≤2h post-interaction, energy drains)
+    // and resting (>2h post-interaction, energy recovers) portions.
+    const restStartSec = lastInteraction + 2 * 3600;
+    const activeSec = Math.max(0, Math.min(restStartSec, now) - row.updated_at);
+    const restingSec = Math.max(0, now - Math.max(restStartSec, row.updated_at));
+    const energy = row.energy - (activeSec / 3600) * 2 + (restingSec / 3600) * 3;
 
     return {
       hunger: Math.round(Math.max(0, Math.min(100, hunger))),
@@ -370,16 +369,6 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       last_played: row.last_played,
       last_petted: now,
     };
-  }
-
-  renamePet(name: string): PetState {
-    const trimmed = name.trim().slice(0, 32);
-    if (!trimmed) throw new Error("Name can't be empty");
-    const now = Math.floor(Date.now() / 1000);
-    this.ensurePetExists();
-    this.sql`UPDATE pet SET name = ${trimmed}, updated_at = ${now} WHERE id = 'default'`;
-    const state = this.getPetState();
-    return state;
   }
 
   async sendMessage(
@@ -687,10 +676,6 @@ callable()(proto.playWithPet, {
 callable()(proto.petTheDog, {
   kind: "method",
   name: "petTheDog",
-} as ClassMethodDecoratorContext);
-callable()(proto.renamePet, {
-  kind: "method",
-  name: "renamePet",
 } as ClassMethodDecoratorContext);
 callable({ streaming: true })(proto.sendMessage, {
   kind: "method",

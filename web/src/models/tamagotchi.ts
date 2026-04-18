@@ -73,15 +73,6 @@ export const TamagotchiModel = createModel(() => {
     }
   });
 
-  const rename = async (name: string) => {
-    error.value = null;
-    try {
-      pet.value = await getAgentConnection().call<PetState>("renamePet", [name]);
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : "Failed to rename pet";
-    }
-  };
-
   return {
     pet,
     loading,
@@ -92,6 +83,5 @@ export const TamagotchiModel = createModel(() => {
     feed,
     play,
     petDog,
-    rename,
   };
 });
