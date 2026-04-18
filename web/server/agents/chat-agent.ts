@@ -5,6 +5,7 @@ import * as schema from "../db/schema";
 import { getModel, MODELS, DEFAULT_MODEL, isPremiumModel } from "../lib/models";
 import type { ModelId } from "../lib/models";
 import { createTools } from "../lib/tools";
+import { retrieveForUser, type RetrievedSource } from "../lib/ai-search";
 import {
   buildSubscriptionSnapshot,
   decrementDailyMessageUsage,
@@ -32,6 +33,7 @@ type Message = {
   role: string;
   content: string;
   tool_calls: string | null;
+  sources: string | null;
   created_at: number;
 };
 
@@ -150,6 +152,12 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     } catch {
       // Column already exists — ignore
     }
+    // Migration: add sources column (RAG citations) for existing DOs
+    try {
+      this.sql`ALTER TABLE messages ADD COLUMN sources TEXT`;
+    } catch {
+      // Column already exists — ignore
+    }
   }
 
   createConversation(title: string, model?: string): Conversation {
@@ -181,7 +189,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     if (conversations.length === 0) throw new Error("Conversation not found");
 
     const messages = this.sql<Message>`
-      SELECT id, conversation_id, role, content, tool_calls, created_at
+      SELECT id, conversation_id, role, content, tool_calls, sources, created_at
       FROM messages WHERE conversation_id = ${conversationId}
       ORDER BY created_at ASC
     `;
@@ -527,6 +535,27 @@ Live UI artifacts:
         systemPrompt += `\n\nStuff you know about this person — use it when it's relevant, ignore it when it's not:\n${memoryBlock}`;
       }
 
+      // Knowledge-base retrieval (Pro only — free users can't upload files).
+      // Runs per-tenant against the user's isolated AI Search instance, so
+      // a filter-syntax slip can never leak another user's chunks.
+      let retrievedSources: RetrievedSource[] = [];
+      if (subscription.plan === "pro") {
+        const { chunks, sources } = await retrieveForUser(this.env, userId, content);
+        if (chunks.length > 0) {
+          const ordered = sources.map((s, i) => ({ ref: i + 1, source: s }));
+          const idToRef = new Map(ordered.map(({ ref, source }) => [source.id, ref]));
+          const excerpts = chunks
+            .map(
+              ({ text, source }) =>
+                `[${idToRef.get(source.id)}] ${source.filename} — "${text.replace(/\s+/g, " ").trim()}"`,
+            )
+            .join("\n");
+          systemPrompt += `\n\nRelevant excerpts from the user's uploaded files. Cite them inline as [1], [2]… and list sources at the end of your answer:\n${excerpts}`;
+          retrievedSources = sources;
+          stream.send({ __event: "sources", sources });
+        }
+      }
+
       // Inject pet state
       const pet = this.getPetState();
       const petNow = Math.floor(Date.now() / 1000);
@@ -591,12 +620,13 @@ Live UI artifacts:
         }
       }
 
-      // Save assistant message with tool call metadata
+      // Save assistant message with tool call + citation metadata
       const finishedAt = Math.floor(Date.now() / 1000);
       const toolCallsJson = toolCalls.length > 0 ? JSON.stringify(toolCalls) : null;
+      const sourcesJson = retrievedSources.length > 0 ? JSON.stringify(retrievedSources) : null;
       this.sql`
-        INSERT INTO messages (id, conversation_id, role, content, tool_calls, created_at)
-        VALUES (${assistantMessageId}, ${conversationId}, ${"assistant"}, ${fullContent}, ${toolCallsJson}, ${finishedAt})
+        INSERT INTO messages (id, conversation_id, role, content, tool_calls, sources, created_at)
+        VALUES (${assistantMessageId}, ${conversationId}, ${"assistant"}, ${fullContent}, ${toolCallsJson}, ${sourcesJson}, ${finishedAt})
       `;
 
       // Auto-title: if this is the first exchange, generate a title from user message

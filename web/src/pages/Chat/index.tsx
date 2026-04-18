@@ -6,6 +6,7 @@ import { AuthModel } from "../../models/auth";
 import { ChatModel } from "../../models/chat";
 import { ChatUIModel } from "../../models/chat-ui";
 import { MemoryModel } from "../../models/memory";
+import { FilesModel } from "../../models/files";
 import { trackEvent } from "../../lib/posthog";
 import { TamagotchiModel } from "../../models/tamagotchi";
 import { PageShell, ContentContainer, PageLoader } from "../../components/ui/Layout";
@@ -24,11 +25,13 @@ import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { UpgradeBanner } from "../../components/UpgradeBanner";
 import { MemoryPanel } from "../../components/MemoryPanel";
+import { FilesPanel } from "../../components/FilesPanel";
 
 export function Chat({ conversationId }: { conversationId?: string }) {
   const auth = useModel(AuthModel);
   const chat = useModel(ChatModel);
   const memory = useModel(MemoryModel);
+  const files = useModel(FilesModel);
   const tamagotchi = useModel(TamagotchiModel);
   const ui = useModel(ChatUIModel);
   const { route } = useLocation();
@@ -46,6 +49,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
       chat.connect().then(() => {
         memory.loadMemories();
         tamagotchi.loadPet();
+        files.load();
       });
     }
     return () => chat.disconnect();
@@ -125,6 +129,11 @@ export function Chat({ conversationId }: { conversationId?: string }) {
           event.preventDefault();
         }
 
+        if (files.panelOpen.value) {
+          files.panelOpen.value = false;
+          event.preventDefault();
+        }
+
         if (ui.petPopoverOpen.value) {
           ui.closePetPopover();
           event.preventDefault();
@@ -166,6 +175,12 @@ export function Chat({ conversationId }: { conversationId?: string }) {
 
       if (key === "m" && event.shiftKey) {
         memory.togglePanel();
+        event.preventDefault();
+        return;
+      }
+
+      if (key === "f" && event.shiftKey) {
+        files.togglePanel();
         event.preventDefault();
         return;
       }
@@ -234,6 +249,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
           onClick={() => {
             if (ui.sidebarOpen.value) ui.closeSidebar();
             if (memory.panelOpen.value) memory.panelOpen.value = false;
+            if (files.panelOpen.value) files.panelOpen.value = false;
             if (ui.petPopoverOpen.value) ui.closePetPopover();
           }}
         >
@@ -310,6 +326,16 @@ export function Chat({ conversationId }: { conversationId?: string }) {
                       </div>
                     </Show>
                   </div>
+                )}
+                {auth.authenticated.value && (
+                  <TextLink
+                    onClick={(e: Event) => {
+                      e.stopPropagation();
+                      files.togglePanel();
+                    }}
+                  >
+                    Files
+                  </TextLink>
                 )}
                 {auth.authenticated.value && (
                   <TextLink
@@ -426,6 +452,20 @@ export function Chat({ conversationId }: { conversationId?: string }) {
           loading={memory.loading.value}
           error={memory.error.value}
           onDeleteMemory={(id) => memory.deleteMemory(id)}
+        />
+
+        <FilesPanel
+          open={files.panelOpen.value}
+          onClose={() => (files.panelOpen.value = false)}
+          files={files.files.value}
+          loading={files.loading.value}
+          uploading={files.uploading.value}
+          error={files.error.value}
+          isLocked={files.isLocked.value}
+          limits={files.limits.value}
+          onUpload={(f) => files.upload(f)}
+          onDelete={(id) => files.remove(id)}
+          onUpgrade={() => chat.startCheckout()}
         />
       </div>
     </PageShell>

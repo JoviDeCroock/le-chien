@@ -8,6 +8,7 @@ import { ToolCallCard } from "./ToolCallCard";
 import { SandboxedArtifact } from "./SandboxedArtifact";
 import { parseArtifacts } from "../lib/parse-artifacts";
 import { ReadAloudModel } from "../models/read-aloud";
+import { CitationList } from "./CitationList";
 
 export function ChatBubble({ message, streaming }: { message: Message; streaming: boolean }) {
   const isUser = message.role === "user";
@@ -16,6 +17,7 @@ export function ChatBubble({ message, streaming }: { message: Message; streaming
   const hasToolCalls = message.tool_calls && message.tool_calls.length > 0;
   const hasReasoning = !!message.reasoning;
   const isStreamingReasoning = streaming && hasReasoning && !message.content;
+  const hasSources = !isUser && message.sources && message.sources.length > 0;
 
   const segments = !isUser && message.content ? parseArtifacts(message.content) : [];
   const readAloud = useModel(ReadAloudModel);
@@ -96,6 +98,7 @@ export function ChatBubble({ message, streaming }: { message: Message; streaming
           <span class="inline-block w-1.5 h-4 bg-violet-500 rounded-sm ml-0.5 animate-pulse align-text-bottom" />
         )}
         {isStreaming && hasToolCalls && <StreamingDots />}
+        {hasSources && <CitationList sources={message.sources!} />}
         {!isUser && !streaming && message.content && (
           <div class="mt-2 pt-2 border-t border-neutral-700/30 flex items-center gap-2">
             <button

@@ -84,6 +84,13 @@ export const AVAILABLE_SHORTCUTS: ShortcutDefinition[] = [
     keys: ["Cmd/Ctrl", "Shift", "M"],
     availability: "available",
   },
+  {
+    id: "open-files",
+    label: "Toggle files panel",
+    description: "Open or close the knowledge-base files panel on the right side.",
+    keys: ["Cmd/Ctrl", "Shift", "F"],
+    availability: "available",
+  },
 ];
 
 export const PLANNED_SHORTCUTS: ShortcutDefinition[] = [
@@ -92,13 +99,6 @@ export const PLANNED_SHORTCUTS: ShortcutDefinition[] = [
     label: "Open search",
     description: "Reserved for the global conversation/files/memory search overlay.",
     keys: ["Cmd/Ctrl", "K"],
-    availability: "planned",
-  },
-  {
-    id: "open-files",
-    label: "Open files panel",
-    description: "Reserved for the workspace files view once it ships.",
-    keys: ["Cmd/Ctrl", "Shift", "F"],
     availability: "planned",
   },
 ];

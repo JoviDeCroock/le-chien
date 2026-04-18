@@ -161,6 +161,32 @@ export function BallIcon(props: IconProps) {
   );
 }
 
+export function FileIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" {...stroke} />
+      <path d="M14 3v5h5" {...stroke} />
+    </Icon>
+  );
+}
+
+export function UploadIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 4v12m0-12l-4 4m4-4l4 4M5 20h14" {...stroke} />
+    </Icon>
+  );
+}
+
+export function LockIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="5" y="11" width="14" height="9" rx="2" {...stroke} />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" {...stroke} />
+    </Icon>
+  );
+}
+
 export function AlertTriangleIcon(props: IconProps) {
   return (
     <Icon {...props}>

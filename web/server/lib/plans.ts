@@ -9,6 +9,10 @@ type PlanLimits = {
   dailyPremiumMessages: number | null;
   dailyImageGenerations: number | null;
   dailyWebSearches: number | null;
+  /** Max files the user can keep in their knowledge base at once. */
+  maxFiles: number;
+  /** Max size (bytes) of any single uploaded file. */
+  maxFileBytes: number;
 };
 
 export type SubscriptionSnapshot = {
@@ -38,12 +42,16 @@ export const PLAN_LIMITS = {
     dailyPremiumMessages: 3,
     dailyImageGenerations: 3,
     dailyWebSearches: 3,
+    maxFiles: 0,
+    maxFileBytes: 0,
   },
   pro: {
     dailyMessages: null,
     dailyPremiumMessages: null,
     dailyImageGenerations: null,
     dailyWebSearches: 25,
+    maxFiles: 20,
+    maxFileBytes: 25 * 1024 * 1024,
   },
 } as const;
 

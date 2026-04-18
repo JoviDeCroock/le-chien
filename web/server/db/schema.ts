@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -142,4 +142,31 @@ export const dailyWebSearchUsage = sqliteTable(
     updatedAt: integer("updated_at").notNull(),
   },
   (t) => [uniqueIndex("daily_web_search_usage_user_date_unique_idx").on(t.userId, t.usageDate)],
+);
+
+// ── Knowledge-base files ──────────────────────────────────────
+
+export const file = sqliteTable(
+  "file",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // AI Search item id (returned by `items.upload`). Used for deletion and
+    // to match chunks back to file rows.
+    itemId: text("item_id").notNull(),
+    filename: text("filename").notNull(),
+    size: integer("size").notNull(),
+    mimeType: text("mime_type").notNull(),
+    // 'indexing' | 'ready' | 'error' — AI Search processing is async; UI
+    // treats anything not 'ready' as still being indexed.
+    status: text("status").notNull().default("indexing"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  (t) => [
+    index("file_user_created_idx").on(t.userId, t.createdAt),
+    uniqueIndex("file_item_id_unique_idx").on(t.itemId),
+  ],
 );

@@ -38,11 +38,12 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.0.0",
+    "@cloudflare/workers-types": "^4.20260418.1",
     "@preact/preset-vite": "^2.10.3",
     "@types/node": "^25.1.0",
     "drizzle-kit": "^0.31.8",
     "typescript": "^5.9.3",
     "vite": "^7.0.4",
-    "wrangler": "^4.79.0"
+    "wrangler": "^4.83.0"
   }
 }

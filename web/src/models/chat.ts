@@ -23,6 +23,13 @@ export type ToolCall = {
   status: "pending" | "complete";
 };
 
+export type MessageSource = {
+  id: string;
+  filename: string;
+  snippet: string;
+  score: number;
+};
+
 export type Message = {
   id: string;
   conversation_id: string;
@@ -30,6 +37,7 @@ export type Message = {
   content: string;
   reasoning?: string;
   tool_calls?: ToolCall[];
+  sources?: MessageSource[];
   created_at: number;
 };
 
@@ -50,6 +58,8 @@ export type SubscriptionStatus = {
     dailyPremiumMessages: number | null;
     dailyImageGenerations: number | null;
     dailyWebSearches: number | null;
+    maxFiles: number;
+    maxFileBytes: number;
   };
   usage: {
     dailyMessagesUsed: number;
@@ -250,10 +260,15 @@ export const ChatModel = createModel(() => {
     try {
       const result = await agent.value!.call<{
         conversation: Conversation;
-        messages: (Message & { tool_calls?: string | ToolCall[] | null })[];
+        messages: (Message & {
+          tool_calls?: string | ToolCall[] | null;
+          sources?: string | MessageSource[] | null;
+        })[];
       }>("getConversation", [conversationId]);
-      // Parse tool_calls JSON from DB storage
+      // Parse tool_calls + sources JSON from DB storage
       messages.value = result.messages.map((m) => {
+        const out: Message = { ...(m as Message) };
+
         if (typeof m.tool_calls === "string") {
           try {
             const parsed = JSON.parse(m.tool_calls) as {
@@ -262,21 +277,27 @@ export const ChatModel = createModel(() => {
               args: unknown;
               result: unknown;
             }[];
-            return {
-              ...m,
-              tool_calls: parsed.map((tc) => ({
-                id: tc.id,
-                name: tc.name,
-                args: (tc.args as Record<string, unknown>) ?? {},
-                result: tc.result,
-                status: "complete" as const,
-              })),
-            };
+            out.tool_calls = parsed.map((tc) => ({
+              id: tc.id,
+              name: tc.name,
+              args: (tc.args as Record<string, unknown>) ?? {},
+              result: tc.result,
+              status: "complete" as const,
+            }));
           } catch {
-            return { ...m, tool_calls: undefined };
+            out.tool_calls = undefined;
           }
         }
-        return m as Message;
+
+        if (typeof m.sources === "string") {
+          try {
+            out.sources = JSON.parse(m.sources) as MessageSource[];
+          } catch {
+            out.sources = undefined;
+          }
+        }
+
+        return out;
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -390,7 +411,12 @@ export const ChatModel = createModel(() => {
                 text?: string;
                 args?: unknown;
                 result?: unknown;
+                sources?: MessageSource[];
               };
+              if (event.__event === "sources") {
+                messages.value = [...msgs.slice(0, -1), { ...last, sources: event.sources ?? [] }];
+                return;
+              }
               if (event.__event === "reasoning") {
                 messages.value = [
                   ...msgs.slice(0, -1),
