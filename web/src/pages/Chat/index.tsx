@@ -70,15 +70,17 @@ export function Chat({ conversationId }: { conversationId?: string }) {
     }
   }, [conversationId, chat.connected.value, auth.authenticated.value]);
 
-  // Model → URL: keep the path in sync when state changes (e.g. after creating a new conversation)
+  // Model → URL: keep the path in sync when state changes (e.g. after creating a new conversation).
+  // Gated on connection so a reload of /chat/:id doesn't strip the id before URL→model has a chance to select it.
   useEffect(() => {
+    if (!chat.connected.value) return;
     const active = chat.activeConversationId.value;
     if (active && active !== conversationId) {
       route(`/chat/${active}`, true);
     } else if (!active && conversationId) {
       route("/chat", true);
     }
-  }, [chat.activeConversationId.value, conversationId]);
+  }, [chat.activeConversationId.value, conversationId, chat.connected.value]);
 
   // Auto-scroll on new messages
   useEffect(() => {
