@@ -55,7 +55,7 @@ function AppContent() {
       <main>
         <Router>
           <Route path="/" component={Landing} />
-          <Route path="/chat" component={Chat} />
+          <Route path="/chat/:conversationId?" component={Chat} />
           <Route path="/auth" component={Auth} />
           <Route path="/billing" component={Billing} />
           <Route default component={NotFound} />
