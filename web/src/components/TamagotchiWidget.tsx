@@ -53,36 +53,36 @@ export function TamagotchiWidget({ pet, onFeed, onPlay, onPet, disabled }: Tamag
       </div>
 
       {/* Actions */}
-      <div class="flex gap-1">
+      <div class="flex gap-1.5 pt-1">
         <Button
           variant="ghost"
-          class="flex-1 !px-1 !py-1 text-[10px]"
+          class="flex-1 flex items-center justify-center gap-1.5 !px-2 !py-2 text-[11px] font-medium rounded-md hover:bg-neutral-800"
           onClick={onFeed}
           disabled={disabled}
           title="Feed"
         >
-          <BoneIcon size={12} />
-          <span class="ml-1">Feed</span>
+          <BoneIcon size={14} />
+          <span>Feed</span>
         </Button>
         <Button
           variant="ghost"
-          class="flex-1 !px-1 !py-1 text-[10px]"
+          class="flex-1 flex items-center justify-center gap-1.5 !px-2 !py-2 text-[11px] font-medium rounded-md hover:bg-neutral-800"
           onClick={onPlay}
           disabled={disabled}
           title="Play"
         >
-          <BallIcon size={12} />
-          <span class="ml-1">Play</span>
+          <BallIcon size={14} />
+          <span>Play</span>
         </Button>
         <Button
           variant="ghost"
-          class="flex-1 !px-1 !py-1 text-[10px]"
+          class="flex-1 flex items-center justify-center gap-1.5 !px-2 !py-2 text-[11px] font-medium rounded-md hover:bg-neutral-800"
           onClick={onPet}
           disabled={disabled}
           title="Pet"
         >
-          <PawIcon size={12} />
-          <span class="ml-1">Pet</span>
+          <PawIcon size={14} />
+          <span>Pet</span>
         </Button>
       </div>
     </div>
