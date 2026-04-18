@@ -43,7 +43,7 @@ export const PLAN_LIMITS = {
     dailyMessages: null,
     dailyPremiumMessages: null,
     dailyImageGenerations: null,
-    dailyWebSearches: 20,
+    dailyWebSearches: 25,
   },
 } as const;
 
