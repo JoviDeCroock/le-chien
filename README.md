@@ -1,33 +1,39 @@
-# Product Template
+# le chien
 
-A full-stack SaaS starter kit with authentication, billing, and a dashboard — ready to build on.
+An open-model AI chat workspace built on Cloudflare — streaming chat, per-user conversation storage, authentication, and billing, all in a single Worker.
 
 ## Tech Stack
 
-| Layer    | Technology                           |
-| -------- | ------------------------------------ |
-| Frontend | Preact, Vite, Tailwind CSS           |
-| Backend  | Hono (Cloudflare Workers)            |
-| Database | Drizzle ORM + Cloudflare D1 (SQLite) |
-| Auth     | BetterAuth (email/password)          |
-| Billing  | Polar (free/pro plans, webhooks)     |
+| Layer      | Technology                                          |
+| ---------- | --------------------------------------------------- |
+| Frontend   | Preact + Vite + Tailwind CSS (signals-based state)  |
+| Backend    | Hono on Cloudflare Workers                          |
+| Chat state | Durable Objects (one agent per user)                |
+| Database   | Drizzle ORM + Cloudflare D1 (SQLite)                |
+| Auth       | Better Auth (email/password)                        |
+| Billing    | Polar (free/pro plans, webhooks)                    |
+| Models     | Workers AI (default) + OpenAI via AI Gateway        |
+| Analytics  | PostHog (optional)                                  |
 
 ## Project Structure
 
 ```
-├── web/          Preact frontend (Vite)
-│   └── src/
-│       ├── components/   UI components
-│       ├── pages/        Route pages (Home, Auth, Dashboard, Billing)
-│       ├── models/       Signal-based models (auth, billing, subscription)
-│       └── lib/          Auth client, API client, constants
-├── api/          Hono backend (Cloudflare Workers)
-│   └── src/
-│       ├── db/           Drizzle schema
-│       ├── lib/          Auth setup, plan logic
-│       ├── routes/       API routes
-│       └── utils/        Helpers
-└── package.json  Root scripts (lint, format)
+├── web/                   Single Cloudflare Worker (frontend + API)
+│   ├── src/               Preact frontend (Vite)
+│   │   ├── components/    UI components
+│   │   ├── pages/         Route pages (Landing, Auth, Chat, Billing)
+│   │   ├── models/        Signal-based models
+│   │   └── lib/           Auth client, API client, shortcuts
+│   ├── server/            Hono backend
+│   │   ├── agents/        Durable Object (ChatAgent)
+│   │   ├── db/            Drizzle schema
+│   │   ├── lib/           Auth, models, plans, tools
+│   │   ├── routes/        API routes
+│   │   └── utils/         Helpers
+│   ├── drizzle/           D1 migrations
+│   └── wrangler.jsonc     Worker config
+├── docs/                  Internal design & architecture notes
+└── package.json           Workspace scripts (lint, format)
 ```
 
 ## Quick Start
@@ -36,7 +42,7 @@ A full-stack SaaS starter kit with authentication, billing, and a dashboard — 
 ./setup.sh
 ```
 
-This copies the env files for both the API and frontend, and installs dependencies. Then follow the steps below to fill in your keys.
+This copies the example env file, installs dependencies, and runs local D1 migrations. Then follow the steps below to fill in your keys.
 
 ## Getting Started
 
@@ -55,122 +61,101 @@ pnpm install
 
 ### 2. Set up environment files
 
-Copy the example env files:
+Copy the example env file:
 
 ```sh
-cp api/.dev.vars.example api/.dev.vars
-cp web/.env.example web/.env
+cp web/.dev.vars.example web/.dev.vars
 ```
-
-#### API environment (`api/.dev.vars`)
 
 | Variable               | Description                                                                                |
 | ---------------------- | ------------------------------------------------------------------------------------------ |
 | `BETTER_AUTH_SECRET`   | Any random string — used to sign session tokens. Generate one with `openssl rand -hex 32`. |
-| `BETTER_AUTH_URL`      | The API base URL. For local dev: `http://localhost:8787/api/auth`                          |
-| `APP_URL`              | Frontend origin. For local dev: `http://localhost:5173`                                    |
 | `POLAR_ACCESS_TOKEN`   | Your Polar API access token (see Polar setup below).                                       |
-| `POLAR_WEBHOOK_SECRET` | Webhook signing secret from Polar (see Polar setup below).                                 |
+| `POLAR_WEBHOOK_SECRET` | Webhook signing secret from Polar.                                                         |
 | `POLAR_PRO_PRODUCT_ID` | The Polar product ID for your "Pro" plan.                                                  |
-| `LOCAL`                | Set to `true` for local development.                                                       |
+| `OPENAI_API_KEY`       | OpenAI key (only needed if you expose OpenAI-routed models).                               |
+| `CF_ACCOUNT_ID`        | Your Cloudflare account ID (needed for AI Gateway routing).                                |
+| `CF_API_TOKEN`         | Cloudflare API token (for AI Gateway).                                                     |
+| `POSTHOG_API_KEY`      | Optional. Enables server-side event tracking.                                              |
+| `TAVILY_API_KEY`       | Optional. Enables the `web_search` tool.                                                   |
+
+`APP_URL`, `BETTER_AUTH_URL`, `LOCAL`, and `CF_AI_GATEWAY_ID` live in `web/wrangler.jsonc` under `vars`. Replace `$YOUR_URL` with your production origin before deploying.
 
 ### 3. Set up Polar (billing)
 
 1. Go to [polar.sh](https://polar.sh) and create an account.
-2. Create an **Organization** (this represents your product/company).
-3. Create a **Product** for your Pro plan:
-   - Go to **Products** and click **Create Product**.
-   - Set the name (e.g. "Pro"), price ($10/mo), and billing interval.
-   - After creating, copy the **Product ID** from the product page — this is your `POLAR_PRO_PRODUCT_ID`.
-4. Get your **Access Token**:
-   - Go to **Settings > Developers > Personal Access Tokens**.
-   - Create a new token with the necessary scopes.
-   - Copy it — this is your `POLAR_ACCESS_TOKEN`.
-5. Set up a **Webhook** (needed for subscription lifecycle events):
-   - Go to **Settings > Webhooks** and click **Add Endpoint**.
-   - URL: `https://your-api-domain.com/api/auth/polar/webhook` (for production). For local dev, use [Polar's local webhook guide](https://docs.polar.sh/integrate/webhooks/locally).
-   - Select events: `subscription.updated`, `subscription.active`, `subscription.canceled`, `subscription.revoked`, `customer.created`.
-   - After creating, copy the **Signing Secret** — this is your `POLAR_WEBHOOK_SECRET`.
+2. Create an **Organization**.
+3. Create a **Product** for your Pro plan and copy its **Product ID** — this is your `POLAR_PRO_PRODUCT_ID`.
+4. **Settings → Developers → Personal Access Tokens** — create a token, copy it as `POLAR_ACCESS_TOKEN`.
+5. **Settings → Webhooks → Add Endpoint**:
+   - URL: `https://<your-domain>/api/auth/polar/webhook` (for local dev, see [Polar's local webhook guide](https://docs.polar.sh/integrate/webhooks/locally)).
+   - Events: `subscription.updated`, `subscription.active`, `subscription.canceled`, `subscription.revoked`, `customer.created`.
+   - Copy the **Signing Secret** as `POLAR_WEBHOOK_SECRET`.
 
-> For local development, Polar uses a **sandbox** environment automatically (the template detects `LOCAL=true`). No real payments are processed.
+When `LOCAL=true`, Polar runs in sandbox mode — no real payments.
 
 ### 4. Set up the database
 
-Generate the schema and run migrations against the local D1 database:
-
 ```sh
-cd api
+cd web
 pnpm run db:generate
 pnpm run db:migrate:local
 ```
 
 ### 5. Run locally
 
-Start both servers in separate terminals:
-
 ```sh
-# Terminal 1 — API (port 8787)
-cd api && pnpm dev
-
-# Terminal 2 — Frontend (port 5173)
 cd web && pnpm dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Open [http://localhost:5173](http://localhost:5173).
 
 ## Deployment
 
 ### Cloudflare Setup
 
-1. **Install Wrangler** (already in devDependencies, or install globally with `npm i -g wrangler`).
-2. **Log in**: `wrangler login`
-3. **Create a D1 database in the EU jurisdiction**:
+1. **Log in**: `npx wrangler login`
+2. **Create a D1 database** (EU jurisdiction is optional but recommended for EU-hosted deployments):
 
    ```sh
-   wrangler d1 create app-db --jurisdiction=eu
+   npx wrangler d1 create chien-db --jurisdiction=eu
    ```
 
-   Copy the output `database_id` and paste it into `api/wrangler.jsonc` (replacing the placeholder `00000000-...`).
-   Jurisdiction is fixed at creation time, so an existing non-EU production database must be recreated if EU-only storage is a requirement.
+   Copy the `database_id` into `web/wrangler.jsonc` (`d1_databases[0].database_id`). Jurisdiction is fixed at creation time.
 
-4. **Run migrations on the remote database**:
+3. **Run migrations on the remote database**:
 
    ```sh
-   cd api && pnpm run db:migrate:remote
+   cd web && pnpm run db:migrate:remote
    ```
 
-5. **Set secrets** in Cloudflare (these are the same values from your `.dev.vars`, but for production):
+4. **Set secrets** in Cloudflare:
 
    ```sh
-   cd api
-   wrangler secret put BETTER_AUTH_SECRET
-   wrangler secret put POLAR_ACCESS_TOKEN
-   wrangler secret put POLAR_WEBHOOK_SECRET
-   wrangler secret put POLAR_PRO_PRODUCT_ID
+   cd web
+   npx wrangler secret put BETTER_AUTH_SECRET
+   npx wrangler secret put POLAR_ACCESS_TOKEN
+   npx wrangler secret put POLAR_WEBHOOK_SECRET
+   npx wrangler secret put POLAR_PRO_PRODUCT_ID
+   npx wrangler secret put OPENAI_API_KEY
+   npx wrangler secret put CF_ACCOUNT_ID
+   npx wrangler secret put CF_API_TOKEN
+   # optional
+   npx wrangler secret put POSTHOG_API_KEY
+   npx wrangler secret put TAVILY_API_KEY
    ```
 
-   Each command will prompt you to paste the value.
+5. **Update production URLs** in `web/wrangler.jsonc`:
+   - `APP_URL` and `BETTER_AUTH_URL`: replace `$YOUR_URL` with your production origin (e.g. `https://chat.example.com`).
+   - `CF_AI_GATEWAY_ID`: set to your AI Gateway ID (create one in the Cloudflare dashboard).
 
-6. **Update production URLs** in `api/wrangler.jsonc`:
-   - Set `BETTER_AUTH_URL` to your production auth URL (e.g. `https://api.yourdomain.com/api/auth`).
-   - Set `APP_URL` to your production frontend URL (e.g. `https://app.yourdomain.com`).
-   - `placement.mode = "smart"` is already enabled for the API Worker to reduce latency to backend services, but this is a performance optimization, not an EU residency guarantee.
-
-### Deploy the API
+### Deploy
 
 ```sh
-cd api && pnpm run deploy
+cd web && pnpm run deploy
 ```
 
-### Deploy the Frontend
-
-Build the static site:
-
-```sh
-cd web && pnpm build
-```
-
-Output goes to `web/dist/`. Deploy to any static host (Cloudflare Pages, Vercel, Netlify, etc.).
+The Worker serves both the API and the built frontend assets.
 
 ## Lint & Format
 
@@ -180,7 +165,12 @@ pnpm -w run format       # oxfmt write
 pnpm -w run check        # lint + format check (CI)
 ```
 
-`pnpm install` also installs a shared `pre-commit` hook.
-Commits run `lint-staged`, which applies `oxlint --fix` and `oxfmt --write`
-to staged JS/TS files and `oxfmt --write` to staged JSON/JSONC files before
-the commit is created.
+`pnpm install` also installs a shared `pre-commit` hook that runs `lint-staged` on changed files.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## License
+
+MIT — see [LICENSE](./LICENSE).

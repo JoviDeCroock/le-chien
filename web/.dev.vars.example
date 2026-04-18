@@ -1,0 +1,25 @@
+# Copy this file to `.dev.vars` and fill in real values.
+# These are loaded by `wrangler dev` for local development.
+# For production, set each one with `wrangler secret put <NAME>`.
+
+# Session signing key. Generate with: openssl rand -hex 32
+BETTER_AUTH_SECRET=
+
+# Polar (billing). See README for setup steps.
+POLAR_ACCESS_TOKEN=
+POLAR_WEBHOOK_SECRET=
+POLAR_PRO_PRODUCT_ID=
+
+# OpenAI — only needed if you expose OpenAI-routed models.
+OPENAI_API_KEY=
+
+# Cloudflare — used to route OpenAI calls through AI Gateway.
+CF_ACCOUNT_ID=
+CF_API_TOKEN=
+
+# PostHog (optional) — enables server-side analytics.
+# POSTHOG_API_KEY=
+# POSTHOG_HOST=https://eu.i.posthog.com
+
+# Tavily (optional) — enables the web_search tool.
+# TAVILY_API_KEY=
