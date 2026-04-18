@@ -14,6 +14,7 @@ import { TextLink } from "../../components/ui/TextLink";
 import { TopBar } from "../../components/TopBar";
 import { ModelSelector } from "../../components/ModelSelector";
 import { Sidebar } from "../../components/Sidebar";
+import { TamagotchiWidget } from "../../components/TamagotchiWidget";
 import { ShortcutOverlay } from "../../components/ShortcutOverlay";
 import { ChatBubble } from "../../components/ChatBubble";
 import { ChatInput } from "../../components/ChatInput";
@@ -32,6 +33,7 @@ export function Chat() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const sidebarOpen = useSignal(false);
   const shortcutsOpen = useSignal(false);
+  const petPopoverOpen = useSignal(false);
 
   useEffect(() => {
     auth.checkSession();
@@ -103,6 +105,11 @@ export function Chat() {
           event.preventDefault();
         }
 
+        if (petPopoverOpen.value) {
+          petPopoverOpen.value = false;
+          event.preventDefault();
+        }
+
         return;
       }
 
@@ -144,7 +151,7 @@ export function Chat() {
       }
 
       if (key === "p" && event.shiftKey) {
-        sidebarOpen.value = true;
+        petPopoverOpen.value = !petPopoverOpen.value;
         event.preventDefault();
       }
     }
@@ -207,6 +214,7 @@ export function Chat() {
           onClick={() => {
             if (sidebarOpen.value) sidebarOpen.value = false;
             if (memory.panelOpen.value) memory.panelOpen.value = false;
+            if (petPopoverOpen.value) petPopoverOpen.value = false;
           }}
         >
           <TopBar
@@ -250,18 +258,38 @@ export function Chat() {
                   />
                 )}
                 {auth.authenticated.value && tamagotchi.pet.value && (
-                  <button
-                    type="button"
-                    onClick={() => (sidebarOpen.value = true)}
-                    class={`p-1 rounded transition-colors ${
-                      tamagotchi.mood.value === "neglected" || tamagotchi.mood.value === "sad"
-                        ? "text-red-400 hover:text-red-300"
-                        : "text-neutral-400 hover:text-neutral-200"
-                    }`}
-                    title={`Pet: ${tamagotchi.pet.value.name} (${tamagotchi.mood.value})`}
-                  >
-                    <DogIcon size={14} />
-                  </button>
+                  <div class="relative">
+                    <button
+                      type="button"
+                      onClick={(e: Event) => {
+                        e.stopPropagation();
+                        petPopoverOpen.value = !petPopoverOpen.value;
+                      }}
+                      class={`p-1 rounded transition-colors ${
+                        tamagotchi.mood.value === "neglected" || tamagotchi.mood.value === "sad"
+                          ? "text-red-400 hover:text-red-300"
+                          : "text-neutral-400 hover:text-neutral-200"
+                      }`}
+                      title={`Pet: ${tamagotchi.pet.value.name} (${tamagotchi.mood.value})`}
+                      aria-expanded={petPopoverOpen.value}
+                    >
+                      <DogIcon size={14} />
+                    </button>
+                    {petPopoverOpen.value && (
+                      <div
+                        class="absolute right-0 top-full mt-2 z-40 w-64 bg-neutral-900 border border-neutral-800 rounded-lg"
+                        onClick={(e: Event) => e.stopPropagation()}
+                      >
+                        <TamagotchiWidget
+                          pet={tamagotchi.pet.value}
+                          onFeed={() => tamagotchi.feed()}
+                          onPlay={() => tamagotchi.play()}
+                          onPet={() => tamagotchi.petDog()}
+                          disabled={tamagotchi.actionCooldown.value}
+                        />
+                      </div>
+                    )}
+                  </div>
                 )}
                 {auth.authenticated.value && (
                   <TextLink

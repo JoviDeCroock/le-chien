@@ -72,8 +72,8 @@ export const AVAILABLE_SHORTCUTS: ShortcutDefinition[] = [
   },
   {
     id: "open-pet",
-    label: "Open pet",
-    description: "Open the sidebar to see your pet dog.",
+    label: "Toggle pet",
+    description: "Show or hide your pet dog from the top bar.",
     keys: ["Cmd/Ctrl", "Shift", "P"],
     availability: "available",
   },

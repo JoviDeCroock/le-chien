@@ -79,13 +79,15 @@ export function Sidebar({
         </div>
 
         {pet && (
-          <TamagotchiWidget
-            pet={pet}
-            onFeed={onFeedPet}
-            onPlay={onPlayPet}
-            onPet={onPetDog}
-            disabled={petDisabled}
-          />
+          <div class="shrink-0 border-t border-neutral-800/60">
+            <TamagotchiWidget
+              pet={pet}
+              onFeed={onFeedPet}
+              onPlay={onPlayPet}
+              onPet={onPetDog}
+              disabled={petDisabled}
+            />
+          </div>
         )}
       </nav>
     </>
