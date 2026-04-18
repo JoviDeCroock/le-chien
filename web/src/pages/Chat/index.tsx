@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "preact/hooks";
 import { useLocation } from "preact-iso";
-import { useSignal } from "@preact/signals";
 import { useModel } from "@preact/signals";
 import { AuthModel } from "../../models/auth";
 import { ChatModel } from "../../models/chat";
+import { ChatUIModel } from "../../models/chat-ui";
 import { MemoryModel } from "../../models/memory";
 import { trackEvent } from "../../lib/posthog";
 import { TamagotchiModel } from "../../models/tamagotchi";
@@ -29,13 +29,11 @@ export function Chat({ conversationId }: { conversationId?: string }) {
   const chat = useModel(ChatModel);
   const memory = useModel(MemoryModel);
   const tamagotchi = useModel(TamagotchiModel);
+  const ui = useModel(ChatUIModel);
   const { route } = useLocation();
   const messagesEnd = useRef<HTMLDivElement>(null);
   const modelBarRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
-  const sidebarOpen = useSignal(false);
-  const shortcutsOpen = useSignal(false);
-  const petPopoverOpen = useSignal(false);
 
   useEffect(() => {
     auth.checkSession();
@@ -98,10 +96,6 @@ export function Chat({ conversationId }: { conversationId?: string }) {
       );
     }
 
-    function toggleSidebar(nextOpen?: boolean) {
-      sidebarOpen.value = nextOpen ?? !sidebarOpen.value;
-    }
-
     function focusModelSelector() {
       const activeButton =
         modelBarRef.current?.querySelector<HTMLButtonElement>("[aria-checked='true']");
@@ -114,14 +108,14 @@ export function Chat({ conversationId }: { conversationId?: string }) {
       const editable = isEditableTarget(event.target);
 
       if (event.key === "Escape") {
-        if (shortcutsOpen.value) {
-          shortcutsOpen.value = false;
+        if (ui.shortcutsOpen.value) {
+          ui.closeShortcuts();
           event.preventDefault();
           return;
         }
 
-        if (sidebarOpen.value) {
-          toggleSidebar(false);
+        if (ui.sidebarOpen.value) {
+          ui.closeSidebar();
           event.preventDefault();
         }
 
@@ -130,8 +124,8 @@ export function Chat({ conversationId }: { conversationId?: string }) {
           event.preventDefault();
         }
 
-        if (petPopoverOpen.value) {
-          petPopoverOpen.value = false;
+        if (ui.petPopoverOpen.value) {
+          ui.closePetPopover();
           event.preventDefault();
         }
 
@@ -143,7 +137,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
       }
 
       if (!hasCommandModifier && !event.altKey && event.key === "?") {
-        shortcutsOpen.value = true;
+        ui.openShortcuts();
         event.preventDefault();
         return;
       }
@@ -164,7 +158,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
       }
 
       if (key === "s" && event.shiftKey) {
-        toggleSidebar();
+        ui.toggleSidebar();
         event.preventDefault();
         return;
       }
@@ -176,14 +170,14 @@ export function Chat({ conversationId }: { conversationId?: string }) {
       }
 
       if (key === "p" && event.shiftKey) {
-        petPopoverOpen.value = !petPopoverOpen.value;
+        ui.togglePetPopover();
         event.preventDefault();
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [chat, route]);
+  }, [route]);
 
   if (auth.loading.value) {
     return <PageLoader />;
@@ -210,20 +204,20 @@ export function Chat({ conversationId }: { conversationId?: string }) {
 
   return (
     <PageShell>
-      <ShortcutOverlay open={shortcutsOpen.value} onClose={() => (shortcutsOpen.value = false)} />
+      <ShortcutOverlay open={ui.shortcutsOpen.value} onClose={ui.closeShortcuts} />
 
       <Sidebar
-        open={sidebarOpen.value}
-        onClose={() => (sidebarOpen.value = false)}
+        open={ui.sidebarOpen.value}
+        onClose={ui.closeSidebar}
         conversations={chat.conversations.value}
         activeId={chat.activeConversationId.value}
         onSelect={(id) => {
           route(`/chat/${id}`);
-          sidebarOpen.value = false;
+          ui.closeSidebar();
         }}
         onNew={() => {
           route("/chat");
-          sidebarOpen.value = false;
+          ui.closeSidebar();
         }}
         onDelete={(id) => chat.deleteConversation(id)}
         pet={tamagotchi.pet.value}
@@ -237,9 +231,9 @@ export function Chat({ conversationId }: { conversationId?: string }) {
         <div
           class="flex-1 flex flex-col overflow-hidden"
           onClick={() => {
-            if (sidebarOpen.value) sidebarOpen.value = false;
+            if (ui.sidebarOpen.value) ui.closeSidebar();
             if (memory.panelOpen.value) memory.panelOpen.value = false;
-            if (petPopoverOpen.value) petPopoverOpen.value = false;
+            if (ui.petPopoverOpen.value) ui.closePetPopover();
           }}
         >
           <TopBar
@@ -250,7 +244,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
                     variant="icon"
                     onClick={(e: Event) => {
                       e.stopPropagation();
-                      sidebarOpen.value = !sidebarOpen.value;
+                      ui.toggleSidebar();
                     }}
                     title="Toggle sidebar (Cmd/Ctrl+Shift+S)"
                   >
@@ -288,7 +282,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
                       type="button"
                       onClick={(e: Event) => {
                         e.stopPropagation();
-                        petPopoverOpen.value = !petPopoverOpen.value;
+                        ui.togglePetPopover();
                       }}
                       class={`p-1 rounded transition-colors ${
                         tamagotchi.mood.value === "neglected" || tamagotchi.mood.value === "sad"
@@ -296,11 +290,11 @@ export function Chat({ conversationId }: { conversationId?: string }) {
                           : "text-neutral-400 hover:text-neutral-200"
                       }`}
                       title={`Pet: ${tamagotchi.pet.value.name} (${tamagotchi.mood.value})`}
-                      aria-expanded={petPopoverOpen.value}
+                      aria-expanded={ui.petPopoverOpen.value}
                     >
                       <DogIcon size={14} />
                     </button>
-                    {petPopoverOpen.value && (
+                    {ui.petPopoverOpen.value && (
                       <div
                         class="absolute right-0 top-full mt-2 z-40 w-64 bg-neutral-900 border border-neutral-800 rounded-lg"
                         onClick={(e: Event) => e.stopPropagation()}
@@ -329,7 +323,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
                 <TextLink
                   onClick={(e: Event) => {
                     e.stopPropagation();
-                    shortcutsOpen.value = true;
+                    ui.openShortcuts();
                   }}
                 >
                   Shortcuts
