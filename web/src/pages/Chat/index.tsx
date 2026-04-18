@@ -5,8 +5,9 @@ import { AuthModel } from "../../models/auth";
 import { ChatModel } from "../../models/chat";
 import { MemoryModel } from "../../models/memory";
 import { trackEvent } from "../../lib/posthog";
+import { TamagotchiModel } from "../../models/tamagotchi";
 import { PageShell, ContentContainer, PageLoader } from "../../components/ui/Layout";
-import { MenuIcon, PlusIcon } from "../../components/ui/Icons";
+import { MenuIcon, PlusIcon, DogIcon } from "../../components/ui/Icons";
 import { Button } from "../../components/ui/Button";
 import { StatusDot } from "../../components/ui/StatusDot";
 import { TextLink } from "../../components/ui/TextLink";
@@ -25,6 +26,7 @@ export function Chat() {
   const auth = useModel(AuthModel);
   const chat = useModel(ChatModel);
   const memory = useModel(MemoryModel);
+  const tamagotchi = useModel(TamagotchiModel);
   const messagesEnd = useRef<HTMLDivElement>(null);
   const modelBarRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -38,7 +40,10 @@ export function Chat() {
 
   useEffect(() => {
     if (auth.authenticated.value) {
-      chat.connect().then(() => memory.loadMemories());
+      chat.connect().then(() => {
+        memory.loadMemories();
+        tamagotchi.loadPet();
+      });
     }
     return () => chat.disconnect();
   }, [auth.authenticated.value]);
@@ -135,6 +140,12 @@ export function Chat() {
       if (key === "m" && event.shiftKey) {
         memory.togglePanel();
         event.preventDefault();
+        return;
+      }
+
+      if (key === "p" && event.shiftKey) {
+        sidebarOpen.value = true;
+        event.preventDefault();
       }
     }
 
@@ -183,6 +194,11 @@ export function Chat() {
           sidebarOpen.value = false;
         }}
         onDelete={(id) => chat.deleteConversation(id)}
+        pet={tamagotchi.pet.value}
+        petDisabled={tamagotchi.actionCooldown.value}
+        onFeedPet={() => tamagotchi.feed()}
+        onPlayPet={() => tamagotchi.play()}
+        onPetDog={() => tamagotchi.petDog()}
       />
 
       <div class="flex-1 flex overflow-hidden">
@@ -232,6 +248,20 @@ export function Chat() {
                     active={chat.connected.value}
                     title={chat.connected.value ? "Connected" : "Disconnected"}
                   />
+                )}
+                {auth.authenticated.value && tamagotchi.pet.value && (
+                  <button
+                    type="button"
+                    onClick={() => (sidebarOpen.value = true)}
+                    class={`p-1 rounded transition-colors ${
+                      tamagotchi.mood.value === "neglected" || tamagotchi.mood.value === "sad"
+                        ? "text-red-400 hover:text-red-300"
+                        : "text-neutral-400 hover:text-neutral-200"
+                    }`}
+                    title={`Pet: ${tamagotchi.pet.value.name} (${tamagotchi.mood.value})`}
+                  >
+                    <DogIcon size={14} />
+                  </button>
                 )}
                 {auth.authenticated.value && (
                   <TextLink

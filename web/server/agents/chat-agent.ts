@@ -43,6 +43,32 @@ type Memory = {
   updated_at: number;
 };
 
+type PetMood = "ecstatic" | "happy" | "content" | "bored" | "sad" | "neglected";
+
+type PetRow = {
+  id: string;
+  name: string;
+  hunger: number;
+  happiness: number;
+  energy: number;
+  last_fed: number;
+  last_played: number;
+  last_petted: number;
+  created_at: number;
+  updated_at: number;
+};
+
+type PetState = {
+  name: string;
+  hunger: number;
+  happiness: number;
+  energy: number;
+  mood: PetMood;
+  last_fed: number;
+  last_played: number;
+  last_petted: number;
+};
+
 /**
  * Rough token estimate: ~4 characters per token.
  * Budget leaves room for system prompt + response.
@@ -100,6 +126,20 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
         id TEXT PRIMARY KEY,
         key TEXT NOT NULL,
         value TEXT NOT NULL,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+      )
+    `;
+    this.sql`
+      CREATE TABLE IF NOT EXISTS pet (
+        id TEXT PRIMARY KEY DEFAULT 'default',
+        name TEXT NOT NULL DEFAULT 'le chien',
+        hunger INTEGER NOT NULL DEFAULT 50,
+        happiness INTEGER NOT NULL DEFAULT 50,
+        energy INTEGER NOT NULL DEFAULT 50,
+        last_fed INTEGER NOT NULL DEFAULT (unixepoch()),
+        last_played INTEGER NOT NULL DEFAULT (unixepoch()),
+        last_petted INTEGER NOT NULL DEFAULT (unixepoch()),
         created_at INTEGER NOT NULL DEFAULT (unixepoch()),
         updated_at INTEGER NOT NULL DEFAULT (unixepoch())
       )
@@ -194,6 +234,141 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
 
   deleteMemory(memoryId: string): void {
     this.sql`DELETE FROM memories WHERE id = ${memoryId}`;
+  }
+
+  private computeMood(hunger: number, happiness: number, energy: number): PetMood {
+    const avg = (hunger + happiness + energy) / 3;
+    if (avg >= 80) return "ecstatic";
+    if (avg >= 60) return "happy";
+    if (avg >= 40) return "content";
+    if (avg >= 20) return "bored";
+    if (avg >= 5) return "sad";
+    return "neglected";
+  }
+
+  private applyDecay(row: PetRow): { hunger: number; happiness: number; energy: number } {
+    const now = Math.floor(Date.now() / 1000);
+    const lastInteraction = Math.max(row.last_fed, row.last_played, row.last_petted);
+    const elapsedHours = (now - row.updated_at) / 3600;
+
+    const hunger = Math.max(0, row.hunger - elapsedHours * 4);
+    const happiness = Math.max(0, row.happiness - elapsedHours * 3);
+
+    // Split elapsed window into active (≤2h post-interaction, energy drains)
+    // and resting (>2h post-interaction, energy recovers) portions.
+    const restStartSec = lastInteraction + 2 * 3600;
+    const activeSec = Math.max(0, Math.min(restStartSec, now) - row.updated_at);
+    const restingSec = Math.max(0, now - Math.max(restStartSec, row.updated_at));
+    const energy = row.energy - (activeSec / 3600) * 2 + (restingSec / 3600) * 3;
+
+    return {
+      hunger: Math.round(Math.max(0, Math.min(100, hunger))),
+      happiness: Math.round(Math.max(0, Math.min(100, happiness))),
+      energy: Math.round(Math.max(0, Math.min(100, energy))),
+    };
+  }
+
+  private ensurePetExists(): PetRow {
+    const rows = this.sql<PetRow>`SELECT * FROM pet WHERE id = 'default'`;
+    if (rows.length > 0) return rows[0];
+    this.sql`INSERT OR IGNORE INTO pet (id) VALUES ('default')`;
+    return this.sql<PetRow>`SELECT * FROM pet WHERE id = 'default'`[0];
+  }
+
+  private persistPet(hunger: number, happiness: number, energy: number): void {
+    const now = Math.floor(Date.now() / 1000);
+    this.sql`
+      UPDATE pet SET hunger = ${hunger}, happiness = ${happiness}, energy = ${energy}, updated_at = ${now}
+      WHERE id = 'default'
+    `;
+  }
+
+  getPetState(): PetState {
+    const row = this.ensurePetExists();
+    const { hunger, happiness, energy } = this.applyDecay(row);
+    this.persistPet(hunger, happiness, energy);
+    return {
+      name: row.name,
+      hunger,
+      happiness,
+      energy,
+      mood: this.computeMood(hunger, happiness, energy),
+      last_fed: row.last_fed,
+      last_played: row.last_played,
+      last_petted: row.last_petted,
+    };
+  }
+
+  feedPet(): PetState {
+    const row = this.ensurePetExists();
+    const decayed = this.applyDecay(row);
+    const hunger = Math.min(100, decayed.hunger + 25);
+    const happiness = Math.min(100, decayed.happiness + 5);
+    const energy = decayed.energy;
+    const now = Math.floor(Date.now() / 1000);
+    this.sql`
+      UPDATE pet SET hunger = ${hunger}, happiness = ${happiness}, energy = ${energy},
+        last_fed = ${now}, updated_at = ${now}
+      WHERE id = 'default'
+    `;
+    return {
+      name: row.name,
+      hunger,
+      happiness,
+      energy,
+      mood: this.computeMood(hunger, happiness, energy),
+      last_fed: now,
+      last_played: row.last_played,
+      last_petted: row.last_petted,
+    };
+  }
+
+  playWithPet(): PetState {
+    const row = this.ensurePetExists();
+    const decayed = this.applyDecay(row);
+    const hunger = Math.max(0, decayed.hunger - 10);
+    const happiness = Math.min(100, decayed.happiness + 20);
+    const energy = Math.max(0, decayed.energy - 15);
+    const now = Math.floor(Date.now() / 1000);
+    this.sql`
+      UPDATE pet SET hunger = ${hunger}, happiness = ${happiness}, energy = ${energy},
+        last_played = ${now}, updated_at = ${now}
+      WHERE id = 'default'
+    `;
+    return {
+      name: row.name,
+      hunger,
+      happiness,
+      energy,
+      mood: this.computeMood(hunger, happiness, energy),
+      last_fed: row.last_fed,
+      last_played: now,
+      last_petted: row.last_petted,
+    };
+  }
+
+  petTheDog(): PetState {
+    const row = this.ensurePetExists();
+    const decayed = this.applyDecay(row);
+    const hunger = decayed.hunger;
+    const happiness = Math.min(100, decayed.happiness + 10);
+    const energy = Math.min(100, decayed.energy + 5);
+    const now = Math.floor(Date.now() / 1000);
+    this.sql`
+      UPDATE pet SET hunger = ${hunger}, happiness = ${happiness}, energy = ${energy},
+        last_petted = ${now}, updated_at = ${now}
+      WHERE id = 'default'
+    `;
+    return {
+      name: row.name,
+      hunger,
+      happiness,
+      energy,
+      mood: this.computeMood(hunger, happiness, energy),
+      last_fed: row.last_fed,
+      last_played: row.last_played,
+      last_petted: now,
+    };
   }
 
   async sendMessage(
@@ -338,6 +513,20 @@ Rules:
         systemPrompt += `\n\nStuff you know about this person — use it when it's relevant, ignore it when it's not:\n${memoryBlock}`;
       }
 
+      // Inject pet state
+      const pet = this.getPetState();
+      const petNow = Math.floor(Date.now() / 1000);
+      const hoursSinceFed = ((petNow - pet.last_fed) / 3600).toFixed(1);
+      const hoursSincePlayed = ((petNow - pet.last_played) / 3600).toFixed(1);
+      const hoursSincePetted = ((petNow - pet.last_petted) / 3600).toFixed(1);
+      let petContext = `\n\nThis person has a virtual pet dog named "${pet.name}" in the app. Current mood: ${pet.mood}. Hunger: ${pet.hunger}/100, Happiness: ${pet.happiness}/100, Energy: ${pet.energy}/100. Last fed: ${hoursSinceFed}h ago. Last played with: ${hoursSincePlayed}h ago. Last petted: ${hoursSincePetted}h ago.`;
+      if (pet.mood === "neglected" || pet.mood === "sad") {
+        petContext += ` The dog seems lonely — mention it if it feels natural, don't force it.`;
+      } else if (pet.mood === "ecstatic") {
+        petContext += ` The dog is thriving. A brief warm nod is fine if the moment calls for it.`;
+      }
+      systemPrompt += petContext;
+
       const trimmed = trimHistory(history);
 
       const result = streamText({
@@ -472,6 +661,22 @@ callable()(proto.listMemories, {
 callable()(proto.deleteMemory, {
   kind: "method",
   name: "deleteMemory",
+} as ClassMethodDecoratorContext);
+callable()(proto.getPetState, {
+  kind: "method",
+  name: "getPetState",
+} as ClassMethodDecoratorContext);
+callable()(proto.feedPet, {
+  kind: "method",
+  name: "feedPet",
+} as ClassMethodDecoratorContext);
+callable()(proto.playWithPet, {
+  kind: "method",
+  name: "playWithPet",
+} as ClassMethodDecoratorContext);
+callable()(proto.petTheDog, {
+  kind: "method",
+  name: "petTheDog",
 } as ClassMethodDecoratorContext);
 callable({ streaming: true })(proto.sendMessage, {
   kind: "method",
