@@ -8,7 +8,7 @@ together and the sharp edges worth remembering.
 ## Instance-per-tenant inside a namespace
 
 We use the **`ai_search_namespaces` binding** (`AI_SEARCH` in the worker)
-pointed at the `bark` namespace. Every user gets their own AI Search
+pointed at the `default` namespace. Every user gets their own AI Search
 instance inside that namespace, created lazily on their first upload.
 
 ```ts
@@ -140,7 +140,7 @@ AI Search item statuses are `'completed' | 'error' | 'skipped' |
 ## Testing
 
 1. Pro user A uploads a PDF. Confirm in the dashboard that an instance
-   named `u-{A_id}` appears under the `bark` namespace, with one item.
+   named `u-{A_id}` appears under the `default` namespace, with one item.
 2. Ask a question only answerable from the PDF. Expect an inline `[1]`
    and a source card under the bubble.
 3. Pro user B asks the same question in a fresh chat. Expect no

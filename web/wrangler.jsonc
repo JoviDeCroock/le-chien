@@ -39,7 +39,7 @@
   "ai_search_namespaces": [
     {
       "binding": "AI_SEARCH",
-      "namespace": "bark",
+      "namespace": "default",
     },
   ],
 }
