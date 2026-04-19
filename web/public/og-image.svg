@@ -18,5 +18,5 @@
   <!-- Brand name -->
   <text x="600" y="480" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="48" fill="white" letter-spacing="-0.03em">le chien</text>
   <!-- Tagline -->
-  <text x="600" y="530" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="24" fill="#a3a3a3">AI workspace — EU hosted</text>
+  <text x="600" y="530" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="24" fill="#a3a3a3">AI workspace</text>
 </svg>
