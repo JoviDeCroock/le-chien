@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals";
+import { useComputed, useSignal } from "@preact/signals";
 import { Show } from "@preact/signals/utils";
 import type { ToolCall } from "../models/chat";
 
@@ -173,6 +173,10 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
   const isPending = toolCall.status === "pending";
   const argsSummary = formatArgs(toolCall.args);
   const resultSummary = !isPending ? formatResultSummary(toolCall.result) : "";
+  const chevronClass = useComputed(
+    () =>
+      `text-neutral-500 transition-transform duration-100 ${expanded.value ? "rotate-180" : ""}`,
+  );
 
   return (
     <div class="my-2 rounded-lg border border-neutral-700/40 bg-neutral-900/60 overflow-hidden text-xs">
@@ -192,13 +196,7 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
           ) : (
             <span class="w-1.5 h-1.5 rounded-full bg-green-400" />
           )}
-          <svg
-            width={12}
-            height={12}
-            viewBox="0 0 24 24"
-            fill="none"
-            class={`text-neutral-500 transition-transform duration-100 ${expanded.value ? "rotate-180" : ""}`}
-          >
+          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" class={chevronClass}>
             <path
               d="M6 9l6 6 6-6"
               stroke="currentColor"
@@ -216,13 +214,13 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
       )}
 
       {/* Non-web-search collapsed preview */}
-      {!expanded.value && resultSummary && !isWebSearchResult(toolCall.result) && (
+      <Show when={() => !expanded.value && !!resultSummary && !isWebSearchResult(toolCall.result)}>
         <div class="px-3 pb-2 -mt-1">
           <pre class="text-neutral-400 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all line-clamp-3">
             {resultSummary}
           </pre>
         </div>
-      )}
+      </Show>
 
       {isImageResult(toolCall.result) && (
         <div class="px-3 py-2">

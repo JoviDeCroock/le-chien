@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from "preact/hooks";
-import { useSignal } from "@preact/signals";
+import { useComputed, useSignal } from "@preact/signals";
 import { Show } from "@preact/signals/utils";
 import { ContentContainer, BarSection } from "./ui/Layout";
 import {
@@ -57,6 +57,9 @@ export function ChatInput({
   const listening = useSignal(false);
   const dropdownOpen = useSignal(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const chevronClass = useComputed(
+    () => `transition-transform duration-150 ${dropdownOpen.value ? "" : "rotate-180"}`,
+  );
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
@@ -210,10 +213,7 @@ export function ChatInput({
               }`}
               title="Toggle extra tools"
             >
-              <ChevronUpIcon
-                size={12}
-                class={`transition-transform duration-150 ${dropdownOpen.value ? "" : "rotate-180"}`}
-              />
+              <ChevronUpIcon size={12} class={chevronClass} />
               <span>Tools</span>
               {activeCount > 0 && (
                 <span class="bg-violet-600/30 text-violet-300 text-[10px] font-medium rounded-full w-4 h-4 flex items-center justify-center">
