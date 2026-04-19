@@ -492,8 +492,18 @@ function _proxyOf(base: SafeElementBase): SafeElementBase {
         (target as AnyRecord)[prop] = value;
         return true;
       }
-      if (value == null || value === false) target.removeAttribute(prop);
-      else target.setAttribute(prop, String(value));
+      if (value == null || value === false) {
+        target.removeAttribute(prop);
+        return true;
+      }
+      // Non-primitive values aren't HTML attributes — they're framework-internal
+      // state (e.g. Preact's minified `n.l = {}` listener map). Store as a
+      // real property so subsequent reads return the same object.
+      if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+        (target as AnyRecord)[prop] = value;
+        return true;
+      }
+      target.setAttribute(prop, String(value));
       return true;
     },
     get(target, prop: string | symbol): unknown {
@@ -504,6 +514,9 @@ function _proxyOf(base: SafeElementBase): SafeElementBase {
     has(target, prop: string | symbol): boolean {
       if (typeof prop === "symbol") return (prop as symbol) in target;
       if (DOM_PROPERTY_NAMES.has(prop)) return true;
+      // Fake lowercase `on*` props so Preact's `lowerCaseName in dom` check
+      // succeeds and it registers listeners with the correct (lowercase) type.
+      if (/^on[a-z]+$/.test(prop)) return true;
       return prop in target;
     },
   });
