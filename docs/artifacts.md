@@ -83,6 +83,25 @@ streamed. This avoids spinning up a worker per token and re-evaluating
 half-finished syntax. The placeholder card shows during streaming so the
 user knows something is coming.
 
+## Proxy traps and Preact's minified internals
+
+Preact's production build (`dist/preact.mjs`) mangles internal property names.
+Most notably `_listeners` becomes `n.l` — a plain object hung off each DOM
+node that maps `eventName + useCapture` → handler, read by the shared
+`eventProxy`. That object isn't an HTML attribute and must not be routed
+through `setAttribute` by the SafeElement proxy.
+
+Two traps in `_proxyOf` (`web/src/runtime/safe-dom-worker.ts`) guard this:
+
+- **setter**: non-primitive values (objects, functions) are stored directly on
+  the target instead of falling through to `setAttribute(prop, String(value))`.
+  This keeps Preact's `n.l` (and anything similarly-shaped) readable across
+  renders. Primitives still flow to `setAttribute`/`removeAttribute`.
+- **has trap**: returns `true` for any `/^on[a-z]+$/` prop. Preact uses
+  `lowerCaseName in dom` (`props.js:73`) to decide whether to register the
+  listener as `"click"` vs `"Click"`. Without the trap, it registered as
+  `"Click"`, which no browser dispatches — handlers silently never fired.
+
 ## Adding a new sandbox global
 
 1. Import the symbol in `artifact-worker.ts`.
