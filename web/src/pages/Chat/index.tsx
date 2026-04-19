@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "preact/hooks";
 import { useLocation } from "preact-iso";
 import { useModel } from "@preact/signals";
+import { For, Show } from "@preact/signals/utils";
 import { AuthModel } from "../../models/auth";
 import { ChatModel } from "../../models/chat";
 import { ChatUIModel } from "../../models/chat-ui";
@@ -294,7 +295,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
                     >
                       <DogIcon size={14} />
                     </button>
-                    {ui.petPopoverOpen.value && (
+                    <Show when={ui.petPopoverOpen}>
                       <div
                         class="absolute right-0 top-full mt-2 z-40 w-64 bg-neutral-900 border border-neutral-800 rounded-lg"
                         onClick={(e: Event) => e.stopPropagation()}
@@ -307,7 +308,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
                           disabled={tamagotchi.actionCooldown.value}
                         />
                       </div>
-                    )}
+                    </Show>
                   </div>
                 )}
                 {auth.authenticated.value && (
@@ -372,15 +373,19 @@ export function Chat({ conversationId }: { conversationId?: string }) {
               <EmptyState />
             ) : (
               <ContentContainer class="py-6 space-y-1">
-                {chat.messages.value.map((msg) => (
-                  <ChatBubble key={msg.id} message={msg} streaming={chat.streaming.value} />
-                ))}
+                <For each={chat.messages}>
+                  {(msg) => (
+                    <ChatBubble key={msg.id} message={msg} streaming={chat.streaming.value} />
+                  )}
+                </For>
                 <div ref={messagesEnd} />
               </ContentContainer>
             )}
           </div>
 
-          {chat.error.value && <ErrorBanner message={chat.error.value} />}
+          <Show when={chat.error}>
+            <ErrorBanner message={chat.error.value!} />
+          </Show>
 
           {limitBannerMessage && (
             <UpgradeBanner
