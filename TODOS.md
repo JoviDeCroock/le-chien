@@ -6,15 +6,6 @@
 
 ## Engineering
 
-## Validate EU region pinning for Workers AI and D1
-
-**Priority:** P1 (blocks all implementation)
-**What:** Research and confirm that Workers AI inference, D1 data storage, and Durable Objects can be pinned to EU Cloudflare regions.
-**Why:** The entire product thesis is "your data stays in Europe." If Workers AI doesn't respect region hints, or D1/DO data can migrate outside EU, the sovereignty claim is marketing fiction. This must be validated before writing any product code.
-**Context:** Workers support `placement.mode: "smart"` and DO supports `locationHint: "eeur"`, but these are hints, not guarantees. Workers AI region pinning is undocumented — may require contacting Cloudflare or testing empirically. D1 location is set at database creation time. Also audit: does Polar (billing) process data in EU? Does the email provider (auth verification) stay in EU?
-**Effort:** S (human: ~2 hours / CC: ~30 min research)
-**Depends on:** Nothing — this is the first task.
-
 ## Implement free tier daily message limits
 
 **Priority:** P1 (needed before launch)

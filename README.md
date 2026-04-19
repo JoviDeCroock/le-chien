@@ -115,10 +115,10 @@ Open [http://localhost:5173](http://localhost:5173).
 ### Cloudflare Setup
 
 1. **Log in**: `npx wrangler login`
-2. **Create a D1 database** (EU jurisdiction is optional but recommended for EU-hosted deployments):
+2. **Create a D1 database** (jurisdiction is optional — pass `--jurisdiction=eu` if you want to pin storage to the EU):
 
    ```sh
-   npx wrangler d1 create chien-db --jurisdiction=eu
+   npx wrangler d1 create chien-db
    ```
 
    Copy the `database_id` into `web/wrangler.jsonc` (`d1_databases[0].database_id`). Jurisdiction is fixed at creation time.
