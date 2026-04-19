@@ -56,7 +56,7 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
       </Show>
       <div
         ref={containerRef}
-        class="p-3 bg-neutral-950"
+        class="sandboxed-artifact-body p-3 bg-neutral-950 text-neutral-200 max-h-[480px] overflow-auto"
         style={{ display: model.collapsed.value ? "none" : "block" }}
       />
     </div>

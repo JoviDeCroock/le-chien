@@ -15,7 +15,15 @@ function Counter() {
   const [n, setN] = useState(0);
   return h(
     "button",
-    { class: "px-3 py-1 rounded bg-violet-600 text-white", onClick: () => setN(n + 1) },
+    {
+      onClick: () => setN(n + 1),
+      style: {
+        padding: "6px 12px",
+        background: "#7c3aed",
+        color: "#fff",
+        borderRadius: "8px",
+      },
+    },
     "Clicked " + n + " times"
   );
 }
@@ -29,8 +37,11 @@ Rules enforced through the prompt (and partially by the sandbox runtime):
 - No `import`/`export`. The runtime provides `h`, `Fragment`, `useState`,
   `useEffect`, `useRef`, `useMemo`, `useCallback` as scope-injected globals.
 - The component is a single PascalCase function placed last in the block.
-- Tailwind utility classes via `class={…}` for styling — the artifact mounts
-  inside the chat surface so it inherits the dark palette by default.
+- **Inline styles, not Tailwind.** The host page's Tailwind is JIT-compiled
+  from source, so any utility the model invents (e.g. `bg-violet-600`) that
+  isn't already used somewhere in the app will simply not exist at runtime and
+  the element renders unstyled. Inline `style={{ ... }}` objects always apply.
+  The container sets a readable default text color as a backstop.
 
 `web/src/lib/parse-artifacts.ts` splits the streamed content into alternating
 `{ kind: "markdown" }` / `{ kind: "preact" }` segments. While a fence is open
@@ -111,3 +122,28 @@ Two traps in `_proxyOf` (`web/src/runtime/safe-dom-worker.ts`) guard this:
 If the new global needs a stub on the main thread (e.g., a remote-callable
 API), extend `MainToWorkerMessage` / `WorkerToMainMessage` in
 `safe-dom-types.ts` and add a handler in both ends.
+
+## Containment and theme defaults
+
+The artifact mount (`.sandboxed-artifact-body` in `style.css`) is the only thing
+stopping a badly-styled component from blowing up the chat bubble. Concretely:
+
+- **Height clamp.** Container is `max-h-[480px] overflow-auto`. Models love to
+  reach for full-viewport heights on the root of a demo component. The
+  `min-h-screen` / `h-screen` Tailwind utilities are additionally neutralised
+  (`min-height: 0 !important; height: auto`) inside the artifact body, in case
+  a model ignores the inline-styles rule and those classes happen to exist in
+  the JIT output.
+- **Default text color.** The container sets `text-neutral-200` so components
+  that forget a text color still render readable text on the dark card. A common
+  failure mode is the model emitting a white inner card (`bg-white`) with
+  light-gray text inherited from the app — invisible. The system prompt now
+  pushes models toward dark surfaces explicitly, but the default color is the
+  belt-and-braces.
+- **`contain: layout paint`.** Keeps the artifact's layout independent from the
+  surrounding chat stream so a tall component doesn't thrash the parent's
+  layout calculations.
+
+When editing the artifact container or system prompt, keep these three things
+aligned — loosening the height clamp without tightening the prompt means users
+see giant empty artifacts again.
