@@ -230,3 +230,20 @@ body {
   max-width: 100%;
   border-radius: 8px;
 }
+
+/* Sandboxed artifact body: contain models that reach for full-viewport layouts.
+   Models often emit `min-h-screen` / `h-screen` on their root — scope those to
+   the artifact card, not the actual viewport, and clamp intrinsic heights. */
+.sandboxed-artifact-body {
+  contain: layout paint;
+}
+
+.sandboxed-artifact-body > * {
+  max-width: 100%;
+}
+
+.sandboxed-artifact-body .min-h-screen,
+.sandboxed-artifact-body .h-screen {
+  min-height: 0 !important;
+  height: auto !important;
+}

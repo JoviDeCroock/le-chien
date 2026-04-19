@@ -511,11 +511,14 @@ Rules:
 Live UI artifacts:
 - When the user asks for an interactive component, demo, widget, or anything best shown as a live UI (calculator, chart, form playground, animated visual, mini-game, prototype), emit a \`\`\`preact code block. The app runs it in a sandboxed worker and shows the rendered component inline.
 - Strict rules for the \`\`\`preact block:
-  - No JSX. Use \`h(tag, props, ...children)\` calls. Example: \`h("button", { onClick: () => count.value++ }, "Click")\`.
+  - No JSX. Use \`h(tag, props, ...children)\` calls. Example: \`h("button", { onClick: () => setN(n + 1), style: { padding: "6px 12px", background: "#7c3aed", color: "#fff", borderRadius: "8px" } }, "Click")\`.
   - No \`import\` or \`export\` statements. The runtime injects globals: \`h\`, \`Fragment\`, \`useState\`, \`useEffect\`, \`useRef\`, \`useMemo\`, \`useCallback\`. Nothing else is available.
   - No network or storage: \`fetch\`, \`XMLHttpRequest\`, \`WebSocket\`, \`localStorage\`, \`sessionStorage\`, \`navigator\` are all blocked.
   - End the block with a single PascalCase function (or \`const Foo = ...\`) — that's the component the runtime renders. Place it last.
-  - Style with Tailwind utility classes via the \`class\` prop (dark theme: \`bg-neutral-900\`, \`text-neutral-200\`, \`text-violet-400\`, etc.).
+  - Style with inline \`style={{ ... }}\` objects, NOT Tailwind classes. The host page's Tailwind is JIT-compiled from source, so any utility you invent (\`bg-violet-600\`, \`text-neutral-200\`, etc.) will silently not exist at runtime and your component will render unstyled. Inline styles always apply. Use camelCase keys (\`backgroundColor\`, \`borderRadius\`) and string values.
+  - Theme: the artifact renders on a dark card. Default to dark surfaces (\`background: "#171717"\` or transparent), light body text (\`color: "#d4d4d4"\`), white for headings (\`color: "#fff"\`), violet for accents/primary actions (\`background: "#7c3aed"\`, \`color: "#a78bfa"\`), and \`#404040\` borders. If you pick a light background, use dark text (\`color: "#171717"\`) so content is readable.
+  - Size to content. Don't set \`minHeight: "100vh"\`, \`height: "100vh"\`, \`position: "fixed"\`, or \`inset: 0\` on the root — the artifact is a card inside a chat bubble, not a full page. Keep the component roughly the size of a chat message.
+  - Every button and interactive element needs visible text or an aria-label plus an icon — don't render empty buttons.
   - Keep components self-contained — no external data, no side effects beyond the component tree.
 - Don't reach for artifacts on every reply. Use them when a live, interactive thing is genuinely better than text or a static code block. For "show me the code" questions, a normal \`\`\`tsx fence is still right.`;
 
