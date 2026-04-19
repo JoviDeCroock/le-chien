@@ -14,8 +14,11 @@ export const ReadAloudModel = createModel(() => {
 
   function teardown() {
     if (audio) {
+      audio.onended = null;
+      audio.onerror = null;
       audio.pause();
-      audio.src = "";
+      audio.removeAttribute("src");
+      audio.load();
       audio = null;
     }
     if (objectUrl) {
@@ -54,15 +57,15 @@ export const ReadAloudModel = createModel(() => {
       const blob = await res.blob();
       objectUrl = URL.createObjectURL(blob);
       audio = new Audio(objectUrl);
-      audio.addEventListener("ended", () => {
+      audio.onended = () => {
         teardown();
         status.value = "idle";
-      });
-      audio.addEventListener("error", () => {
+      };
+      audio.onerror = () => {
         teardown();
         status.value = "error";
         errorMessage.value = "Playback failed";
-      });
+      };
       await audio.play();
       status.value = "playing";
     } catch (err) {

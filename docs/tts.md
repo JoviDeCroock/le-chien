@@ -64,3 +64,16 @@ to avoid synthesizing partial sentences.
 - Status flips straight to `error`: usually a 500 from the route. The error
   text bubbles up via `errorMessage`. Common cause: the model name is wrong
   for the deployed compatibility date.
+
+## Gotcha: "Playback failed" after a successful read
+
+Setting `audio.src = ""` to unload a media element fires the element's `error`
+event in browsers (empty src is itself a load error). If the `error` handler
+is still attached during teardown, a normal `ended` → teardown sequence ends
+with status flipped to `"error"` and `errorMessage = "Playback failed"` right
+after the `ended` handler had set it to `"idle"`.
+
+Fix: null out `onended`/`onerror` before touching the element's src, then use
+`removeAttribute("src")` + `load()` to release the resource cleanly. Keep the
+listeners as `.on*` properties (not `addEventListener`) so nulling is enough
+to detach them.
