@@ -1,5 +1,13 @@
 import { Agent, callable, type StreamingResponse } from "agents";
-import { streamText, stepCountIs } from "ai";
+import {
+  APICallError,
+  EmptyResponseBodyError,
+  LoadAPIKeyError,
+  NoContentGeneratedError,
+  NoSuchModelError,
+  streamText,
+  stepCountIs,
+} from "ai";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { getModel, MODELS, DEFAULT_MODEL, isPremiumModel } from "../lib/models";
@@ -14,6 +22,7 @@ import {
   tryIncrementDailyMessageUsage,
   tryIncrementDailyPremiumMessageUsage,
 } from "../lib/plans";
+import type { SubscriptionSnapshot } from "../lib/plans";
 import { trackServerEvent, captureServerException } from "../lib/posthog";
 import { trackInferenceCost } from "../lib/polar-events";
 import { isProduction } from "../utils/isProduction";
@@ -34,6 +43,23 @@ type Message = {
   content: string;
   tool_calls: string | null;
   created_at: number;
+};
+
+type ConversationIndexSyncAction = "upsert" | "delete";
+
+type ConversationIndexSyncRow = {
+  conversation_id: string;
+  action: ConversationIndexSyncAction;
+  sync_token: string;
+  title: string | null;
+  model: string | null;
+  conversation_created_at: number | null;
+  conversation_updated_at: number | null;
+  attempts: number;
+  last_error: string | null;
+  next_attempt_at: number;
+  queued_at: number;
+  updated_at: number;
 };
 
 type Memory = {
@@ -75,6 +101,50 @@ type PetState = {
  * Budget leaves room for system prompt + response.
  */
 const MAX_HISTORY_CHARS = 48_000; // ~12k tokens
+const CONVERSATION_INDEX_SYNC_INTERVAL_SECONDS = 60;
+const CONVERSATION_INDEX_RECONCILE_INTERVAL_SECONDS = 60 * 60;
+const CONVERSATION_INDEX_SYNC_BATCH_SIZE = 25;
+const MAX_SYNC_ERROR_LENGTH = 500;
+const MAX_CONVERSATION_INDEX_SYNC_PASSES = 5;
+
+class EmptyAssistantResponseError extends Error {
+  constructor() {
+    super("The model finished without returning a response. Please try again.");
+    this.name = "EmptyAssistantResponseError";
+  }
+}
+
+function toError(err: unknown, fallback = "Unknown error") {
+  return err instanceof Error ? err : new Error(typeof err === "string" ? err : fallback);
+}
+
+function isAiServiceError(err: unknown) {
+  return (
+    APICallError.isInstance(err) ||
+    EmptyResponseBodyError.isInstance(err) ||
+    LoadAPIKeyError.isInstance(err) ||
+    NoContentGeneratedError.isInstance(err) ||
+    NoSuchModelError.isInstance(err)
+  );
+}
+
+function getClientErrorMessage(err: unknown) {
+  if (err instanceof EmptyAssistantResponseError) return err.message;
+  if (isAiServiceError(err)) {
+    return "The AI service failed to respond. Please try again in a moment.";
+  }
+  return "Something went wrong while sending your message. Please try again.";
+}
+
+function getFailureType(err: unknown) {
+  if (err instanceof EmptyAssistantResponseError) return "empty_response";
+  if (isAiServiceError(err)) return "ai_service";
+  return "generic";
+}
+
+function getConversationIndexRetryDelaySeconds(attempts: number) {
+  return Math.min(300, 2 ** Math.min(attempts, 8));
+}
 
 function trimHistory(
   messages: { role: string; content: string }[],
@@ -145,11 +215,367 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
         updated_at INTEGER NOT NULL DEFAULT (unixepoch())
       )
     `;
+    this.sql`
+      CREATE TABLE IF NOT EXISTS conversation_d1_sync_queue (
+        conversation_id TEXT PRIMARY KEY,
+        action TEXT NOT NULL CHECK(action IN ('upsert', 'delete')),
+        sync_token TEXT NOT NULL,
+        title TEXT,
+        model TEXT,
+        conversation_created_at INTEGER,
+        conversation_updated_at INTEGER,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        next_attempt_at INTEGER NOT NULL DEFAULT 0,
+        queued_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+      )
+    `;
+    this.sql`
+      CREATE INDEX IF NOT EXISTS idx_conversation_d1_sync_due
+      ON conversation_d1_sync_queue(next_attempt_at, updated_at)
+    `;
+    this.sql`
+      CREATE TABLE IF NOT EXISTS conversation_d1_sync_meta (
+        key TEXT PRIMARY KEY,
+        value INTEGER NOT NULL
+      )
+    `;
     // Migration: add tool_calls column for existing DOs
     try {
       this.sql`ALTER TABLE messages ADD COLUMN tool_calls TEXT`;
     } catch {
       // Column already exists — ignore
+    }
+    try {
+      this
+        .sql`ALTER TABLE conversation_d1_sync_queue ADD COLUMN sync_token TEXT NOT NULL DEFAULT ''`;
+    } catch {
+      // Column already exists — ignore
+    }
+
+    await this.scheduleEvery<null>(
+      CONVERSATION_INDEX_SYNC_INTERVAL_SECONDS,
+      "flushConversationIndexSyncQueue",
+      null,
+      { retry: { maxAttempts: 1 } },
+    );
+    this.reconcileConversationIndexIfStale();
+  }
+
+  private kickConversationIndexSync(): void {
+    this.queue<null>("flushConversationIndexSyncQueue", null, { retry: { maxAttempts: 1 } }).catch(
+      (err) => {
+        captureServerException(this.env, this.name, toError(err, "Failed to queue D1 sync"), {
+          source: "conversation_index",
+        });
+      },
+    );
+  }
+
+  private enqueueConversationIndexSync(conversation: Conversation, kick = true): void {
+    const queuedAt = Math.floor(Date.now() / 1000);
+    const syncToken = crypto.randomUUID();
+    try {
+      this.sql`
+        INSERT INTO conversation_d1_sync_queue (
+          conversation_id,
+          action,
+          sync_token,
+          title,
+          model,
+          conversation_created_at,
+          conversation_updated_at,
+          attempts,
+          last_error,
+          next_attempt_at,
+          queued_at,
+          updated_at
+        )
+        VALUES (
+          ${conversation.id},
+          ${"upsert"},
+          ${syncToken},
+          ${conversation.title},
+          ${conversation.model},
+          ${conversation.created_at},
+          ${conversation.updated_at},
+          ${0},
+          ${null},
+          ${0},
+          ${queuedAt},
+          ${queuedAt}
+        )
+        ON CONFLICT(conversation_id) DO UPDATE SET
+          action = excluded.action,
+          sync_token = excluded.sync_token,
+          title = excluded.title,
+          model = excluded.model,
+          conversation_created_at = excluded.conversation_created_at,
+          conversation_updated_at = excluded.conversation_updated_at,
+          attempts = 0,
+          last_error = NULL,
+          next_attempt_at = 0,
+          updated_at = excluded.updated_at
+      `;
+      if (kick) this.kickConversationIndexSync();
+    } catch (err) {
+      captureServerException(
+        this.env,
+        this.name,
+        toError(err, "Failed to enqueue conversation index sync"),
+        { source: "conversation_index", conversation_id: conversation.id, action: "upsert" },
+      );
+    }
+  }
+
+  private enqueueConversationIndexDelete(conversationId: string): void {
+    const queuedAt = Math.floor(Date.now() / 1000);
+    const syncToken = crypto.randomUUID();
+    try {
+      this.sql`
+        INSERT INTO conversation_d1_sync_queue (
+          conversation_id,
+          action,
+          sync_token,
+          title,
+          model,
+          conversation_created_at,
+          conversation_updated_at,
+          attempts,
+          last_error,
+          next_attempt_at,
+          queued_at,
+          updated_at
+        )
+        VALUES (
+          ${conversationId},
+          ${"delete"},
+          ${syncToken},
+          ${null},
+          ${null},
+          ${null},
+          ${null},
+          ${0},
+          ${null},
+          ${0},
+          ${queuedAt},
+          ${queuedAt}
+        )
+        ON CONFLICT(conversation_id) DO UPDATE SET
+          action = excluded.action,
+          sync_token = excluded.sync_token,
+          title = NULL,
+          model = NULL,
+          conversation_created_at = NULL,
+          conversation_updated_at = NULL,
+          attempts = 0,
+          last_error = NULL,
+          next_attempt_at = 0,
+          updated_at = excluded.updated_at
+      `;
+      this.kickConversationIndexSync();
+    } catch (err) {
+      captureServerException(
+        this.env,
+        this.name,
+        toError(err, "Failed to enqueue conversation index delete"),
+        { source: "conversation_index", conversation_id: conversationId, action: "delete" },
+      );
+    }
+  }
+
+  private getConversationForIndex(conversationId: string): Conversation | null {
+    const rows = this.sql<Conversation>`
+      SELECT id, title, model, created_at, updated_at
+      FROM conversations
+      WHERE id = ${conversationId}
+    `;
+    return rows[0] ?? null;
+  }
+
+  private getConversationIndexSyncRow(conversationId: string): ConversationIndexSyncRow | null {
+    const rows = this.sql<ConversationIndexSyncRow>`
+      SELECT
+        conversation_id,
+        action,
+        sync_token,
+        title,
+        model,
+        conversation_created_at,
+        conversation_updated_at,
+        attempts,
+        last_error,
+        next_attempt_at,
+        queued_at,
+        updated_at
+      FROM conversation_d1_sync_queue
+      WHERE conversation_id = ${conversationId}
+    `;
+    return rows[0] ?? null;
+  }
+
+  private reconcileConversationIndexIfStale(): void {
+    const now = Math.floor(Date.now() / 1000);
+    const rows = this.sql<{ value: number }>`
+      SELECT value FROM conversation_d1_sync_meta WHERE key = 'last_reconcile_at'
+    `;
+    const lastReconciledAt = rows[0]?.value ?? 0;
+    if (now - lastReconciledAt < CONVERSATION_INDEX_RECONCILE_INTERVAL_SECONDS) return;
+
+    for (const conversation of this.listConversations()) {
+      this.enqueueConversationIndexSync(conversation, false);
+    }
+
+    this.sql`
+      INSERT INTO conversation_d1_sync_meta (key, value)
+      VALUES ('last_reconcile_at', ${now})
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `;
+    this.kickConversationIndexSync();
+  }
+
+  private async syncConversationIndexRow(row: ConversationIndexSyncRow): Promise<void> {
+    if (row.action === "delete") {
+      await this.env.DB.prepare("DELETE FROM conversation_index WHERE id = ? AND user_id = ?")
+        .bind(row.conversation_id, this.name)
+        .run();
+      return;
+    }
+
+    if (
+      row.title === null ||
+      row.model === null ||
+      row.conversation_created_at === null ||
+      row.conversation_updated_at === null
+    ) {
+      throw new Error("Conversation index upsert is missing metadata");
+    }
+
+    const syncedAt = Math.floor(Date.now() / 1000);
+    await this.env.DB.prepare(
+      `
+        INSERT INTO conversation_index (id, user_id, title, model, created_at, updated_at, synced_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          user_id = excluded.user_id,
+          title = excluded.title,
+          model = excluded.model,
+          created_at = excluded.created_at,
+          updated_at = excluded.updated_at,
+          synced_at = excluded.synced_at
+      `,
+    )
+      .bind(
+        row.conversation_id,
+        this.name,
+        row.title,
+        row.model,
+        row.conversation_created_at,
+        row.conversation_updated_at,
+        syncedAt,
+      )
+      .run();
+  }
+
+  private async processConversationIndexSyncRow(
+    initialRow: ConversationIndexSyncRow,
+    now: number,
+  ): Promise<void> {
+    let row: ConversationIndexSyncRow | null = initialRow;
+
+    for (let pass = 0; pass < MAX_CONVERSATION_INDEX_SYNC_PASSES; pass++) {
+      if (!row || row.next_attempt_at > now) return;
+
+      try {
+        await this.syncConversationIndexRow(row);
+        this.sql`
+          DELETE FROM conversation_d1_sync_queue
+          WHERE conversation_id = ${row.conversation_id}
+            AND sync_token = ${row.sync_token}
+        `;
+
+        const latestRow = this.getConversationIndexSyncRow(row.conversation_id);
+        if (!latestRow) {
+          if (row.attempts > 0) {
+            trackServerEvent(this.env, this.name, "conversation_index_sync_recovered", {
+              conversation_id: row.conversation_id,
+              action: row.action,
+              attempts: row.attempts,
+            });
+          }
+          return;
+        }
+
+        if (latestRow.sync_token === row.sync_token) return;
+        row = latestRow;
+      } catch (err) {
+        const error = toError(err, "Conversation index sync failed");
+        const attempts = row.attempts + 1;
+        const nextAttemptAt = now + getConversationIndexRetryDelaySeconds(attempts);
+        const lastError = error.message.slice(0, MAX_SYNC_ERROR_LENGTH);
+
+        this.sql`
+          UPDATE conversation_d1_sync_queue
+          SET
+            attempts = ${attempts},
+            last_error = ${lastError},
+            next_attempt_at = ${nextAttemptAt},
+            updated_at = ${now}
+          WHERE conversation_id = ${row.conversation_id}
+            AND sync_token = ${row.sync_token}
+        `;
+
+        const latestRow = this.getConversationIndexSyncRow(row.conversation_id);
+        if (!latestRow) return;
+        if (latestRow.sync_token !== row.sync_token) {
+          row = latestRow;
+          continue;
+        }
+
+        trackServerEvent(this.env, this.name, "conversation_index_sync_failed", {
+          conversation_id: row.conversation_id,
+          action: row.action,
+          attempts,
+          next_attempt_at: nextAttemptAt,
+        });
+        captureServerException(this.env, this.name, error, {
+          source: "conversation_index",
+          conversation_id: row.conversation_id,
+          action: row.action,
+          attempts,
+        });
+        return;
+      }
+    }
+  }
+
+  async flushConversationIndexSyncQueue(): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+    const rows = this.sql<ConversationIndexSyncRow>`
+      SELECT
+        conversation_id,
+        action,
+        sync_token,
+        title,
+        model,
+        conversation_created_at,
+        conversation_updated_at,
+        attempts,
+        last_error,
+        next_attempt_at,
+        queued_at,
+        updated_at
+      FROM conversation_d1_sync_queue
+      WHERE next_attempt_at <= ${now}
+      ORDER BY updated_at ASC
+      LIMIT ${CONVERSATION_INDEX_SYNC_BATCH_SIZE}
+    `;
+
+    for (const row of rows) {
+      const latestRow = this.getConversationIndexSyncRow(row.conversation_id);
+      if (!latestRow || latestRow.next_attempt_at > now) continue;
+      await this.processConversationIndexSyncRow(latestRow, now);
     }
   }
 
@@ -163,7 +589,9 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       VALUES (${id}, ${title}, ${selectedModel}, ${now}, ${now})
     `;
 
-    return { id, title, model: selectedModel, created_at: now, updated_at: now };
+    const conversation = { id, title, model: selectedModel, created_at: now, updated_at: now };
+    this.enqueueConversationIndexSync(conversation);
+    return conversation;
   }
 
   listConversations(): Conversation[] {
@@ -193,6 +621,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
   deleteConversation(conversationId: string): void {
     this.sql`DELETE FROM messages WHERE conversation_id = ${conversationId}`;
     this.sql`DELETE FROM conversations WHERE id = ${conversationId}`;
+    this.enqueueConversationIndexDelete(conversationId);
   }
 
   updateConversationTitle(conversationId: string, title: string): void {
@@ -201,6 +630,8 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       UPDATE conversations SET title = ${title}, updated_at = ${now}
       WHERE id = ${conversationId}
     `;
+    const conversation = this.getConversationForIndex(conversationId);
+    if (conversation) this.enqueueConversationIndexSync(conversation);
   }
 
   listMemories(): Memory[] {
@@ -387,7 +818,11 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       SELECT id, model FROM conversations WHERE id = ${conversationId}
     `;
     if (conversations.length === 0) {
-      stream.error("Conversation not found");
+      stream.end({
+        error: "Conversation not found.",
+        failureType: "generic",
+        discardOptimistic: true,
+      });
       return;
     }
 
@@ -396,59 +831,139 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     const userMessageId = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000);
     const usageDate = getUsageDate();
-    let subscription = await getSubscriptionSnapshot(this.env, db, userId);
+    let subscription: SubscriptionSnapshot;
+    try {
+      subscription = await getSubscriptionSnapshot(this.env, db, userId);
+    } catch (err) {
+      captureServerException(this.env, userId, toError(err, "Failed to load subscription"), {
+        model: selectedModel,
+        conversation_id: conversationId,
+        source: "subscription",
+      });
+      stream.end({
+        error: "We couldn't verify your plan or usage. Please try again.",
+        failureType: "generic",
+        discardOptimistic: true,
+      });
+      return;
+    }
     let usageReserved = false;
 
     const isPremium = isPremiumModel(selectedModel);
     let premiumUsageReserved = false;
     const enforceRateLimits = isProduction(this.env) && isBillingEnabled(this.env);
 
-    if (enforceRateLimits && subscription.plan === "free") {
-      if (subscription.usage.limitReached) {
-        stream.end({ blocked: true, reason: "daily_limit", subscription });
-        return;
-      }
-
-      if (isPremium && subscription.usage.premiumLimitReached) {
-        stream.end({ blocked: true, reason: "premium_limit", subscription });
-        return;
-      }
-
-      const usedCount = await tryIncrementDailyMessageUsage(this.env.DB, userId, usageDate);
-      if (usedCount === null) {
-        subscription = await getSubscriptionSnapshot(this.env, db, userId);
-        stream.end({ blocked: true, reason: "daily_limit", subscription });
-        return;
-      }
-
-      usageReserved = true;
-
-      if (isPremium) {
-        const premiumUsedCount = await tryIncrementDailyPremiumMessageUsage(
-          this.env.DB,
-          userId,
-          usageDate,
-        );
-        if (premiumUsedCount === null) {
-          // Roll back the general message increment
+    const releaseUsageReservation = async () => {
+      try {
+        if (usageReserved) {
           await decrementDailyMessageUsage(this.env.DB, userId, usageDate);
           usageReserved = false;
-          subscription = await getSubscriptionSnapshot(this.env, db, userId);
+        }
+        if (premiumUsageReserved) {
+          await decrementDailyPremiumMessageUsage(this.env.DB, userId, usageDate);
+          premiumUsageReserved = false;
+        }
+      } catch (err) {
+        captureServerException(
+          this.env,
+          userId,
+          toError(err, "Failed to roll back usage reservation"),
+          { model: selectedModel, conversation_id: conversationId, source: "usage" },
+        );
+      }
+    };
+
+    if (enforceRateLimits && subscription.plan === "free") {
+      try {
+        if (subscription.usage.limitReached) {
+          stream.end({ blocked: true, reason: "daily_limit", subscription });
+          return;
+        }
+
+        if (isPremium && subscription.usage.premiumLimitReached) {
           stream.end({ blocked: true, reason: "premium_limit", subscription });
           return;
         }
-        premiumUsageReserved = true;
-        subscription = buildSubscriptionSnapshot("free", usedCount, undefined, premiumUsedCount);
-      } else {
-        subscription = buildSubscriptionSnapshot("free", usedCount);
+
+        const usedCount = await tryIncrementDailyMessageUsage(this.env.DB, userId, usageDate);
+        if (usedCount === null) {
+          subscription = await getSubscriptionSnapshot(this.env, db, userId);
+          stream.end({ blocked: true, reason: "daily_limit", subscription });
+          return;
+        }
+
+        usageReserved = true;
+
+        if (isPremium) {
+          const premiumUsedCount = await tryIncrementDailyPremiumMessageUsage(
+            this.env.DB,
+            userId,
+            usageDate,
+          );
+          if (premiumUsedCount === null) {
+            await releaseUsageReservation();
+            subscription = await getSubscriptionSnapshot(this.env, db, userId);
+            stream.end({ blocked: true, reason: "premium_limit", subscription });
+            return;
+          }
+          premiumUsageReserved = true;
+          subscription = buildSubscriptionSnapshot(
+            "free",
+            usedCount,
+            undefined,
+            premiumUsedCount,
+            subscription.usage.dailyImageGenerationsUsed,
+            subscription.usage.dailyWebSearchesUsed,
+            subscription.billingEnabled,
+          );
+        } else {
+          subscription = buildSubscriptionSnapshot(
+            "free",
+            usedCount,
+            undefined,
+            subscription.usage.dailyPremiumMessagesUsed,
+            subscription.usage.dailyImageGenerationsUsed,
+            subscription.usage.dailyWebSearchesUsed,
+            subscription.billingEnabled,
+          );
+        }
+      } catch (err) {
+        await releaseUsageReservation();
+        captureServerException(this.env, userId, toError(err, "Failed to reserve usage"), {
+          model: selectedModel,
+          conversation_id: conversationId,
+          source: "usage",
+        });
+        stream.end({
+          error: "We couldn't verify your plan or usage. Please try again.",
+          failureType: "generic",
+          discardOptimistic: true,
+        });
+        return;
       }
     }
 
     const extras = new Set(enabledExtras ?? []);
 
-    const aiModel = getModel(this.env, selectedModel, {
-      sessionAffinity: conversationId,
-    });
+    let aiModel: ReturnType<typeof getModel>;
+    try {
+      aiModel = getModel(this.env, selectedModel, {
+        sessionAffinity: conversationId,
+      });
+    } catch (err) {
+      await releaseUsageReservation();
+      captureServerException(this.env, userId, toError(err, "Failed to load model"), {
+        model: selectedModel,
+        conversation_id: conversationId,
+      });
+      stream.end({
+        error: getClientErrorMessage(err),
+        failureType: getFailureType(err),
+        discardOptimistic: true,
+        subscription,
+      });
+      return;
+    }
 
     const tools = createTools(this.env, {
       onSaveMemory: (key, value) => this.createMemory(key, value),
@@ -474,14 +989,20 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     let fullContent = "";
     const toolCalls: { id: string; name: string; args: unknown; result: unknown }[] = [];
     const assistantMessageId = crypto.randomUUID();
+    let userMessagePersisted = false;
+    let responseCompleted = false;
+    let assistantMessagePersisted = false;
 
     try {
       this.sql`
         INSERT INTO messages (id, conversation_id, role, content, created_at)
         VALUES (${userMessageId}, ${conversationId}, ${"user"}, ${content}, ${now})
       `;
+      userMessagePersisted = true;
 
       this.sql`UPDATE conversations SET updated_at = ${now} WHERE id = ${conversationId}`;
+      const updatedConversation = this.getConversationForIndex(conversationId);
+      if (updatedConversation) this.enqueueConversationIndexSync(updatedConversation);
 
       const history = this.sql<{ role: string; content: string }>`
         SELECT role, content FROM messages
@@ -592,6 +1113,12 @@ Live UI artifacts:
         }
       }
 
+      responseCompleted = true;
+
+      if (fullContent.trim().length === 0 && toolCalls.length === 0) {
+        throw new EmptyAssistantResponseError();
+      }
+
       // Save assistant message with tool call metadata
       const finishedAt = Math.floor(Date.now() / 1000);
       const toolCallsJson = toolCalls.length > 0 ? JSON.stringify(toolCalls) : null;
@@ -599,15 +1126,27 @@ Live UI artifacts:
         INSERT INTO messages (id, conversation_id, role, content, tool_calls, created_at)
         VALUES (${assistantMessageId}, ${conversationId}, ${"assistant"}, ${fullContent}, ${toolCallsJson}, ${finishedAt})
       `;
+      assistantMessagePersisted = true;
 
-      // Auto-title: if this is the first exchange, generate a title from user message
-      const messageCount = this.sql<{ count: number }>`
-        SELECT COUNT(*) as count FROM messages WHERE conversation_id = ${conversationId}
-      `;
-      if (messageCount[0].count <= 2) {
-        const title = content.length > 50 ? content.slice(0, 47) + "..." : content;
-        this
-          .sql`UPDATE conversations SET title = ${title}, updated_at = ${finishedAt} WHERE id = ${conversationId}`;
+      try {
+        // Auto-title: if this is the first exchange, generate a title from user message
+        const messageCount = this.sql<{ count: number }>`
+          SELECT COUNT(*) as count FROM messages WHERE conversation_id = ${conversationId}
+        `;
+        if (messageCount[0].count <= 2) {
+          const title = content.length > 50 ? content.slice(0, 47) + "..." : content;
+          this
+            .sql`UPDATE conversations SET title = ${title}, updated_at = ${finishedAt} WHERE id = ${conversationId}`;
+        }
+        const finishedConversation = this.getConversationForIndex(conversationId);
+        if (finishedConversation) this.enqueueConversationIndexSync(finishedConversation);
+      } catch (err) {
+        captureServerException(
+          this.env,
+          userId,
+          toError(err, "Failed to update conversation metadata"),
+          { model: selectedModel, conversation_id: conversationId, source: "conversation" },
+        );
       }
 
       trackServerEvent(this.env, userId, "chat_completion", {
@@ -617,32 +1156,49 @@ Live UI artifacts:
         response_length: fullContent.length,
       });
 
-      const usage = await result.usage;
-      if (usage.inputTokens != null && usage.outputTokens != null) {
-        trackInferenceCost(this.env, userId, {
+      try {
+        const usage = await result.usage;
+        if (usage.inputTokens != null && usage.outputTokens != null) {
+          trackInferenceCost(this.env, userId, {
+            model: selectedModel,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            totalTokens: usage.totalTokens ?? usage.inputTokens + usage.outputTokens,
+            conversationId,
+          });
+        }
+      } catch (err) {
+        captureServerException(this.env, userId, toError(err, "Failed to track usage"), {
           model: selectedModel,
-          inputTokens: usage.inputTokens,
-          outputTokens: usage.outputTokens,
-          totalTokens: usage.totalTokens ?? usage.inputTokens + usage.outputTokens,
-          conversationId,
+          conversation_id: conversationId,
+          source: "usage_tracking",
         });
       }
 
       stream.end({ messageId: assistantMessageId, subscription });
     } catch (err) {
-      if (usageReserved) {
-        await decrementDailyMessageUsage(this.env.DB, userId, usageDate);
+      const error = toError(err, "Stream failed");
+      const failureType =
+        responseCompleted && fullContent.trim().length > 0 && !assistantMessagePersisted
+          ? "save_failed"
+          : getFailureType(error);
+      if (!responseCompleted || error instanceof EmptyAssistantResponseError) {
+        await releaseUsageReservation();
       }
-      if (premiumUsageReserved) {
-        await decrementDailyPremiumMessageUsage(this.env.DB, userId, usageDate);
-      }
-      captureServerException(
-        this.env,
-        userId,
-        err instanceof Error ? err : new Error("Stream failed"),
-        { model: selectedModel, conversation_id: conversationId },
-      );
-      stream.error(err instanceof Error ? err.message : "Stream failed");
+      captureServerException(this.env, userId, error, {
+        model: selectedModel,
+        conversation_id: conversationId,
+        failure_type: failureType,
+      });
+      stream.end({
+        error:
+          failureType === "save_failed"
+            ? "The response was generated, but we couldn't save it. Please try again."
+            : getClientErrorMessage(error),
+        failureType,
+        discardOptimistic: !userMessagePersisted,
+        subscription,
+      });
     }
   }
 }
