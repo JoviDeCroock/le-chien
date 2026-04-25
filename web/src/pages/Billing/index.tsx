@@ -100,6 +100,19 @@ export function Billing() {
               Retry
             </Button>
           </Card>
+        ) : snap && !snap.billingEnabled ? (
+          <Card>
+            <div class="text-xs font-medium tracking-wide text-neutral-500 uppercase mb-1">
+              Self-hosted
+            </div>
+            <div class="text-xl font-bold text-white mb-2">Billing is disabled</div>
+            <p class="text-sm text-neutral-400">
+              This deployment runs without Polar billing. All users have unlimited access and no
+              daily limits are enforced. To enable billing, set{" "}
+              <code class="text-neutral-300">BILLING_ENABLED=true</code> and configure the Polar
+              secrets.
+            </p>
+          </Card>
         ) : snap ? (
           <div class="space-y-6">
             {/* Current plan */}

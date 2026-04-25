@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
+import { isBillingEnabled } from "../utils/billingEnabled";
 
 export type Plan = "free" | "pro";
 
@@ -13,6 +14,8 @@ type PlanLimits = {
 
 export type SubscriptionSnapshot = {
   plan: Plan;
+  /** When false, billing is disabled — every user is treated as Pro and no limits are enforced. */
+  billingEnabled: boolean;
   limits: PlanLimits;
   usage: {
     dailyMessagesUsed: number;
@@ -65,6 +68,7 @@ export function buildSubscriptionSnapshot(
   dailyPremiumMessagesUsed = 0,
   dailyImageGenerationsUsed = 0,
   dailyWebSearchesUsed = 0,
+  billingEnabled = true,
 ): SubscriptionSnapshot {
   const limits = PLAN_LIMITS[plan];
   const dailyMessagesRemaining =
@@ -84,6 +88,7 @@ export function buildSubscriptionSnapshot(
 
   return {
     plan,
+    billingEnabled,
     limits,
     usage: {
       dailyMessagesUsed,
@@ -110,9 +115,12 @@ export function buildSubscriptionSnapshot(
 }
 
 export async function getUserPlan(
+  env: Cloudflare.Env,
   db: DrizzleD1Database<typeof schema>,
   userId: string,
 ): Promise<Plan> {
+  if (!isBillingEnabled(env)) return "pro";
+
   const row = await db
     .select({ plan: schema.subscription.plan })
     .from(schema.subscription)
@@ -200,18 +208,21 @@ export async function getDailyWebSearchUsage(
 }
 
 export async function getSubscriptionSnapshot(
+  env: Cloudflare.Env,
   db: DrizzleD1Database<typeof schema>,
   userId: string,
   date = new Date(),
 ): Promise<SubscriptionSnapshot> {
-  const plan = await getUserPlan(db, userId);
+  const plan = await getUserPlan(env, db, userId);
   const usageDate = getUsageDate(date);
   const dailyMessagesUsed = plan === "free" ? await getDailyMessageUsage(db, userId, usageDate) : 0;
   const dailyPremiumMessagesUsed =
     plan === "free" ? await getDailyPremiumMessageUsage(db, userId, usageDate) : 0;
   const dailyImageGenerationsUsed =
     plan === "free" ? await getDailyImageGenerationUsage(db, userId, usageDate) : 0;
-  const dailyWebSearchesUsed = await getDailyWebSearchUsage(db, userId, usageDate);
+  const dailyWebSearchesUsed = isBillingEnabled(env)
+    ? await getDailyWebSearchUsage(db, userId, usageDate)
+    : 0;
 
   return buildSubscriptionSnapshot(
     plan,
@@ -220,6 +231,7 @@ export async function getSubscriptionSnapshot(
     dailyPremiumMessagesUsed,
     dailyImageGenerationsUsed,
     dailyWebSearchesUsed,
+    isBillingEnabled(env),
   );
 }
 

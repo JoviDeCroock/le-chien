@@ -13,5 +13,5 @@ subscription.get("/", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  return c.json(await getSubscriptionSnapshot(db, userId));
+  return c.json(await getSubscriptionSnapshot(c.env, db, userId));
 });

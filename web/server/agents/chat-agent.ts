@@ -17,6 +17,7 @@ import {
 import { trackServerEvent, captureServerException } from "../lib/posthog";
 import { trackInferenceCost } from "../lib/polar-events";
 import { isProduction } from "../utils/isProduction";
+import { isBillingEnabled } from "../utils/billingEnabled";
 
 type Conversation = {
   id: string;
@@ -395,12 +396,12 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     const userMessageId = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000);
     const usageDate = getUsageDate();
-    let subscription = await getSubscriptionSnapshot(db, userId);
+    let subscription = await getSubscriptionSnapshot(this.env, db, userId);
     let usageReserved = false;
 
     const isPremium = isPremiumModel(selectedModel);
     let premiumUsageReserved = false;
-    const enforceRateLimits = isProduction(this.env);
+    const enforceRateLimits = isProduction(this.env) && isBillingEnabled(this.env);
 
     if (enforceRateLimits && subscription.plan === "free") {
       if (subscription.usage.limitReached) {
@@ -415,7 +416,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
 
       const usedCount = await tryIncrementDailyMessageUsage(this.env.DB, userId, usageDate);
       if (usedCount === null) {
-        subscription = await getSubscriptionSnapshot(db, userId);
+        subscription = await getSubscriptionSnapshot(this.env, db, userId);
         stream.end({ blocked: true, reason: "daily_limit", subscription });
         return;
       }
@@ -432,7 +433,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
           // Roll back the general message increment
           await decrementDailyMessageUsage(this.env.DB, userId, usageDate);
           usageReserved = false;
-          subscription = await getSubscriptionSnapshot(db, userId);
+          subscription = await getSubscriptionSnapshot(this.env, db, userId);
           stream.end({ blocked: true, reason: "premium_limit", subscription });
           return;
         }

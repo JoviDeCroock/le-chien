@@ -8,6 +8,7 @@ import { chatRoutes } from "./routes/chat";
 import { ttsRoutes } from "./routes/tts";
 import { Bindings, Variables } from "./types";
 import { isProduction } from "./utils/isProduction";
+import { isBillingEnabled } from "./utils/billingEnabled";
 import { getAppOrigin } from "./utils/urls";
 import { trackServerEvent } from "./lib/posthog";
 import * as schema from "./db/schema";
@@ -35,6 +36,10 @@ app.use("/api/*", async (c, next) => {
 });
 
 app.get("/api/billing-success", async (c) => {
+  if (!isBillingEnabled(c.env) || !c.env.POLAR_ACCESS_TOKEN) {
+    return c.json({ error: "Billing is disabled" }, 404);
+  }
+
   // Upgrade customer
   const db = drizzle(c.env.DB, { schema });
 
