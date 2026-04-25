@@ -230,9 +230,9 @@ export function Landing() {
                   €0<span class="text-base font-normal text-neutral-500">/mo</span>
                 </div>
                 <ul class="mt-6 space-y-3 text-sm text-neutral-400">
-                  <PricingFeature>20 messages per day</PricingFeature>
+                  <PricingFeature>10 messages per day</PricingFeature>
                   <PricingFeature>3 premium messages per day</PricingFeature>
-                  <PricingFeature>3 image generations per day</PricingFeature>
+                  <PricingFeature>1 image generation per day</PricingFeature>
                   <PricingFeature>All model modes</PricingFeature>
                   <PricingFeature>Persistent memory</PricingFeature>
                 </ul>
