@@ -34,9 +34,11 @@
   "ai": {
     "binding": "AI",
   },
-  "browser": {
-    "binding": "BROWSER",
-  },
+  "worker_loaders": [
+    {
+      "binding": "LOADER",
+    },
+  ],
   "durable_objects": {
     "bindings": [{ "name": "CHAT_AGENT", "class_name": "ChatAgent" }],
   },

@@ -1,6 +1,7 @@
 import { tool } from "ai";
-import puppeteer from "@cloudflare/puppeteer";
 import { z } from "zod";
+import { runDynamicJavaScript } from "./dynamic-workers";
+import { readResponseTextWithLimit, safeFetchHttpUrl } from "./safe-url";
 import type { Plan } from "./plans";
 import {
   getUsageDate,
@@ -117,101 +118,17 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
 
     run_javascript: tool({
       description:
-        "Execute JavaScript code and return the result. Use this to run calculations, data transformations, string operations, or any JavaScript code the user asks about. The code runs in an isolated environment with no network or filesystem access.",
+        "Execute JavaScript code and return the result. Use this to run calculations, data transformations, string operations, or any JavaScript code the user asks about. The code runs in an isolated Dynamic Worker with outbound network access disabled.",
       inputSchema: z.object({
         code: z
           .string()
           .describe(
-            "The JavaScript code to execute. The last expression's value is returned as the result.",
+            "The JavaScript code to execute. Use an explicit return statement for the result.",
           ),
       }),
       execute: async ({ code }) => {
-        try {
-          const ALLOWED_GLOBALS: Record<string, unknown> = {
-            // Primitives & constructors
-            undefined,
-            NaN,
-            Infinity,
-            Object,
-            Array,
-            String,
-            Number,
-            Boolean,
-            Symbol,
-            BigInt,
-            Map,
-            Set,
-            WeakMap,
-            WeakSet,
-            Promise,
-            Int8Array,
-            Uint8Array,
-            Int16Array,
-            Uint16Array,
-            Int32Array,
-            Uint32Array,
-            Float32Array,
-            Float64Array,
-            ArrayBuffer,
-            SharedArrayBuffer,
-            DataView,
-            RegExp,
-            Error,
-            TypeError,
-            RangeError,
-            SyntaxError,
-            URIError,
-            ReferenceError,
-            // Safe builtins
-            Math,
-            JSON,
-            Date,
-            Intl,
-            isNaN,
-            isFinite,
-            parseFloat,
-            parseInt,
-            encodeURI,
-            encodeURIComponent,
-            decodeURI,
-            decodeURIComponent,
-            // Console for debugging
-            console,
-          };
-
-          const sandbox = new Proxy(ALLOWED_GLOBALS, {
-            has: () => true,
-            get: (target, key) => {
-              if (key === Symbol.unscopables) return undefined;
-              if (key in target) return target[key as string];
-              return undefined;
-            },
-          });
-
-          const wrappedCode = `
-            with (sandbox) {
-              return (async () => {
-                ${code}
-              })();
-            }
-          `;
-          const fn = new Function("sandbox", wrappedCode);
-          const result = await fn(sandbox);
-
-          // Format the result
-          const output =
-            result === undefined
-              ? "undefined"
-              : typeof result === "object"
-                ? JSON.stringify(result, null, 2)
-                : String(result);
-          return { code, result: output };
-        } catch (e) {
-          return {
-            code,
-            error: e instanceof Error ? `${e.name}: ${e.message}` : "Execution failed",
-          };
-        }
+        const result = await runDynamicJavaScript(env, code);
+        return { code, ...result };
       },
     }),
 
@@ -308,7 +225,7 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
       ? {
           read_url: tool({
             description:
-              "Fetch and read the text content of a web page. Returns extracted text with HTML tags stripped. Useful for reading articles, docs, or any public URL. Falls back to browser rendering for JS-heavy or bot-protected pages.",
+              "Fetch and read the text content of a public web page. Returns extracted text with HTML tags stripped. Private, local, reserved, and non-http(s) URLs are rejected.",
             inputSchema: z.object({
               url: z.url().describe("The URL to fetch"),
             }),
@@ -320,54 +237,28 @@ export function createTools(env: Cloudflare.Env, options: ToolOptions = {}) {
 
               // -- Attempt 1: plain fetch --
               try {
-                const res = await fetch(url, {
+                const { response: res, finalUrl } = await safeFetchHttpUrl(url, {
                   headers: {
                     "User-Agent": "le-chien/1.0",
                     Accept:
                       "text/html,application/xhtml+xml,text/plain,text/markdown,application/json",
                   },
-                  redirect: "follow",
                 });
 
                 if (res.ok) {
                   const contentType = res.headers.get("content-type") || "";
-                  const raw = await res.text();
+                  const raw = await readResponseTextWithLimit(res);
                   const text = contentType.includes("html") ? htmlToText(raw) : raw;
                   // If we got meaningful content, return it
                   if (text.trim().length > 100) {
-                    return { url, content: truncate(text), length: text.length };
+                    return { url: finalUrl, content: truncate(text), length: text.length };
                   }
                 }
-                // Fall through to browser rendering on non-ok or empty content
-              } catch {
-                // Fall through to browser rendering
-              }
-
-              // -- Attempt 2: Cloudflare Browser Rendering --
-              if (!env.BROWSER) {
-                return { url, error: "Fetch failed and browser rendering is not available" };
-              }
-
-              try {
-                const browser = await puppeteer.launch(env.BROWSER);
-                const page = await browser.newPage();
-                try {
-                  await page.goto(url, { waitUntil: "networkidle0", timeout: 15000 });
-                  const html = await page.content();
-                  const text = htmlToText(html);
-                  return {
-                    url,
-                    content: truncate(text),
-                    length: text.length,
-                    method: "browser",
-                  };
-                } finally {
-                  await browser.close();
-                }
+                return { url: finalUrl, error: `Fetch returned HTTP ${res.status}` };
               } catch (e) {
                 return {
                   url,
-                  error: e instanceof Error ? e.message : "Browser rendering failed",
+                  error: e instanceof Error ? e.message : "Fetch failed",
                 };
               }
             },

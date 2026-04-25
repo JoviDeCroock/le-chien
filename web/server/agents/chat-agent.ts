@@ -106,6 +106,13 @@ const CONVERSATION_INDEX_RECONCILE_INTERVAL_SECONDS = 60 * 60;
 const CONVERSATION_INDEX_SYNC_BATCH_SIZE = 25;
 const MAX_SYNC_ERROR_LENGTH = 500;
 const MAX_CONVERSATION_INDEX_SYNC_PASSES = 5;
+const MAX_TITLE_CHARS = 120;
+const MAX_MESSAGE_CHARS = 32_000;
+const MAX_MEMORY_KEY_CHARS = 80;
+const MAX_MEMORY_VALUE_CHARS = 1_500;
+const MAX_ENABLED_EXTRAS = 3;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ALLOWED_EXTRAS = new Set(["generate_image", "read_url", "web_search"]);
 
 class EmptyAssistantResponseError extends Error {
   constructor() {
@@ -144,6 +151,62 @@ function getFailureType(err: unknown) {
 
 function getConversationIndexRetryDelaySeconds(attempts: number) {
   return Math.min(300, 2 ** Math.min(attempts, 8));
+}
+
+function assertUuid(value: unknown, label: string) {
+  if (typeof value !== "string" || !UUID_RE.test(value)) {
+    throw new Error(`Invalid ${label}`);
+  }
+  return value;
+}
+
+function normalizeTitle(value: unknown) {
+  if (typeof value !== "string") throw new Error("Invalid title");
+  const title = value.trim().replace(/\s+/g, " ").slice(0, MAX_TITLE_CHARS);
+  return title || "New chat";
+}
+
+function normalizeModel(value: unknown, fallback: string = DEFAULT_MODEL): ModelId {
+  if (typeof value === "string" && value in MODELS) return value as ModelId;
+  if (fallback in MODELS) return fallback as ModelId;
+  return DEFAULT_MODEL;
+}
+
+function normalizeMessageContent(value: unknown) {
+  if (typeof value !== "string") throw new Error("Invalid message");
+  const content = value.trim();
+  if (!content) throw new Error("Message cannot be empty");
+  if (content.length > MAX_MESSAGE_CHARS) {
+    throw new Error(`Message is too long. Limit is ${MAX_MESSAGE_CHARS} characters.`);
+  }
+  return content;
+}
+
+function normalizeEnabledExtras(value: unknown) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new Error("Invalid enabled tools");
+
+  const extras: string[] = [];
+  for (const item of value) {
+    if (typeof item !== "string" || !ALLOWED_EXTRAS.has(item) || extras.includes(item)) continue;
+    extras.push(item);
+    if (extras.length >= MAX_ENABLED_EXTRAS) break;
+  }
+  return extras;
+}
+
+function normalizeMemoryKey(value: unknown) {
+  if (typeof value !== "string") throw new Error("Invalid memory key");
+  const key = value.trim().replace(/\s+/g, " ").slice(0, MAX_MEMORY_KEY_CHARS);
+  if (!key) throw new Error("Memory key cannot be empty");
+  return key;
+}
+
+function normalizeMemoryValue(value: unknown) {
+  if (typeof value !== "string") throw new Error("Invalid memory value");
+  const memory = value.trim().slice(0, MAX_MEMORY_VALUE_CHARS);
+  if (!memory) throw new Error("Memory value cannot be empty");
+  return memory;
 }
 
 function trimHistory(
@@ -582,14 +645,21 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
   createConversation(title: string, model?: string): Conversation {
     const id = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000);
-    const selectedModel = model && model in MODELS ? model : DEFAULT_MODEL;
+    const safeTitle = normalizeTitle(title);
+    const selectedModel = normalizeModel(model);
 
     this.sql`
       INSERT INTO conversations (id, title, model, created_at, updated_at)
-      VALUES (${id}, ${title}, ${selectedModel}, ${now}, ${now})
+      VALUES (${id}, ${safeTitle}, ${selectedModel}, ${now}, ${now})
     `;
 
-    const conversation = { id, title, model: selectedModel, created_at: now, updated_at: now };
+    const conversation = {
+      id,
+      title: safeTitle,
+      model: selectedModel,
+      created_at: now,
+      updated_at: now,
+    };
     this.enqueueConversationIndexSync(conversation);
     return conversation;
   }
@@ -603,6 +673,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
   }
 
   getConversation(conversationId: string): { conversation: Conversation; messages: Message[] } {
+    conversationId = assertUuid(conversationId, "conversation id");
     const conversations = this.sql<Conversation>`
       SELECT id, title, model, created_at, updated_at
       FROM conversations WHERE id = ${conversationId}
@@ -619,12 +690,15 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
   }
 
   deleteConversation(conversationId: string): void {
+    conversationId = assertUuid(conversationId, "conversation id");
     this.sql`DELETE FROM messages WHERE conversation_id = ${conversationId}`;
     this.sql`DELETE FROM conversations WHERE id = ${conversationId}`;
     this.enqueueConversationIndexDelete(conversationId);
   }
 
   updateConversationTitle(conversationId: string, title: string): void {
+    conversationId = assertUuid(conversationId, "conversation id");
+    title = normalizeTitle(title);
     const now = Math.floor(Date.now() / 1000);
     this.sql`
       UPDATE conversations SET title = ${title}, updated_at = ${now}
@@ -643,6 +717,8 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
   }
 
   createMemory(key: string, value: string): Memory {
+    key = normalizeMemoryKey(key);
+    value = normalizeMemoryValue(value);
     const id = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000);
     this.sql`
@@ -653,6 +729,9 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
   }
 
   updateMemory(memoryId: string, key: string, value: string): Memory {
+    memoryId = assertUuid(memoryId, "memory id");
+    key = normalizeMemoryKey(key);
+    value = normalizeMemoryValue(value);
     const now = Math.floor(Date.now() / 1000);
     this.sql`
       UPDATE memories SET key = ${key}, value = ${value}, updated_at = ${now}
@@ -665,6 +744,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
   }
 
   deleteMemory(memoryId: string): void {
+    memoryId = assertUuid(memoryId, "memory id");
     this.sql`DELETE FROM memories WHERE id = ${memoryId}`;
   }
 
@@ -810,12 +890,28 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     model?: string,
     enabledExtras?: string[],
   ) {
+    let safeConversationId: string;
+    let safeContent: string;
+    let safeEnabledExtras: string[];
+    try {
+      safeConversationId = assertUuid(conversationId, "conversation id");
+      safeContent = normalizeMessageContent(content);
+      safeEnabledExtras = normalizeEnabledExtras(enabledExtras);
+    } catch (err) {
+      stream.end({
+        error: err instanceof Error ? err.message : "Invalid message request",
+        failureType: "generic",
+        discardOptimistic: true,
+      });
+      return;
+    }
+
     const db = drizzle(this.env.DB, { schema });
     const userId = this.name;
 
     // Verify conversation exists
     const conversations = this.sql<Conversation>`
-      SELECT id, model FROM conversations WHERE id = ${conversationId}
+      SELECT id, model FROM conversations WHERE id = ${safeConversationId}
     `;
     if (conversations.length === 0) {
       stream.end({
@@ -827,7 +923,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     }
 
     const conversation = conversations[0];
-    const selectedModel = (model ?? conversation.model) as ModelId;
+    const selectedModel = normalizeModel(model, conversation.model);
     const userMessageId = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000);
     const usageDate = getUsageDate();
@@ -837,7 +933,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     } catch (err) {
       captureServerException(this.env, userId, toError(err, "Failed to load subscription"), {
         model: selectedModel,
-        conversation_id: conversationId,
+        conversation_id: safeConversationId,
         source: "subscription",
       });
       stream.end({
@@ -868,7 +964,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
           this.env,
           userId,
           toError(err, "Failed to roll back usage reservation"),
-          { model: selectedModel, conversation_id: conversationId, source: "usage" },
+          { model: selectedModel, conversation_id: safeConversationId, source: "usage" },
         );
       }
     };
@@ -931,7 +1027,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
         await releaseUsageReservation();
         captureServerException(this.env, userId, toError(err, "Failed to reserve usage"), {
           model: selectedModel,
-          conversation_id: conversationId,
+          conversation_id: safeConversationId,
           source: "usage",
         });
         stream.end({
@@ -943,18 +1039,18 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       }
     }
 
-    const extras = new Set(enabledExtras ?? []);
+    const extras = new Set(safeEnabledExtras);
 
     let aiModel: ReturnType<typeof getModel>;
     try {
       aiModel = getModel(this.env, selectedModel, {
-        sessionAffinity: conversationId,
+        sessionAffinity: safeConversationId,
       });
     } catch (err) {
       await releaseUsageReservation();
       captureServerException(this.env, userId, toError(err, "Failed to load model"), {
         model: selectedModel,
-        conversation_id: conversationId,
+        conversation_id: safeConversationId,
       });
       stream.end({
         error: getClientErrorMessage(err),
@@ -979,7 +1075,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
             plan: subscription.plan,
           }
         : undefined,
-      enabledExtras: enabledExtras ?? [],
+      enabledExtras: safeEnabledExtras,
       imageGenerationLimitReached:
         enforceRateLimits && subscription.usage.imageGenerationLimitReached,
       webSearchLimitReached: enforceRateLimits && subscription.usage.webSearchLimitReached,
@@ -996,17 +1092,17 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     try {
       this.sql`
         INSERT INTO messages (id, conversation_id, role, content, created_at)
-        VALUES (${userMessageId}, ${conversationId}, ${"user"}, ${content}, ${now})
+        VALUES (${userMessageId}, ${safeConversationId}, ${"user"}, ${safeContent}, ${now})
       `;
       userMessagePersisted = true;
 
-      this.sql`UPDATE conversations SET updated_at = ${now} WHERE id = ${conversationId}`;
-      const updatedConversation = this.getConversationForIndex(conversationId);
+      this.sql`UPDATE conversations SET updated_at = ${now} WHERE id = ${safeConversationId}`;
+      const updatedConversation = this.getConversationForIndex(safeConversationId);
       if (updatedConversation) this.enqueueConversationIndexSync(updatedConversation);
 
       const history = this.sql<{ role: string; content: string }>`
         SELECT role, content FROM messages
-        WHERE conversation_id = ${conversationId}
+        WHERE conversation_id = ${safeConversationId}
         ORDER BY created_at ASC
       `;
 
@@ -1026,7 +1122,7 @@ Rules:
 - Have opinions when asked. Don't sit on the fence with "it depends on your use case" when you can give a straight answer.
 - Match how the person talks to you. Short question, short answer. Long detailed question, longer detailed answer.
 - Use markdown formatting (headings, lists, code blocks) when it helps — not to make short answers look longer.
-- You have tools: use calculate for math, get_current_datetime for time, ${extras.has("web_search") ? "web_search to search the web for current info, " : ""}${extras.has("read_url") ? "read_url for web pages, " : ""}${extras.has("generate_image") ? "generate_image for pictures, " : ""}run_javascript to run code. Always run code rather than just showing it when asked to test something. Just use tools — don't narrate that you're using them.
+- You have tools: use calculate for math, get_current_datetime for time, ${extras.has("web_search") ? "web_search to search the web for current info, " : ""}${extras.has("read_url") ? "read_url for public web pages, " : ""}${extras.has("generate_image") ? "generate_image for pictures, " : ""}run_javascript to run code in an isolated Dynamic Worker. Always run code rather than just showing it when asked to test something, and use an explicit return statement for the result. Just use tools — don't narrate that you're using them.
 - When you use web_search, always cite your sources inline. Use numbered markdown links like [1](url), [2](url) etc. next to the claims they support. At the end of your response, list all sources with their titles. This lets people verify what you're saying.
 - Proactively use save_memory when the person shares something worth remembering: their name, role, preferences, projects, tech stack, goals, or any context they'd expect you to know next time. Don't save throwaway details or things only relevant to the current question. Before saving, check the existing memories listed below — if a memory with the same topic already exists, update it instead of creating a duplicate. Never save two memories about the same thing.
 
@@ -1034,8 +1130,9 @@ Live UI artifacts:
 - When the user asks for an interactive component, demo, widget, or anything best shown as a live UI (calculator, chart, form playground, animated visual, mini-game, prototype), emit a \`\`\`preact code block. The app runs it in a sandboxed worker and shows the rendered component inline.
 - Strict rules for the \`\`\`preact block:
   - No JSX. Use \`h(tag, props, ...children)\` calls. Example: \`h("button", { onClick: () => setN(n + 1), style: { padding: "6px 12px", background: "#7c3aed", color: "#fff", borderRadius: "8px" } }, "Click")\`.
-  - No \`import\` or \`export\` statements. The runtime injects globals: \`h\`, \`Fragment\`, \`useState\`, \`useEffect\`, \`useRef\`, \`useMemo\`, \`useCallback\`. Nothing else is available.
-  - No network or storage: \`fetch\`, \`XMLHttpRequest\`, \`WebSocket\`, \`localStorage\`, \`sessionStorage\`, \`navigator\` are all blocked.
+  - No \`import\` or \`export\` statements. The server-side Dynamic Worker renderer injects globals: \`h\`, \`Fragment\`, \`useState\`, \`useEffect\`, \`useRef\`, \`useMemo\`, \`useCallback\`. Nothing else is available.
+  - No network or storage: \`fetch\`, \`XMLHttpRequest\`, \`WebSocket\`, \`localStorage\`, \`sessionStorage\`, \`navigator\` are all blocked by the renderer.
+  - \`useEffect\` is supported for deterministic local state updates after render. Don't use it for browser APIs, timers, network, storage, or long-running work.
   - End the block with a single PascalCase function (or \`const Foo = ...\`) — that's the component the runtime renders. Place it last.
   - Style with inline \`style={{ ... }}\` objects, NOT Tailwind classes. The host page's Tailwind is JIT-compiled from source, so any utility you invent (\`bg-violet-600\`, \`text-neutral-200\`, etc.) will silently not exist at runtime and your component will render unstyled. Inline styles always apply. Use camelCase keys (\`backgroundColor\`, \`borderRadius\`) and string values.
   - Theme: the artifact renders on a dark card. Default to dark surfaces (\`background: "#171717"\` or transparent), light body text (\`color: "#d4d4d4"\`), white for headings (\`color: "#fff"\`), violet for accents/primary actions (\`background: "#7c3aed"\`, \`color: "#a78bfa"\`), and \`#404040\` borders. If you pick a light background, use dark text (\`color: "#171717"\`) so content is readable.
@@ -1124,34 +1221,34 @@ Live UI artifacts:
       const toolCallsJson = toolCalls.length > 0 ? JSON.stringify(toolCalls) : null;
       this.sql`
         INSERT INTO messages (id, conversation_id, role, content, tool_calls, created_at)
-        VALUES (${assistantMessageId}, ${conversationId}, ${"assistant"}, ${fullContent}, ${toolCallsJson}, ${finishedAt})
+        VALUES (${assistantMessageId}, ${safeConversationId}, ${"assistant"}, ${fullContent}, ${toolCallsJson}, ${finishedAt})
       `;
       assistantMessagePersisted = true;
 
       try {
         // Auto-title: if this is the first exchange, generate a title from user message
         const messageCount = this.sql<{ count: number }>`
-          SELECT COUNT(*) as count FROM messages WHERE conversation_id = ${conversationId}
+          SELECT COUNT(*) as count FROM messages WHERE conversation_id = ${safeConversationId}
         `;
         if (messageCount[0].count <= 2) {
-          const title = content.length > 50 ? content.slice(0, 47) + "..." : content;
+          const title = safeContent.length > 50 ? safeContent.slice(0, 47) + "..." : safeContent;
           this
-            .sql`UPDATE conversations SET title = ${title}, updated_at = ${finishedAt} WHERE id = ${conversationId}`;
+            .sql`UPDATE conversations SET title = ${title}, updated_at = ${finishedAt} WHERE id = ${safeConversationId}`;
         }
-        const finishedConversation = this.getConversationForIndex(conversationId);
+        const finishedConversation = this.getConversationForIndex(safeConversationId);
         if (finishedConversation) this.enqueueConversationIndexSync(finishedConversation);
       } catch (err) {
         captureServerException(
           this.env,
           userId,
           toError(err, "Failed to update conversation metadata"),
-          { model: selectedModel, conversation_id: conversationId, source: "conversation" },
+          { model: selectedModel, conversation_id: safeConversationId, source: "conversation" },
         );
       }
 
       trackServerEvent(this.env, userId, "chat_completion", {
         model: selectedModel,
-        conversation_id: conversationId,
+        conversation_id: safeConversationId,
         tool_calls_count: toolCalls.length,
         response_length: fullContent.length,
       });
@@ -1164,13 +1261,13 @@ Live UI artifacts:
             inputTokens: usage.inputTokens,
             outputTokens: usage.outputTokens,
             totalTokens: usage.totalTokens ?? usage.inputTokens + usage.outputTokens,
-            conversationId,
+            conversationId: safeConversationId,
           });
         }
       } catch (err) {
         captureServerException(this.env, userId, toError(err, "Failed to track usage"), {
           model: selectedModel,
-          conversation_id: conversationId,
+          conversation_id: safeConversationId,
           source: "usage_tracking",
         });
       }
@@ -1187,7 +1284,7 @@ Live UI artifacts:
       }
       captureServerException(this.env, userId, error, {
         model: selectedModel,
-        conversation_id: conversationId,
+        conversation_id: safeConversationId,
         failure_type: failureType,
       });
       stream.end({
