@@ -2,6 +2,13 @@ node_modules
 dist
 .wrangler
 .dev.vars
+wrangler.jsonc
 .DS_Store
 *.log
 .gstack/
+.agents/
+.claude/
+skills-lock.json
+**/.agents/
+**/.claude/
+**/skills-lock.json

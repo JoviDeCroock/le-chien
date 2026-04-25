@@ -1,7 +1,13 @@
 {
+  "name": "le-chien",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JoviDeCroock/le-chien.git"
+  },
   "scripts": {
-    "dev": "cd web && npm run dev",
+    "dev": "pnpm --dir web dev",
     "prepare": "node ./scripts/install-git-hooks.mjs",
     "lint": "oxlint --fix",
     "format": "oxfmt --write .",

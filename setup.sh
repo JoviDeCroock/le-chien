@@ -11,6 +11,13 @@ else
   echo "web/.dev.vars already exists, skipping"
 fi
 
+if [ ! -f web/wrangler.jsonc ]; then
+  cp web/wrangler.example.jsonc web/wrangler.jsonc
+  echo "Created web/wrangler.jsonc from example"
+else
+  echo "web/wrangler.jsonc already exists, skipping"
+fi
+
 echo ""
 echo "Installing dependencies..."
 pnpm install
@@ -25,7 +32,8 @@ echo ""
 echo "Done! Next steps:"
 echo ""
 echo "  1. Edit web/.dev.vars with your Polar, OpenAI, and Cloudflare keys"
-echo "  2. Start the dev server:"
+echo "  2. Edit web/wrangler.jsonc with your Cloudflare account, D1, URL, and product IDs"
+echo "  3. Start the dev server:"
 echo "     cd web && pnpm dev"
 echo ""
 echo "See README.md for full setup instructions."

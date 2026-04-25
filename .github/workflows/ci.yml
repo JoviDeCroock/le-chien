@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Create worker config
+        run: cp web/wrangler.example.jsonc web/wrangler.jsonc
+
       - name: Lint and format check
         run: pnpm -w run check
 
