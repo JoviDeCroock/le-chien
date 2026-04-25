@@ -8,6 +8,7 @@ This guide deploys le chien to Cloudflare Workers with D1, Durable Objects, Work
 - A Cloudflare account with Workers, D1, Durable Objects, Workers AI, Browser Rendering, and AI Gateway access.
 - A Polar account and Pro product if billing is enabled.
 - Optional PostHog and Tavily accounts.
+- Optional `jq` for inspecting JSON responses from Cloudflare API commands.
 
 ## 1. Create local deployment config
 
@@ -34,15 +35,74 @@ cd web
 npx wrangler login
 ```
 
-## 3. Create D1
+## 3. Create Cloudflare resources
 
-Create the remote database once:
+Set shell variables used by the commands below:
 
 ```sh
-npx wrangler d1 create chien-db
+cd web
+export CF_ACCOUNT_ID="<your-cloudflare-account-id>"
+export CF_AI_GATEWAY_ID="chien-gateway"
+export D1_DATABASE_NAME="chien-db"
+export CLOUDFLARE_API_TOKEN="<token-with-ai-gateway-read-edit>"
 ```
 
-Copy the returned `database_id` into `web/wrangler.jsonc`. If you need EU data location, create it with `--jurisdiction=eu`; jurisdiction cannot be changed later.
+Use a Cloudflare API token with AI Gateway Read/Edit permissions for `CLOUDFLARE_API_TOKEN`. You can reuse the same value later for the app's `CF_API_TOKEN` secret if your deployment needs a Cloudflare API token.
+
+### D1
+
+Create the remote D1 database and let Wrangler write the binding into your local, ignored `web/wrangler.jsonc`:
+
+```sh
+pnpm exec wrangler d1 create "$D1_DATABASE_NAME" \
+  --binding DB \
+  --jurisdiction eu \
+  --update-config
+```
+
+Omit `--jurisdiction eu` if you do not need EU-only storage. If you only want a location hint instead of a jurisdiction restriction, replace it with a `--location` value such as `weur`, `eeur`, `wnam`, or `enam`.
+
+Confirm the remote database:
+
+```sh
+pnpm exec wrangler d1 info "$D1_DATABASE_NAME"
+```
+
+### AI Gateway
+
+Wrangler does not currently expose an `ai-gateway create` command. Create the gateway through the Cloudflare API:
+
+```sh
+curl --fail --request POST \
+  "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai-gateway/gateways" \
+  --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+  --header "Content-Type: application/json" \
+  --data "{\"id\":\"${CF_AI_GATEWAY_ID}\",\"collect_logs\":true}"
+```
+
+Confirm the gateway:
+
+```sh
+curl --fail \
+  "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai-gateway/gateways/${CF_AI_GATEWAY_ID}" \
+  --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+```
+
+Update `web/wrangler.jsonc` so `vars.CF_ACCOUNT_ID` and `vars.CF_AI_GATEWAY_ID` match the values above.
+
+### Workers AI, Browser Rendering, and Durable Objects
+
+These are configured as bindings in `web/wrangler.jsonc` and are provisioned/connected by Wrangler during deploy:
+
+- `ai.binding = "AI"` enables Workers AI at `env.AI`.
+- `browser.binding = "BROWSER"` enables Browser Rendering at `env.BROWSER`.
+- `durable_objects.bindings` plus `migrations` creates/connects `ChatAgent`.
+
+You can confirm Workers AI access from the CLI:
+
+```sh
+pnpm exec wrangler ai models --json
+```
 
 ## 4. Configure secrets
 
