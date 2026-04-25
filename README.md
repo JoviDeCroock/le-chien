@@ -2,6 +2,18 @@
 
 An open-model AI chat workspace built on Cloudflare — streaming chat, per-user conversation storage, authentication, and billing, all in a single Worker.
 
+![le chien preview](./web/public/og-image.svg)
+
+## Project Status
+
+le chien is open source as a reference implementation and starter for Cloudflare-native AI chat products. It is usable for development, but hosted production usage should wait until the launch issues below are resolved.
+
+- [#77](https://github.com/JoviDeCroock/le-chien/issues/77): enforce free-tier daily message limits.
+- [#78](https://github.com/JoviDeCroock/le-chien/issues/78): harden `ChatAgent#sendMessage` error handling.
+- [#79](https://github.com/JoviDeCroock/le-chien/issues/79): add Durable Object → D1 sync retry handling.
+
+Use [docs/open-source-release.md](./docs/open-source-release.md) before changing repository visibility.
+
 ## Tech Stack
 
 | Layer      | Technology                                          |
@@ -31,10 +43,27 @@ An open-model AI chat workspace built on Cloudflare — streaming chat, per-user
 │   │   ├── routes/        API routes
 │   │   └── utils/         Helpers
 │   ├── drizzle/           D1 migrations
-│   └── wrangler.jsonc     Worker config
+│   └── wrangler.example.jsonc Example Worker config
 ├── docs/                  Internal design & architecture notes
 └── package.json           Workspace scripts (lint, format)
 ```
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Browser[Preact client] --> Worker[Hono Worker API]
+  Worker --> Auth[Better Auth]
+  Worker --> DB[(Cloudflare D1)]
+  Worker --> ChatAgent[Durable Object: ChatAgent]
+  ChatAgent --> LocalSQLite[(DO SQLite)]
+  ChatAgent --> Models[Workers AI / OpenAI via AI Gateway]
+  ChatAgent --> Tools[Tools: calculator, images, web search]
+  Worker --> Polar[Polar billing]
+  Worker --> PostHog[PostHog analytics]
+```
+
+See [docs/architecture.md](./docs/architecture.md) for more detail.
 
 ## Quick Start
 
@@ -42,7 +71,7 @@ An open-model AI chat workspace built on Cloudflare — streaming chat, per-user
 ./setup.sh
 ```
 
-This copies the example env file, installs dependencies, and runs local D1 migrations. Then follow the steps below to fill in your keys.
+This copies the example env and Worker config files, installs dependencies, and runs local D1 migrations. Then follow the steps below to fill in your keys.
 
 ## Getting Started
 
@@ -59,13 +88,16 @@ This copies the example env file, installs dependencies, and runs local D1 migra
 pnpm install
 ```
 
-### 2. Set up environment files
+### 2. Set up local configuration
 
-Copy the example env file:
+Copy the examples:
 
 ```sh
 cp web/.dev.vars.example web/.dev.vars
+cp web/wrangler.example.jsonc web/wrangler.jsonc
 ```
+
+Both generated files are gitignored. Keep real account IDs, database IDs, product IDs, and secrets out of commits.
 
 | Variable               | Description                                                                                |
 | ---------------------- | ------------------------------------------------------------------------------------------ |
@@ -79,7 +111,7 @@ cp web/.dev.vars.example web/.dev.vars
 | `POSTHOG_API_KEY`      | Optional. Enables server-side event tracking.                                              |
 | `TAVILY_API_KEY`       | Optional. Enables the `web_search` tool.                                                   |
 
-`APP_URL`, `BETTER_AUTH_URL`, `LOCAL`, and `CF_AI_GATEWAY_ID` live in `web/wrangler.jsonc` under `vars`. Replace `$YOUR_URL` with your production origin before deploying.
+`APP_URL`, `BETTER_AUTH_URL`, `LOCAL`, `CF_ACCOUNT_ID`, `CF_AI_GATEWAY_ID`, `POLAR_PRO_PRODUCT_ID`, and D1 `database_id` live in your local `web/wrangler.jsonc`. Replace placeholders before deploying.
 
 ### 3. Set up Polar (billing)
 
@@ -112,44 +144,7 @@ Open [http://localhost:5173](http://localhost:5173).
 
 ## Deployment
 
-### Cloudflare Setup
-
-1. **Log in**: `npx wrangler login`
-2. **Create a D1 database** (jurisdiction is optional — pass `--jurisdiction=eu` if you want to pin storage to the EU):
-
-   ```sh
-   npx wrangler d1 create chien-db
-   ```
-
-   Copy the `database_id` into `web/wrangler.jsonc` (`d1_databases[0].database_id`). Jurisdiction is fixed at creation time.
-
-3. **Run migrations on the remote database**:
-
-   ```sh
-   cd web && pnpm run db:migrate:remote
-   ```
-
-4. **Set secrets** in Cloudflare:
-
-   ```sh
-   cd web
-   npx wrangler secret put BETTER_AUTH_SECRET
-   npx wrangler secret put POLAR_ACCESS_TOKEN
-   npx wrangler secret put POLAR_WEBHOOK_SECRET
-   npx wrangler secret put POLAR_PRO_PRODUCT_ID
-   npx wrangler secret put OPENAI_API_KEY
-   npx wrangler secret put CF_ACCOUNT_ID
-   npx wrangler secret put CF_API_TOKEN
-   # optional
-   npx wrangler secret put POSTHOG_API_KEY
-   npx wrangler secret put TAVILY_API_KEY
-   ```
-
-5. **Update production URLs** in `web/wrangler.jsonc`:
-   - `APP_URL` and `BETTER_AUTH_URL`: replace `$YOUR_URL` with your production origin (e.g. `https://chat.example.com`).
-   - `CF_AI_GATEWAY_ID`: set to your AI Gateway ID (create one in the Cloudflare dashboard).
-
-### Deploy
+See [docs/deployment.md](./docs/deployment.md) for the full Cloudflare, D1, Polar, secrets, verification, and rollback flow.
 
 ```sh
 cd web && pnpm run deploy

@@ -51,8 +51,7 @@ code.
 
 ## Sandbox model
 
-Ported from the `dynamui` prototype (see `/Users/jovi/Documents/SideProjects/dynamui`).
-Lives entirely in `web/src/runtime/`:
+Ported from an earlier local prototype. The runtime lives entirely in `web/src/runtime/`:
 
 | File | Role |
 | --- | --- |

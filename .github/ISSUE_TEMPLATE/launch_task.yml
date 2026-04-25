@@ -1,0 +1,26 @@
+name: Launch task
+description: Track production-readiness work.
+title: "Launch: "
+labels: ["launch"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What needs to be true before launch?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What work is included?
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: How should reviewers verify this is done?
+    validations:
+      required: true
