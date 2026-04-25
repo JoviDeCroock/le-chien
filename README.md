@@ -4,16 +4,6 @@ An open-model AI chat workspace built on Cloudflare — streaming chat, per-user
 
 ![le chien preview](./web/public/og-image.svg)
 
-## Project Status
-
-le chien is open source as a reference implementation and starter for Cloudflare-native AI chat products. It is usable for development, but hosted production usage should wait until the launch issues below are resolved.
-
-- [#77](https://github.com/JoviDeCroock/le-chien/issues/77): enforce free-tier daily message limits.
-- [#78](https://github.com/JoviDeCroock/le-chien/issues/78): harden `ChatAgent#sendMessage` error handling.
-- [#79](https://github.com/JoviDeCroock/le-chien/issues/79): add Durable Object → D1 sync retry handling.
-
-Use [docs/open-source-release.md](./docs/open-source-release.md) before changing repository visibility.
-
 ## Tech Stack
 
 | Layer      | Technology                                          |

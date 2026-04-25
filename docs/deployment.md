@@ -195,12 +195,3 @@ npx wrangler rollback
 ```
 
 If a migration caused the issue, rollback the Worker first, then decide whether the D1 schema needs a forward fix. Avoid destructive D1 changes without a backup/export.
-
-## Production checklist
-
-- `web/wrangler.jsonc` exists locally and remains ignored.
-- `APP_URL` and `BETTER_AUTH_URL` match the deployed domain.
-- Remote D1 `database_id` is configured.
-- Required secrets are set with `wrangler secret put`.
-- Polar webhook endpoint and events are configured.
-- Launch blockers are reviewed: [#77](https://github.com/JoviDeCroock/le-chien/issues/77), [#78](https://github.com/JoviDeCroock/le-chien/issues/78), [#79](https://github.com/JoviDeCroock/le-chien/issues/79).
