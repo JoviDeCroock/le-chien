@@ -81,6 +81,11 @@ id back to the render endpoint. The Dynamic Worker re-renders, invokes the
 matching handler inside the isolated worker, updates hook state, sanitizes the
 next tree, and returns it.
 
+During event re-renders, the browser keeps the previous sanitized VDOM mounted
+until the next response arrives. Only the initial render or a changed artifact
+source shows the full "Rendering artifact..." placeholder, so interactive
+artifacts do not flicker between user actions.
+
 ## Interactivity contract
 
 Dynamic Workers still allow interactive JavaScript, but not browser-resident

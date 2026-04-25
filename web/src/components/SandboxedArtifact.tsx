@@ -142,7 +142,7 @@ const CLIENT_ALLOWED_PROPS = new Set([
 export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [rendering, setRendering] = useState(true);
   const [tree, setTree] = useState<ArtifactNode | null>(null);
   const artifactStateRef = useRef<unknown[]>([]);
   const requestIdRef = useRef(0);
@@ -150,6 +150,7 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
   useEffect(() => {
     const abortController = new AbortController();
     artifactStateRef.current = [];
+    setTree(null);
     void renderArtifact({ signal: abortController.signal });
 
     return () => {
@@ -168,7 +169,9 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
     };
   }) {
     const requestId = ++requestIdRef.current;
-    setLoading(true);
+    const preserveExistingTree = Boolean(options.event);
+    if (!preserveExistingTree) setTree(null);
+    setRendering(true);
     setError(null);
 
     try {
@@ -191,9 +194,9 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Artifact render failed");
-      setTree(null);
+      if (!preserveExistingTree) setTree(null);
     } finally {
-      if (requestId === requestIdRef.current) setLoading(false);
+      if (requestId === requestIdRef.current) setRendering(false);
     }
   }
 
@@ -212,9 +215,17 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
   return (
     <div class="my-3 rounded-lg border border-neutral-700/40 bg-neutral-900/40 overflow-hidden">
       <div class="flex items-center justify-between px-3 py-1.5 border-b border-neutral-700/40 bg-neutral-800/40">
-        <span class="text-[11px] font-medium text-neutral-400 tracking-wide uppercase">
-          Artifact
-        </span>
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-medium text-neutral-400 tracking-wide uppercase">
+            Artifact
+          </span>
+          {rendering && tree !== null && (
+            <span
+              aria-label="Updating artifact"
+              class="inline-block w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse"
+            />
+          )}
+        </div>
         <button
           type="button"
           onClick={() => setCollapsed((value) => !value)}
@@ -229,16 +240,17 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
         </div>
       )}
       <div
+        aria-busy={rendering ? "true" : "false"}
         class="sandboxed-artifact-body p-3 bg-neutral-950 text-neutral-200 max-h-[480px] overflow-auto"
         style={{ display: collapsed ? "none" : "block" }}
       >
-        {loading && (
+        {rendering && tree === null && (
           <div class="text-xs text-neutral-500 flex items-center gap-2">
             <span class="inline-block w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
             Rendering artifact…
           </div>
         )}
-        {!loading && tree !== null && renderArtifactNode(tree, dispatchArtifactEvent)}
+        {tree !== null && renderArtifactNode(tree, dispatchArtifactEvent)}
       </div>
     </div>
   );
