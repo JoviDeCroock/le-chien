@@ -50,6 +50,7 @@ type ConversationIndexSyncAction = "upsert" | "delete";
 type ConversationIndexSyncRow = {
   conversation_id: string;
   action: ConversationIndexSyncAction;
+  sync_token: string;
   title: string | null;
   model: string | null;
   conversation_created_at: number | null;
@@ -104,6 +105,7 @@ const CONVERSATION_INDEX_SYNC_INTERVAL_SECONDS = 60;
 const CONVERSATION_INDEX_RECONCILE_INTERVAL_SECONDS = 60 * 60;
 const CONVERSATION_INDEX_SYNC_BATCH_SIZE = 25;
 const MAX_SYNC_ERROR_LENGTH = 500;
+const MAX_CONVERSATION_INDEX_SYNC_PASSES = 5;
 
 class EmptyAssistantResponseError extends Error {
   constructor() {
@@ -217,6 +219,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       CREATE TABLE IF NOT EXISTS conversation_d1_sync_queue (
         conversation_id TEXT PRIMARY KEY,
         action TEXT NOT NULL CHECK(action IN ('upsert', 'delete')),
+        sync_token TEXT NOT NULL,
         title TEXT,
         model TEXT,
         conversation_created_at INTEGER,
@@ -244,6 +247,12 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     } catch {
       // Column already exists — ignore
     }
+    try {
+      this
+        .sql`ALTER TABLE conversation_d1_sync_queue ADD COLUMN sync_token TEXT NOT NULL DEFAULT ''`;
+    } catch {
+      // Column already exists — ignore
+    }
 
     await this.scheduleEvery<null>(
       CONVERSATION_INDEX_SYNC_INTERVAL_SECONDS,
@@ -266,11 +275,13 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
 
   private enqueueConversationIndexSync(conversation: Conversation, kick = true): void {
     const queuedAt = Math.floor(Date.now() / 1000);
+    const syncToken = crypto.randomUUID();
     try {
       this.sql`
         INSERT INTO conversation_d1_sync_queue (
           conversation_id,
           action,
+          sync_token,
           title,
           model,
           conversation_created_at,
@@ -284,6 +295,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
         VALUES (
           ${conversation.id},
           ${"upsert"},
+          ${syncToken},
           ${conversation.title},
           ${conversation.model},
           ${conversation.created_at},
@@ -296,6 +308,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
         )
         ON CONFLICT(conversation_id) DO UPDATE SET
           action = excluded.action,
+          sync_token = excluded.sync_token,
           title = excluded.title,
           model = excluded.model,
           conversation_created_at = excluded.conversation_created_at,
@@ -318,11 +331,13 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
 
   private enqueueConversationIndexDelete(conversationId: string): void {
     const queuedAt = Math.floor(Date.now() / 1000);
+    const syncToken = crypto.randomUUID();
     try {
       this.sql`
         INSERT INTO conversation_d1_sync_queue (
           conversation_id,
           action,
+          sync_token,
           title,
           model,
           conversation_created_at,
@@ -336,6 +351,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
         VALUES (
           ${conversationId},
           ${"delete"},
+          ${syncToken},
           ${null},
           ${null},
           ${null},
@@ -348,6 +364,7 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
         )
         ON CONFLICT(conversation_id) DO UPDATE SET
           action = excluded.action,
+          sync_token = excluded.sync_token,
           title = NULL,
           model = NULL,
           conversation_created_at = NULL,
@@ -373,6 +390,27 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       SELECT id, title, model, created_at, updated_at
       FROM conversations
       WHERE id = ${conversationId}
+    `;
+    return rows[0] ?? null;
+  }
+
+  private getConversationIndexSyncRow(conversationId: string): ConversationIndexSyncRow | null {
+    const rows = this.sql<ConversationIndexSyncRow>`
+      SELECT
+        conversation_id,
+        action,
+        sync_token,
+        title,
+        model,
+        conversation_created_at,
+        conversation_updated_at,
+        attempts,
+        last_error,
+        next_attempt_at,
+        queued_at,
+        updated_at
+      FROM conversation_d1_sync_queue
+      WHERE conversation_id = ${conversationId}
     `;
     return rows[0] ?? null;
   }
@@ -440,12 +478,85 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
       .run();
   }
 
+  private async processConversationIndexSyncRow(
+    initialRow: ConversationIndexSyncRow,
+    now: number,
+  ): Promise<void> {
+    let row: ConversationIndexSyncRow | null = initialRow;
+
+    for (let pass = 0; pass < MAX_CONVERSATION_INDEX_SYNC_PASSES; pass++) {
+      if (!row || row.next_attempt_at > now) return;
+
+      try {
+        await this.syncConversationIndexRow(row);
+        this.sql`
+          DELETE FROM conversation_d1_sync_queue
+          WHERE conversation_id = ${row.conversation_id}
+            AND sync_token = ${row.sync_token}
+        `;
+
+        const latestRow = this.getConversationIndexSyncRow(row.conversation_id);
+        if (!latestRow) {
+          if (row.attempts > 0) {
+            trackServerEvent(this.env, this.name, "conversation_index_sync_recovered", {
+              conversation_id: row.conversation_id,
+              action: row.action,
+              attempts: row.attempts,
+            });
+          }
+          return;
+        }
+
+        if (latestRow.sync_token === row.sync_token) return;
+        row = latestRow;
+      } catch (err) {
+        const error = toError(err, "Conversation index sync failed");
+        const attempts = row.attempts + 1;
+        const nextAttemptAt = now + getConversationIndexRetryDelaySeconds(attempts);
+        const lastError = error.message.slice(0, MAX_SYNC_ERROR_LENGTH);
+
+        this.sql`
+          UPDATE conversation_d1_sync_queue
+          SET
+            attempts = ${attempts},
+            last_error = ${lastError},
+            next_attempt_at = ${nextAttemptAt},
+            updated_at = ${now}
+          WHERE conversation_id = ${row.conversation_id}
+            AND sync_token = ${row.sync_token}
+        `;
+
+        const latestRow = this.getConversationIndexSyncRow(row.conversation_id);
+        if (!latestRow) return;
+        if (latestRow.sync_token !== row.sync_token) {
+          row = latestRow;
+          continue;
+        }
+
+        trackServerEvent(this.env, this.name, "conversation_index_sync_failed", {
+          conversation_id: row.conversation_id,
+          action: row.action,
+          attempts,
+          next_attempt_at: nextAttemptAt,
+        });
+        captureServerException(this.env, this.name, error, {
+          source: "conversation_index",
+          conversation_id: row.conversation_id,
+          action: row.action,
+          attempts,
+        });
+        return;
+      }
+    }
+  }
+
   async flushConversationIndexSyncQueue(): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
     const rows = this.sql<ConversationIndexSyncRow>`
       SELECT
         conversation_id,
         action,
+        sync_token,
         title,
         model,
         conversation_created_at,
@@ -462,46 +573,9 @@ export class ChatAgent extends Agent<Cloudflare.Env> {
     `;
 
     for (const row of rows) {
-      try {
-        await this.syncConversationIndexRow(row);
-        this.sql`
-          DELETE FROM conversation_d1_sync_queue
-          WHERE conversation_id = ${row.conversation_id}
-        `;
-        if (row.attempts > 0) {
-          trackServerEvent(this.env, this.name, "conversation_index_sync_recovered", {
-            conversation_id: row.conversation_id,
-            action: row.action,
-            attempts: row.attempts,
-          });
-        }
-      } catch (err) {
-        const error = toError(err, "Conversation index sync failed");
-        const attempts = row.attempts + 1;
-        const nextAttemptAt = now + getConversationIndexRetryDelaySeconds(attempts);
-        const lastError = error.message.slice(0, MAX_SYNC_ERROR_LENGTH);
-        this.sql`
-          UPDATE conversation_d1_sync_queue
-          SET
-            attempts = ${attempts},
-            last_error = ${lastError},
-            next_attempt_at = ${nextAttemptAt},
-            updated_at = ${now}
-          WHERE conversation_id = ${row.conversation_id}
-        `;
-        trackServerEvent(this.env, this.name, "conversation_index_sync_failed", {
-          conversation_id: row.conversation_id,
-          action: row.action,
-          attempts,
-          next_attempt_at: nextAttemptAt,
-        });
-        captureServerException(this.env, this.name, error, {
-          source: "conversation_index",
-          conversation_id: row.conversation_id,
-          action: row.action,
-          attempts,
-        });
-      }
+      const latestRow = this.getConversationIndexSyncRow(row.conversation_id);
+      if (!latestRow || latestRow.next_attempt_at > now) continue;
+      await this.processConversationIndexSyncRow(latestRow, now);
     }
   }
 
@@ -1041,7 +1115,7 @@ Live UI artifacts:
 
       responseCompleted = true;
 
-      if (fullContent.trim().length === 0) {
+      if (fullContent.trim().length === 0 && toolCalls.length === 0) {
         throw new EmptyAssistantResponseError();
       }
 
