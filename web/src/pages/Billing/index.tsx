@@ -135,7 +135,7 @@ export function Billing() {
                   <p class="text-sm text-neutral-400 mt-1">
                     {snap.plan === "pro"
                       ? "Unlimited messages, premium models, and priority inference."
-                      : "20 messages per day with access to all model modes."}
+                      : "10 messages per day with access to all model modes."}
                   </p>
                 </div>
                 <div class="text-right shrink-0">
