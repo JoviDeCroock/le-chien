@@ -119,7 +119,11 @@ Local and production Worker configs need a Worker Loader binding:
 ```
 
 The Dynamic Worker module is created at request time in
-`web/server/lib/dynamic-workers.ts`. Outbound network is disabled through the
+`web/server/lib/dynamic-workers.ts`. Artifact renders use `LOADER.get()` with a
+SHA-256 cache id derived from the generated worker source, so Cloudflare can
+reuse a warm isolate for identical artifact code when available. Hook state
+still round-trips explicitly between browser and server, so correctness does
+not depend on that cache being warm. Outbound network is disabled through the
 Worker Loader `globalOutbound: null` setting, so artifact code and the
 `run_javascript` tool do not inherit the app Worker's fetch capability.
 

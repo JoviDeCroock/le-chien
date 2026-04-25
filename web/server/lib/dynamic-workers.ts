@@ -87,19 +87,21 @@ async function callDynamicWorker<T>(
   env: Cloudflare.Env,
   source: string,
   input: unknown,
+  cacheId?: string,
 ): Promise<DynamicWorkerResponse<T>> {
   if (!env.LOADER) {
     throw new Error("Dynamic Worker Loader binding is not configured");
   }
 
-  const worker = env.LOADER.load({
+  const code = {
     compatibilityDate: DYNAMIC_WORKER_COMPATIBILITY_DATE,
     mainModule: DYNAMIC_WORKER_MODULE,
     modules: {
       [DYNAMIC_WORKER_MODULE]: source,
     },
     globalOutbound: null,
-  });
+  };
+  const worker = cacheId ? env.LOADER.get(cacheId, () => code) : env.LOADER.load(code);
 
   const response = await worker.getEntrypoint().fetch("https://sandbox.local/run", {
     method: "POST",
@@ -120,6 +122,15 @@ async function callDynamicWorker<T>(
   }
 
   return data;
+}
+
+async function getWorkerCacheId(prefix: string, source: string) {
+  const encoded = new TextEncoder().encode(`${DYNAMIC_WORKER_COMPATIBILITY_DATE}\n${source}`);
+  const digest = await crypto.subtle.digest("SHA-256", encoded);
+  const hash = [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  return `${prefix}-${hash}`;
 }
 
 export async function runDynamicJavaScript(
@@ -155,11 +166,9 @@ export async function renderDynamicArtifact(
   }
 
   try {
-    return await callDynamicWorker<ArtifactRenderResult>(
-      env,
-      buildArtifactWorkerSource(stripped.code, componentName),
-      input,
-    );
+    const source = buildArtifactWorkerSource(stripped.code, componentName);
+    const cacheId = await getWorkerCacheId("artifact", source);
+    return await callDynamicWorker<ArtifactRenderResult>(env, source, input, cacheId);
   } catch (err) {
     return { error: formatDynamicWorkerError(err) };
   }
