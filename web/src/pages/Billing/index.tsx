@@ -193,6 +193,11 @@ export function Billing() {
                     used={snap.usage.dailyImageGenerationsUsed}
                     limit={PLAN_LIMITS.free.dailyImageGenerations}
                   />
+                  <UsageRow
+                    label="Read-aloud"
+                    used={snap.usage.dailyTtsRequestsUsed}
+                    limit={PLAN_LIMITS.free.dailyTtsRequests}
+                  />
                 </div>
               </Card>
             )}

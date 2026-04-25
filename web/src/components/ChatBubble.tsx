@@ -18,6 +18,13 @@ export function ChatBubble({ message, streaming }: { message: Message; streaming
   const isStreamingReasoning = streaming && hasReasoning && !message.content;
 
   const segments = !isUser && message.content ? parseArtifacts(message.content) : [];
+  const readableText = segments
+    .filter((s) => s.kind === "markdown")
+    .map((s) => s.text)
+    .join("\n")
+    .trim();
+  const canReadAloud = !isUser && !streaming && readableText.length > 0;
+
   const readAloud = useModel(ReadAloudModel);
 
   useEffect(() => () => readAloud.dispose(), [readAloud]);
@@ -96,11 +103,11 @@ export function ChatBubble({ message, streaming }: { message: Message; streaming
           <span class="inline-block w-1.5 h-4 bg-violet-500 rounded-sm ml-0.5 animate-pulse align-text-bottom" />
         )}
         {isStreaming && hasToolCalls && <StreamingDots />}
-        {!isUser && !streaming && message.content && (
+        {canReadAloud && (
           <div class="mt-2 pt-2 border-t border-neutral-700/30 flex items-center gap-2">
             <button
               type="button"
-              onClick={() => readAloud.play(message.content)}
+              onClick={() => readAloud.play(readableText)}
               disabled={audioBusy}
               class={`
                 inline-flex items-center gap-1.5 text-[11px] tracking-wide

@@ -1,8 +1,13 @@
 # Text-to-Speech (Read Aloud)
 
-A speaker button on every settled assistant message synthesizes the text via
-Workers AI and plays it back inline. No persistent storage, no per-user quota
-yet — just on-demand synthesis and one in-flight audio element per bubble.
+A speaker button on settled assistant messages synthesizes the text via
+Workers AI and plays it back inline. Per-user daily quota is enforced
+server-side and one in-flight audio element per bubble.
+
+The button is hidden whenever the bubble has no readable prose to speak:
+streaming bubbles, artifact-only responses, and whitespace-only content all
+suppress it. Synthesis cost scales with input length, so we never want to fire
+a request that has nothing meaningful to read.
 
 ## Server
 
@@ -17,11 +22,18 @@ Steps:
 
 1. Validate body and reject empty input.
 2. Strip markdown formatting (`stripMarkdown`) so the synthesizer doesn't read
-   asterisks, backticks, list markers, or link URLs aloud.
-3. Truncate to `MAX_INPUT_CHARS` (4000) to keep model latency bounded.
+   asterisks, backticks, list markers, or link URLs aloud. Fenced code blocks
+   are dropped entirely.
+3. Truncate to `MAX_INPUT_CHARS` (1500) to bound per-call cost and latency,
+   and reject anything shorter than `MIN_INPUT_CHARS` (4) as "Nothing to read".
 4. Call the AI binding with `@cf/myshell-ai/melotts`, which returns
    `{ audio: <base64 mp3> }`.
 5. Decode base64 and stream the bytes back as `audio/mpeg`.
+
+The client never sends artifact (`\`\`\`preact … \`\`\``) blocks to this route —
+`ChatBubble` parses the message into segments and only forwards the
+concatenated markdown segments. Server-side `stripMarkdown` is the second line
+of defense, not the first.
 
 The response is `Cache-Control: private, no-store` — no edge caching of
 user content.
@@ -40,7 +52,9 @@ State lives in `web/src/models/read-aloud.ts` as `ReadAloudModel`, a
 `ChatBubble.tsx` calls `useModel(ReadAloudModel)` per bubble (each instance is
 independent because `useModel` runs the factory once via `useMemo([])`), and
 disposes on unmount. The button is hidden while a message is still streaming
-to avoid synthesizing partial sentences.
+(to avoid synthesizing partial sentences) and also when the parsed markdown
+segments contain no non-whitespace text — so artifact-only replies, tool-call
+echoes, and the like never expose the speaker.
 
 ## Trade-offs and known gaps
 
@@ -49,9 +63,13 @@ to avoid synthesizing partial sentences.
   there's user demand.
 - **Single voice.** No voice selection — melotts default. The roadmap entry
   in `docs/roadmap-tools.md` covers extending this.
-- **No quota integration.** Unlike chat completions and image generation, TTS
-  does not increment any counter in `dailyMessageUsage`. This is fine for
-  launch but should be revisited if the cost line becomes meaningful.
+- **Daily quota.** When `BILLING_ENABLED=true`, every successful synthesis
+  increments `daily_tts_usage` (one row per `(user_id, usage_date)`). The
+  `tryIncrementDailyTtsUsage` helper does an atomic `INSERT … ON CONFLICT DO
+  UPDATE … WHERE message_count < limit RETURNING message_count`, so the route
+  returns `429 Daily read-aloud limit reached` without firing a Worker AI call
+  when the cap is hit. Free: `PLAN_LIMITS.free.dailyTtsRequests` (5/day). Pro:
+  50/day. Self-hosted (`BILLING_ENABLED` unset) bypasses the check entirely.
 - **No streaming audio.** We buffer the full MP3 server-side, then ship it.
   Users wait until synthesis completes before hearing anything. Streaming
   would shave time-to-first-sound but the worker AI binding doesn't expose a

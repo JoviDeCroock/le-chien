@@ -1,9 +1,14 @@
 import { Hono } from "hono";
+import { drizzle } from "drizzle-orm/d1";
 import type { Bindings, Variables } from "../types";
+import * as schema from "../db/schema";
+import { getUsageDate, getUserPlan, tryIncrementDailyTtsUsage } from "../lib/plans";
+import { isBillingEnabled } from "../utils/billingEnabled";
 
 export const ttsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-const MAX_INPUT_CHARS = 4000;
+const MAX_INPUT_CHARS = 1500;
+const MIN_INPUT_CHARS = 4;
 
 /** Strip markdown formatting so the TTS model only speaks the prose. */
 function stripMarkdown(input: string): string {
@@ -39,8 +44,28 @@ ttsRoutes.post("/", async (c) => {
   }
 
   const cleaned = stripMarkdown(body.text).slice(0, MAX_INPUT_CHARS);
-  if (cleaned.length === 0) {
+  if (cleaned.length < MIN_INPUT_CHARS) {
     return c.json({ error: "Nothing to read" }, 400);
+  }
+
+  if (isBillingEnabled(c.env)) {
+    const user = c.get("user");
+    if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+    const db = drizzle(c.env.DB, { schema });
+    const plan = await getUserPlan(c.env, db, user.id);
+    const used = await tryIncrementDailyTtsUsage(c.env.DB, user.id, getUsageDate(), plan);
+    if (used === null) {
+      return c.json(
+        {
+          error:
+            plan === "free"
+              ? "Daily read-aloud limit reached. Upgrade to Pro for more."
+              : "Daily read-aloud limit reached. Resets at midnight UTC.",
+        },
+        429,
+      );
+    }
   }
 
   try {

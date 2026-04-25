@@ -144,6 +144,21 @@ export const dailyWebSearchUsage = sqliteTable(
   (t) => [uniqueIndex("daily_web_search_usage_user_date_unique_idx").on(t.userId, t.usageDate)],
 );
 
+export const dailyTtsUsage = sqliteTable(
+  "daily_tts_usage",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    usageDate: text("usage_date").notNull(),
+    messageCount: integer("message_count").notNull().default(0),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("daily_tts_usage_user_date_unique_idx").on(t.userId, t.usageDate)],
+);
+
 export const conversationIndex = sqliteTable(
   "conversation_index",
   {

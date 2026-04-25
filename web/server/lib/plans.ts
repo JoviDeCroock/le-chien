@@ -10,6 +10,7 @@ type PlanLimits = {
   dailyPremiumMessages: number | null;
   dailyImageGenerations: number | null;
   dailyWebSearches: number | null;
+  dailyTtsRequests: number | null;
 };
 
 export type SubscriptionSnapshot = {
@@ -30,6 +31,9 @@ export type SubscriptionSnapshot = {
     dailyWebSearchesUsed: number;
     dailyWebSearchesRemaining: number | null;
     webSearchLimitReached: boolean;
+    dailyTtsRequestsUsed: number;
+    dailyTtsRequestsRemaining: number | null;
+    ttsLimitReached: boolean;
     usageDate: string;
     resetsAt: string;
   };
@@ -41,12 +45,14 @@ export const PLAN_LIMITS = {
     dailyPremiumMessages: 3,
     dailyImageGenerations: 1,
     dailyWebSearches: 3,
+    dailyTtsRequests: 5,
   },
   pro: {
     dailyMessages: null,
     dailyPremiumMessages: null,
     dailyImageGenerations: null,
     dailyWebSearches: 25,
+    dailyTtsRequests: 50,
   },
 } as const;
 
@@ -69,6 +75,7 @@ export function buildSubscriptionSnapshot(
   dailyImageGenerationsUsed = 0,
   dailyWebSearchesUsed = 0,
   billingEnabled = true,
+  dailyTtsRequestsUsed = 0,
 ): SubscriptionSnapshot {
   const limits = PLAN_LIMITS[plan];
   const dailyMessagesRemaining =
@@ -85,6 +92,10 @@ export function buildSubscriptionSnapshot(
     limits.dailyWebSearches === null
       ? null
       : Math.max(limits.dailyWebSearches - dailyWebSearchesUsed, 0);
+  const dailyTtsRequestsRemaining =
+    limits.dailyTtsRequests === null
+      ? null
+      : Math.max(limits.dailyTtsRequests - dailyTtsRequestsUsed, 0);
 
   return {
     plan,
@@ -108,6 +119,10 @@ export function buildSubscriptionSnapshot(
       dailyWebSearchesRemaining,
       webSearchLimitReached:
         limits.dailyWebSearches !== null && dailyWebSearchesUsed >= limits.dailyWebSearches,
+      dailyTtsRequestsUsed,
+      dailyTtsRequestsRemaining,
+      ttsLimitReached:
+        limits.dailyTtsRequests !== null && dailyTtsRequestsUsed >= limits.dailyTtsRequests,
       usageDate: getUsageDate(date),
       resetsAt: getUsageResetAt(date),
     },
@@ -207,6 +222,22 @@ export async function getDailyWebSearchUsage(
   return row?.messageCount ?? 0;
 }
 
+export async function getDailyTtsUsage(
+  db: DrizzleD1Database<typeof schema>,
+  userId: string,
+  usageDate = getUsageDate(),
+) {
+  const row = await db
+    .select({ messageCount: schema.dailyTtsUsage.messageCount })
+    .from(schema.dailyTtsUsage)
+    .where(
+      and(eq(schema.dailyTtsUsage.userId, userId), eq(schema.dailyTtsUsage.usageDate, usageDate)),
+    )
+    .get();
+
+  return row?.messageCount ?? 0;
+}
+
 export async function getSubscriptionSnapshot(
   env: Cloudflare.Env,
   db: DrizzleD1Database<typeof schema>,
@@ -223,6 +254,9 @@ export async function getSubscriptionSnapshot(
   const dailyWebSearchesUsed = isBillingEnabled(env)
     ? await getDailyWebSearchUsage(db, userId, usageDate)
     : 0;
+  const dailyTtsRequestsUsed = isBillingEnabled(env)
+    ? await getDailyTtsUsage(db, userId, usageDate)
+    : 0;
 
   return buildSubscriptionSnapshot(
     plan,
@@ -232,6 +266,7 @@ export async function getSubscriptionSnapshot(
     dailyImageGenerationsUsed,
     dailyWebSearchesUsed,
     isBillingEnabled(env),
+    dailyTtsRequestsUsed,
   );
 }
 
@@ -356,6 +391,33 @@ export async function tryIncrementDailyWebSearchUsage(
     .prepare(
       `
         INSERT INTO daily_web_search_usage (id, user_id, usage_date, message_count, created_at, updated_at)
+        VALUES (?, ?, ?, 1, ?, ?)
+        ON CONFLICT(user_id, usage_date) DO UPDATE SET
+          message_count = message_count + 1,
+          updated_at = excluded.updated_at
+        WHERE message_count < ?
+        RETURNING message_count
+      `,
+    )
+    .bind(crypto.randomUUID(), userId, usageDate, now, now, limit)
+    .first<{ message_count: number }>();
+
+  return row?.message_count ?? null;
+}
+
+export async function tryIncrementDailyTtsUsage(
+  db: D1Database,
+  userId: string,
+  usageDate: string,
+  plan: Plan,
+) {
+  const limit = PLAN_LIMITS[plan].dailyTtsRequests;
+  if (limit === null) return 1; // unlimited
+  const now = Math.floor(Date.now() / 1000);
+  const row = await db
+    .prepare(
+      `
+        INSERT INTO daily_tts_usage (id, user_id, usage_date, message_count, created_at, updated_at)
         VALUES (?, ?, ?, 1, ?, ?)
         ON CONFLICT(user_id, usage_date) DO UPDATE SET
           message_count = message_count + 1,
