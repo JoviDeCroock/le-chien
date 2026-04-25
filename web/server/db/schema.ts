@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -142,4 +142,20 @@ export const dailyWebSearchUsage = sqliteTable(
     updatedAt: integer("updated_at").notNull(),
   },
   (t) => [uniqueIndex("daily_web_search_usage_user_date_unique_idx").on(t.userId, t.usageDate)],
+);
+
+export const conversationIndex = sqliteTable(
+  "conversation_index",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    model: text("model").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    syncedAt: integer("synced_at").notNull(),
+  },
+  (t) => [index("conversation_index_user_updated_idx").on(t.userId, t.updatedAt)],
 );

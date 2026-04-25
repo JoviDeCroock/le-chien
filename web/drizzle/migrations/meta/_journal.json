@@ -43,6 +43,13 @@
       "when": 1775433600000,
       "tag": "0005_web_search_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1777116656210,
+      "tag": "0006_curious_joshua_kane",
+      "breakpoints": true
     }
   ]
 }

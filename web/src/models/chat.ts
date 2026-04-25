@@ -74,6 +74,9 @@ type SendMessageResult = {
   messageId?: string;
   blocked?: boolean;
   reason?: "daily_limit" | "premium_limit";
+  error?: string;
+  failureType?: "ai_service" | "empty_response" | "save_failed" | "generic";
+  discardOptimistic?: boolean;
   subscription?: SubscriptionStatus;
 };
 
@@ -108,7 +111,13 @@ export const ChatModel = createModel(() => {
   function scheduleSubscriptionRefresh(status: SubscriptionStatus) {
     clearSubscriptionResetTimer();
 
-    if (typeof window === "undefined" || status.plan !== "free" || !status.usage.limitReached) {
+    const hasResettableLimit =
+      status.usage.limitReached ||
+      status.usage.premiumLimitReached ||
+      status.usage.imageGenerationLimitReached ||
+      status.usage.webSearchLimitReached;
+
+    if (typeof window === "undefined" || status.plan !== "free" || !hasResettableLimit) {
       return;
     }
 
@@ -447,6 +456,30 @@ export const ChatModel = createModel(() => {
               return;
             }
 
+            if (meta?.error) {
+              error.value = meta.error;
+              trackEvent("message_failed", {
+                failure_type: meta.failureType,
+                model: selectedModel.value,
+                conversation_id: convId,
+              });
+              if (meta.discardOptimistic) {
+                messages.value = messages.value.filter(
+                  (message) =>
+                    message.id !== optimisticUserMessageId &&
+                    message.id !== optimisticAssistantMessageId,
+                );
+              } else {
+                const msgs = messages.value;
+                const last = msgs[msgs.length - 1];
+                if (last?.role === "assistant" && !last.content.trim()) {
+                  messages.value = msgs.slice(0, -1);
+                }
+              }
+              streaming.value = false;
+              return;
+            }
+
             if (meta?.messageId) {
               const msgs = messages.value;
               const last = msgs[msgs.length - 1];
@@ -480,7 +513,7 @@ export const ChatModel = createModel(() => {
             // Remove empty assistant message on error
             const msgs = messages.value;
             const last = msgs[msgs.length - 1];
-            if (last.role === "assistant" && !last.content) {
+            if (last?.role === "assistant" && !last.content) {
               messages.value = msgs.slice(0, -1);
             }
           },
