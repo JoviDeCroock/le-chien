@@ -3,7 +3,8 @@ import type { Bindings, Variables } from "../types";
 
 export const ttsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-const MAX_INPUT_CHARS = 4000;
+const MAX_INPUT_CHARS = 1500;
+const MIN_INPUT_CHARS = 4;
 
 /** Strip markdown formatting so the TTS model only speaks the prose. */
 function stripMarkdown(input: string): string {
@@ -39,7 +40,7 @@ ttsRoutes.post("/", async (c) => {
   }
 
   const cleaned = stripMarkdown(body.text).slice(0, MAX_INPUT_CHARS);
-  if (cleaned.length === 0) {
+  if (cleaned.length < MIN_INPUT_CHARS) {
     return c.json({ error: "Nothing to read" }, 400);
   }
 
