@@ -5,10 +5,14 @@
 # Session signing key. Generate with: openssl rand -hex 32
 BETTER_AUTH_SECRET=
 
-# Polar (billing). See README for setup steps.
-POLAR_ACCESS_TOKEN=
-POLAR_WEBHOOK_SECRET=
-POLAR_PRO_PRODUCT_ID=
+# Polar (billing). Optional — leave BILLING_ENABLED unset (or any value other
+# than "true") to run without billing. Every user is treated as Pro and no
+# daily limits are enforced. Set BILLING_ENABLED=true and fill in the three
+# POLAR_* values to turn billing on. See README for setup steps.
+# BILLING_ENABLED=true
+# POLAR_ACCESS_TOKEN=
+# POLAR_WEBHOOK_SECRET=
+# POLAR_PRO_PRODUCT_ID=
 
 # OpenAI — only needed if you expose OpenAI-routed models.
 OPENAI_API_KEY=

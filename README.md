@@ -99,17 +99,18 @@ cp web/wrangler.example.jsonc web/wrangler.jsonc
 
 Both generated files are gitignored. Keep real account IDs, database IDs, product IDs, and secrets out of commits.
 
-| Variable               | Description                                                                                |
-| ---------------------- | ------------------------------------------------------------------------------------------ |
-| `BETTER_AUTH_SECRET`   | Any random string — used to sign session tokens. Generate one with `openssl rand -hex 32`. |
-| `POLAR_ACCESS_TOKEN`   | Your Polar API access token (see Polar setup below).                                       |
-| `POLAR_WEBHOOK_SECRET` | Webhook signing secret from Polar.                                                         |
-| `POLAR_PRO_PRODUCT_ID` | The Polar product ID for your "Pro" plan.                                                  |
-| `OPENAI_API_KEY`       | OpenAI key (only needed if you expose OpenAI-routed models).                               |
-| `CF_ACCOUNT_ID`        | Your Cloudflare account ID (needed for AI Gateway routing).                                |
-| `CF_API_TOKEN`         | Cloudflare API token (for AI Gateway).                                                     |
-| `POSTHOG_API_KEY`      | Optional. Enables server-side event tracking.                                              |
-| `TAVILY_API_KEY`       | Optional. Enables the `web_search` tool.                                                   |
+| Variable               | Description                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`   | Any random string — used to sign session tokens. Generate one with `openssl rand -hex 32`.                 |
+| `BILLING_ENABLED`      | Set to `"true"` to enable Polar billing and rate limits. Leave unset for self-hosted (everyone Pro).       |
+| `POLAR_ACCESS_TOKEN`   | Required when `BILLING_ENABLED=true`. Your Polar API access token (see Polar setup below).                 |
+| `POLAR_WEBHOOK_SECRET` | Required when `BILLING_ENABLED=true`. Webhook signing secret from Polar.                                   |
+| `POLAR_PRO_PRODUCT_ID` | Required when `BILLING_ENABLED=true`. The Polar product ID for your "Pro" plan.                            |
+| `OPENAI_API_KEY`       | OpenAI key (only needed if you expose OpenAI-routed models).                                               |
+| `CF_ACCOUNT_ID`        | Your Cloudflare account ID (needed for AI Gateway routing).                                                |
+| `CF_API_TOKEN`         | Cloudflare API token (for AI Gateway).                                                                     |
+| `POSTHOG_API_KEY`      | Optional. Enables server-side event tracking.                                                              |
+| `TAVILY_API_KEY`       | Optional. Enables the `web_search` tool.                                                                   |
 
 `APP_URL`, `BETTER_AUTH_URL`, `LOCAL`, `CF_ACCOUNT_ID`, `CF_AI_GATEWAY_ID`, `POLAR_PRO_PRODUCT_ID`, and D1 `database_id` live in your local `web/wrangler.jsonc`. Replace placeholders before deploying.
 

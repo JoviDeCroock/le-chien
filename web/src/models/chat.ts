@@ -45,6 +45,7 @@ export type ModelOption = {
 
 export type SubscriptionStatus = {
   plan: "free" | "pro";
+  billingEnabled: boolean;
   limits: {
     dailyMessages: number | null;
     dailyPremiumMessages: number | null;

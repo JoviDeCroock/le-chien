@@ -5,9 +5,11 @@
 declare namespace Cloudflare {
   interface Env {
     BETTER_AUTH_SECRET: string;
-    POLAR_ACCESS_TOKEN: string;
-    POLAR_WEBHOOK_SECRET: string;
-    POLAR_PRO_PRODUCT_ID: string;
+    /** "true" to enable Polar billing and rate limits; anything else disables. */
+    BILLING_ENABLED?: string;
+    POLAR_ACCESS_TOKEN?: string;
+    POLAR_WEBHOOK_SECRET?: string;
+    POLAR_PRO_PRODUCT_ID?: string;
     OPENAI_API_KEY: string;
     CF_API_TOKEN: string;
     CF_ACCOUNT_ID: string;

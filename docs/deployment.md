@@ -6,7 +6,7 @@ This guide deploys le chien to Cloudflare Workers with D1, Durable Objects, Work
 
 - Node.js 20+ and pnpm.
 - A Cloudflare account with Workers, D1, Durable Objects, Workers AI, Browser Rendering, and AI Gateway access.
-- A Polar account and Pro product if billing is enabled.
+- A Polar account and Pro product **only if** you set `BILLING_ENABLED=true`. Self-hosted/internal deployments can leave billing off entirely.
 - Optional PostHog and Tavily accounts.
 - Optional `jq` for inspecting JSON responses from Cloudflare API commands.
 
@@ -25,7 +25,8 @@ Edit `web/wrangler.jsonc`:
 - `LOCAL`: `false`.
 - `CF_ACCOUNT_ID`: Cloudflare account ID.
 - `CF_AI_GATEWAY_ID`: AI Gateway ID.
-- `POLAR_PRO_PRODUCT_ID`: Polar Pro product ID.
+- `BILLING_ENABLED`: `"true"` to enable Polar billing, `"false"` (or omit) to run without it.
+- `POLAR_PRO_PRODUCT_ID`: Polar Pro product ID. Only required when `BILLING_ENABLED=true`.
 - `d1_databases[0].database_id`: remote D1 database ID after creation.
 
 ## 2. Log in to Cloudflare
@@ -111,10 +112,15 @@ Set required production secrets:
 ```sh
 cd web
 npx wrangler secret put BETTER_AUTH_SECRET
-npx wrangler secret put POLAR_ACCESS_TOKEN
-npx wrangler secret put POLAR_WEBHOOK_SECRET
 npx wrangler secret put OPENAI_API_KEY
 npx wrangler secret put CF_API_TOKEN
+```
+
+Only when `BILLING_ENABLED=true`:
+
+```sh
+npx wrangler secret put POLAR_ACCESS_TOKEN
+npx wrangler secret put POLAR_WEBHOOK_SECRET
 ```
 
 Optional integrations:
@@ -127,6 +133,8 @@ npx wrangler secret put TAVILY_API_KEY
 `POLAR_PRO_PRODUCT_ID` and `CF_ACCOUNT_ID` can live in `web/wrangler.jsonc` because they are identifiers, not credentials. If you prefer to keep them out of config, set them with `wrangler secret put` instead.
 
 ## 5. Configure Polar
+
+Skip this section if `BILLING_ENABLED` is not `"true"`. Without billing, every signed-in user is treated as Pro and no Polar credentials are required.
 
 In Polar:
 

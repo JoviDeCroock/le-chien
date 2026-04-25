@@ -1,5 +1,6 @@
 import { Polar } from "@polar-sh/sdk";
 import { isProduction } from "../utils/isProduction";
+import { isBillingEnabled } from "../utils/billingEnabled";
 import type { ModelId } from "./models";
 
 type Env = Cloudflare.Env;
@@ -45,6 +46,8 @@ export async function trackInferenceCost(
     conversationId: string;
   },
 ) {
+  if (!isBillingEnabled(env) || !env.POLAR_ACCESS_TOKEN) return;
+
   try {
     const polar = new Polar({
       accessToken: env.POLAR_ACCESS_TOKEN,

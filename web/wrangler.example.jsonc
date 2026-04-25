@@ -13,7 +13,11 @@
     "LOCAL": "true",
     "CF_ACCOUNT_ID": "replace-with-cloudflare-account-id",
     "CF_AI_GATEWAY_ID": "replace-with-ai-gateway-id",
-    "POLAR_PRO_PRODUCT_ID": "replace-with-polar-product-id",
+    // Billing is opt-in. Leave BILLING_ENABLED as "false" (or omit it) to run
+    // without Polar — every user becomes Pro with no rate limits. Flip to
+    // "true" and set POLAR_PRO_PRODUCT_ID to enable billing.
+    "BILLING_ENABLED": "false",
+    // "POLAR_PRO_PRODUCT_ID": "replace-with-polar-product-id",
   },
   "assets": {
     "not_found_handling": "single-page-application",
