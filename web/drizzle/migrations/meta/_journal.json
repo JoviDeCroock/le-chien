@@ -50,6 +50,13 @@
       "when": 1777116656210,
       "tag": "0006_curious_joshua_kane",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1777119109714,
+      "tag": "0007_fearless_gamora",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,8 @@
 # Text-to-Speech (Read Aloud)
 
 A speaker button on settled assistant messages synthesizes the text via
-Workers AI and plays it back inline. No persistent storage, no per-user quota
-yet — just on-demand synthesis and one in-flight audio element per bubble.
+Workers AI and plays it back inline. Per-user daily quota is enforced
+server-side and one in-flight audio element per bubble.
 
 The button is hidden whenever the bubble has no readable prose to speak:
 streaming bubbles, artifact-only responses, and whitespace-only content all
@@ -63,11 +63,13 @@ echoes, and the like never expose the speaker.
   there's user demand.
 - **Single voice.** No voice selection — melotts default. The roadmap entry
   in `docs/roadmap-tools.md` covers extending this.
-- **No quota integration.** Unlike chat completions and image generation, TTS
-  does not increment any counter in `dailyMessageUsage`. The 1500-char input
-  cap and the artifact-only suppression are the only cost guards today; if the
-  AI line item grows, the next step is a `daily_tts_usage` table mirroring
-  `daily_web_search_usage` and a `dailyTtsRequests` field on `PlanLimits`.
+- **Daily quota.** When `BILLING_ENABLED=true`, every successful synthesis
+  increments `daily_tts_usage` (one row per `(user_id, usage_date)`). The
+  `tryIncrementDailyTtsUsage` helper does an atomic `INSERT … ON CONFLICT DO
+  UPDATE … WHERE message_count < limit RETURNING message_count`, so the route
+  returns `429 Daily read-aloud limit reached` without firing a Worker AI call
+  when the cap is hit. Free: `PLAN_LIMITS.free.dailyTtsRequests` (5/day). Pro:
+  50/day. Self-hosted (`BILLING_ENABLED` unset) bypasses the check entirely.
 - **No streaming audio.** We buffer the full MP3 server-side, then ship it.
   Users wait until synthesis completes before hearing anything. Streaming
   would shave time-to-first-sound but the worker AI binding doesn't expose a
