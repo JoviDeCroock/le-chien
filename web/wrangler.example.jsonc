@@ -7,6 +7,15 @@
   "placement": {
     "mode": "smart",
   },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
+    "traces": {
+      "enabled": false,
+    },
+  },
   "vars": {
     "APP_URL": "http://localhost:5173",
     "BETTER_AUTH_URL": "http://localhost:5173/api/auth",
