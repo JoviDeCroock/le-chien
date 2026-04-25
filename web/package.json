@@ -18,8 +18,8 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.48",
-    "@polar-sh/better-auth": "^1.8.0",
-    "@polar-sh/sdk": "^0.42.5",
+    "@polar-sh/better-auth": "^1.8.3",
+    "@polar-sh/sdk": "^0.46.7",
     "@preact/signals": "^2.7.0",
     "@tailwindcss/vite": "^4.2.4",
     "agents": "^0.8.7",
