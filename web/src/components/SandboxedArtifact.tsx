@@ -14,7 +14,6 @@ type ArtifactNode = ArtifactTextNode | ArtifactElementNode | ArtifactNode[];
 
 type ArtifactRenderResponse = {
   tree?: ArtifactNode;
-  state?: unknown[];
   error?: string;
 };
 
@@ -144,12 +143,10 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
   const [collapsed, setCollapsed] = useState(false);
   const [rendering, setRendering] = useState(true);
   const [tree, setTree] = useState<ArtifactNode | null>(null);
-  const artifactStateRef = useRef<unknown[]>([]);
   const requestIdRef = useRef(0);
 
   useEffect(() => {
     const abortController = new AbortController();
-    artifactStateRef.current = [];
     setTree(null);
     void renderArtifact({ signal: abortController.signal });
 
@@ -181,15 +178,14 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
         headers: { "Content-Type": "application/json" },
         signal: options.signal,
         body: JSON.stringify({
+          artifactId: id,
           code,
-          state: artifactStateRef.current,
           event: options.event,
         }),
       });
       const body = (await response.json()) as ArtifactRenderResponse;
       if (!response.ok || body.error) throw new Error(body.error ?? "Artifact render failed");
       if (requestId !== requestIdRef.current) return;
-      artifactStateRef.current = body.state ?? [];
       setTree(body.tree ?? "");
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;

@@ -17,5 +17,30 @@ declare namespace Cloudflare {
     POSTHOG_HOST?: string;
     TAVILY_API_KEY?: string;
     LOADER: WorkerLoader;
+    ARTIFACT_SESSION: DurableObjectNamespace<import("./index").ArtifactSession>;
   }
+}
+
+interface WorkerStub {
+  getDurableObjectClass(name: string): DurableObjectClass;
+}
+
+interface DurableObjectFacetStartupOptions {
+  class: DurableObjectClass;
+  id?: DurableObjectId | string;
+}
+
+interface DurableObjectFacets {
+  get(
+    name: string,
+    getStartupOptions: () =>
+      | DurableObjectFacetStartupOptions
+      | Promise<DurableObjectFacetStartupOptions>,
+  ): Fetcher;
+  abort(name: string, reason?: unknown): void;
+  delete(name: string): void;
+}
+
+interface DurableObjectState<Props = unknown> {
+  readonly facets: DurableObjectFacets;
 }
