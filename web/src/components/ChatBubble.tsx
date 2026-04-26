@@ -93,7 +93,7 @@ export function ChatBubble({ message, streaming }: { message: Message; streaming
             return (
               <SandboxedArtifact
                 key={`art-${message.id}-${seg.index}`}
-                id={`${message.id}-${seg.index}`}
+                artifactId={`${message.id}-${seg.index}`}
                 code={seg.code}
               />
             );

@@ -15,6 +15,7 @@ import { trackServerEvent } from "./lib/posthog";
 import * as schema from "./db/schema";
 
 export { ChatAgent } from "./agents/chat-agent";
+export { ArtifactSession } from "./agents/artifact-session";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 

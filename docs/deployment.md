@@ -97,7 +97,8 @@ These are configured as bindings in `web/wrangler.jsonc` and are provisioned/con
 
 - `ai.binding = "AI"` enables Workers AI at `env.AI`.
 - `browser.binding = "BROWSER"` enables Browser Rendering at `env.BROWSER`.
-- `durable_objects.bindings` plus `migrations` creates/connects `ChatAgent`.
+- `durable_objects.bindings` plus `migrations` creates/connects `ChatAgent`
+  and `ArtifactSession`.
 
 You can confirm Workers AI access from the CLI:
 
