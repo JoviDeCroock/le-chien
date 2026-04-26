@@ -1,3 +1,6 @@
+import preactHooksModuleSource from "preact/hooks?raw";
+import preactModuleSource from "preact?raw";
+
 export type ArtifactTextNode = string | number;
 
 export type ArtifactElementNode = {
@@ -34,9 +37,19 @@ export type JavaScriptRunResult = {
 
 const DYNAMIC_WORKER_COMPATIBILITY_DATE = "2026-04-25";
 const DYNAMIC_WORKER_MODULE = "index.js";
+const DYNAMIC_PREACT_MODULE = "preact.js";
+const DYNAMIC_PREACT_HOOKS_MODULE = "preact-hooks.js";
 const MAX_DYNAMIC_WORKER_ERROR_LENGTH = 500;
 const MAX_ARTIFACT_CODE_CHARS = 24_000;
 const MAX_JAVASCRIPT_CODE_CHARS = 16_000;
+const preactHooksWorkerSource = preactHooksModuleSource.replace(
+  /from(["'])preact\1/g,
+  `from$1./${DYNAMIC_PREACT_MODULE}$1`,
+);
+const artifactWorkerRuntimeModules = {
+  [DYNAMIC_PREACT_MODULE]: preactModuleSource,
+  [DYNAMIC_PREACT_HOOKS_MODULE]: preactHooksWorkerSource,
+};
 
 type DynamicWorkerResponse<T> = T & {
   error?: string;
@@ -88,6 +101,7 @@ async function callDynamicWorker<T>(
   source: string,
   input: unknown,
   cacheId?: string,
+  extraModules: Record<string, string> = {},
 ): Promise<DynamicWorkerResponse<T>> {
   if (!env.LOADER) {
     throw new Error("Dynamic Worker Loader binding is not configured");
@@ -98,6 +112,7 @@ async function callDynamicWorker<T>(
     mainModule: DYNAMIC_WORKER_MODULE,
     modules: {
       [DYNAMIC_WORKER_MODULE]: source,
+      ...extraModules,
     },
     globalOutbound: null,
   };
@@ -167,8 +182,17 @@ export async function renderDynamicArtifact(
 
   try {
     const source = buildArtifactWorkerSource(stripped.code, componentName);
-    const cacheId = await getWorkerCacheId("artifact", source);
-    return await callDynamicWorker<ArtifactRenderResult>(env, source, input, cacheId);
+    const cacheId = await getWorkerCacheId(
+      "artifact",
+      [source, preactModuleSource, preactHooksWorkerSource].join("\n"),
+    );
+    return await callDynamicWorker<ArtifactRenderResult>(
+      env,
+      source,
+      input,
+      cacheId,
+      artifactWorkerRuntimeModules,
+    );
   } catch (err) {
     return { error: formatDynamicWorkerError(err) };
   }
@@ -246,7 +270,15 @@ ${code}
 
 function buildArtifactWorkerSource(code: string, componentName: string) {
   return `
-const Fragment = Symbol.for("le-chien.fragment");
+import { Fragment as __PreactFragment, h as __preactH, options as __preactOptions } from "./${DYNAMIC_PREACT_MODULE}";
+import {
+  useCallback as __preactUseCallback,
+  useEffect as __preactUseEffect,
+  useMemo as __preactUseMemo,
+  useRef as __preactUseRef,
+  useState as __preactUseState,
+} from "./${DYNAMIC_PREACT_HOOKS_MODULE}";
+
 const MAX_DEPTH = 30;
 const MAX_NODES = 800;
 const MAX_STATE_ITEMS = 50;
@@ -255,6 +287,12 @@ const MAX_TEXT_LENGTH = 4_000;
 const MAX_PROP_LENGTH = 1_000;
 const MAX_EFFECT_PASSES = 5;
 const HOOK_SLOT_KEY = "__leChienHookSlot";
+const HOOK_STATE = 1;
+const HOOK_REDUCER = 2;
+const HOOK_EFFECT = 3;
+const HOOK_LAYOUT_EFFECT = 4;
+const HOOK_REF = 5;
+const HOOK_ID = 11;
 const EVENT_PROP_TO_TYPE = {
   onClick: "click",
   onInput: "input",
@@ -289,31 +327,46 @@ const ALLOWED_STYLE_PROPS = new Set([
   "whiteSpace", "width",
 ]);
 
-let __runtime = null;
-let h = (...args) => __runtime.h(...args);
-let useState = (...args) => __runtime.useState(...args);
-let useEffect = (...args) => __runtime.useEffect(...args);
-let useRef = (...args) => __runtime.useRef(...args);
-let useMemo = (...args) => __runtime.useMemo(...args);
-let useCallback = (...args) => __runtime.useCallback(...args);
-let fetch = undefined;
-let WebSocket = undefined;
-let XMLHttpRequest = undefined;
-let EventSource = undefined;
-let localStorage = undefined;
-let sessionStorage = undefined;
-let navigator = undefined;
-let document = undefined;
-let window = undefined;
-let setTimeout = undefined;
-let setInterval = undefined;
-let clearTimeout = undefined;
-let clearInterval = undefined;
-let requestAnimationFrame = undefined;
+const __previousHookInspector = __preactOptions.__h;
+__preactOptions.__h = (component, index, hookType) => {
+  if (component && component.__leChienHookTypes) {
+    component.__leChienHookTypes[index] = hookType;
+  }
+  if (__previousHookInspector) __previousHookInspector(component, index, hookType);
+};
+const __previousVNodeHook = __preactOptions.vnode;
+__preactOptions.vnode = (vnode) => {
+  if (__previousVNodeHook) __previousVNodeHook(vnode);
+  sanitizePreactVNode(vnode);
+};
 
+const __userModule = (() => {
+const h = __preactH;
+const Fragment = __PreactFragment;
+const useState = __preactUseState;
+const useEffect = __preactUseEffect;
+const useRef = __preactUseRef;
+const useMemo = __preactUseMemo;
+const useCallback = __preactUseCallback;
+const fetch = undefined;
+const WebSocket = undefined;
+const XMLHttpRequest = undefined;
+const EventSource = undefined;
+const localStorage = undefined;
+const sessionStorage = undefined;
+const navigator = undefined;
+const document = undefined;
+const window = undefined;
+const setTimeout = undefined;
+const setInterval = undefined;
+const clearTimeout = undefined;
+const clearInterval = undefined;
+const requestAnimationFrame = undefined;
 ${code}
+return { ${componentName} };
+})();
 
-const __Component = ${componentName};
+const __Component = __userModule.${componentName};
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -407,14 +460,6 @@ function sanitizeEffectDeps(deps) {
   return deps.slice(0, 20).map((value) => sanitizeStateValue(value));
 }
 
-function areJsonValuesEqual(a, b) {
-  try {
-    return JSON.stringify(a) === JSON.stringify(b);
-  } catch {
-    return false;
-  }
-}
-
 function sanitizeProps(props, path, handlers) {
   const out = {};
   const events = {};
@@ -449,60 +494,214 @@ function sanitizeProps(props, path, handlers) {
   return { props: out, events };
 }
 
+function sanitizePreactVNode(vnode) {
+  if (!vnode || typeof vnode.type !== "string" || !isPlainObject(vnode.props)) return;
+  vnode.props = sanitizeVNodeProps(vnode.props);
+}
+
+function sanitizeVNodeProps(props) {
+  const out = {};
+
+  for (const [key, value] of Object.entries(props)) {
+    if (key === "children") {
+      out.children = value;
+      continue;
+    }
+    if (key === "key" || key === "ref") continue;
+
+    const eventType = EVENT_PROP_TO_TYPE[key];
+    if (eventType && typeof value === "function") {
+      out[key] = value;
+      continue;
+    }
+
+    if (key === "style") {
+      const style = sanitizeStyle(value);
+      if (style) out.style = style;
+      continue;
+    }
+
+    if (!ALLOWED_PROPS.has(key) && !key.startsWith("aria-")) continue;
+    if ((key === "href" || key === "src") && !isSafeUrl(value)) continue;
+    if (key === "target" && value !== "_blank" && value !== "_self") continue;
+
+    if (typeof value === "string") out[key] = value.slice(0, MAX_PROP_LENGTH);
+    else if (typeof value === "number" || typeof value === "boolean") out[key] = value;
+  }
+
+  return out;
+}
+
 function createRuntime(initialState) {
-  let hookIndex = 0;
   let nodeCount = 0;
   let stateChanged = false;
-  let pendingEffects = [];
-  const hookState = sanitizeState(initialState);
+  let componentReadIndex = 0;
+  let activeComponents = [];
+  let previousComponents = [];
+  const initialComponentStates = normalizeInitialComponentStates(initialState);
   const handlers = new Map();
 
-  function normalizeChildren(children) {
-    const flattened = [];
-    for (const child of children.flat(Infinity)) {
-      if (child === null || child === undefined || child === false || child === true) continue;
-      flattened.push(child);
+  function normalizeInitialComponentStates(state) {
+    const sanitized = sanitizeState(state);
+    if (sanitized.some((slot) => isHookSlot(slot, "component"))) {
+      return sanitized.filter((slot) => isHookSlot(slot, "component"));
     }
-    return flattened;
+    return sanitized.length > 0 ? [createHookSlot("component", { hooks: sanitized })] : [];
   }
 
-  function vnode(tag, props, ...children) {
-    return { tag, props: props || {}, children: normalizeChildren(children) };
+  function getSavedHooks(componentSlot) {
+    return isHookSlot(componentSlot, "component") && Array.isArray(componentSlot.hooks)
+      ? componentSlot.hooks
+      : [];
   }
 
-  function useState(initial) {
-    const index = hookIndex++;
-    if (!isHookSlot(hookState[index], "state")) {
-      const initialValue =
-        hookState[index] === undefined ? (typeof initial === "function" ? initial() : initial) : hookState[index];
-      hookState[index] = createHookSlot("state", { value: sanitizeStateValue(initialValue) });
-    }
-    const setState = (next) => {
-      const slot = hookState[index];
-      const current = isHookSlot(slot, "state") ? slot.value : undefined;
-      const nextValue = sanitizeStateValue(typeof next === "function" ? next(current) : next);
-      if (!areJsonValuesEqual(current, nextValue)) {
-        hookState[index] = createHookSlot("state", { value: nextValue });
-        stateChanged = true;
+  function createDispatch(hook, component) {
+    return (action) => {
+      const currentValue = hook.__N ? hook.__N[0] : hook.__?.[0];
+      const reducer = typeof hook.t === "function" ? hook.t : (_current, next) => next;
+      const nextValue = reducer(currentValue, action);
+      if (currentValue !== nextValue) {
+        hook.__N = [sanitizeStateValue(nextValue), hook.__[1]];
+        component.setState({});
       }
     };
-    return [hookState[index].value, setState];
   }
 
-  function useEffect(effect, deps) {
-    const index = hookIndex++;
-    const nextDeps = sanitizeEffectDeps(deps);
-    const previous = isHookSlot(hookState[index], "effect") ? hookState[index].deps : undefined;
-    const shouldRun = nextDeps === null || previous === undefined || !areJsonValuesEqual(previous, nextDeps);
-    hookState[index] = createHookSlot("effect", { deps: nextDeps });
-    if (shouldRun && typeof effect === "function") {
-      pendingEffects.push(effect);
+  function restoreHook(slot, component) {
+    if (!isPlainObject(slot)) return {};
+    const kind = slot[HOOK_SLOT_KEY];
+    const type = typeof slot.type === "number" ? slot.type : undefined;
+
+    if (kind === "state" || type === HOOK_STATE || type === HOOK_REDUCER) {
+      const hook = { __c: component };
+      hook.__ = [sanitizeStateValue(slot.value), null];
+      hook.__[1] = createDispatch(hook, component);
+      return hook;
+    }
+
+    if (kind === "effect" || type === HOOK_EFFECT || type === HOOK_LAYOUT_EFFECT) {
+      return { __H: sanitizeEffectDeps(slot.deps) };
+    }
+
+    if (kind === "ref" || type === HOOK_REF) {
+      const value = isPlainObject(slot.value) && "current" in slot.value ? slot.value : { current: slot.value ?? null };
+      return { __: sanitizeStateValue(value), __H: [] };
+    }
+
+    if (kind === "id" || type === HOOK_ID) {
+      return { __: typeof slot.value === "string" ? slot.value : undefined };
+    }
+
+    return {};
+  }
+
+  function createComponent(vnode, context, savedState) {
+    const component = {
+      __v: vnode,
+      context,
+      props: vnode.props,
+      setState() {
+        this.__d = true;
+        stateChanged = true;
+      },
+      forceUpdate() {
+        this.__d = true;
+        stateChanged = true;
+      },
+      __d: true,
+      __h: [],
+      __H: { __: [], __h: [] },
+      __leChienComponentType: getComponentTypeName(vnode.type),
+      __leChienHookTypes: [],
+    };
+    component.__H.__ = getSavedHooks(savedState).map((slot) => restoreHook(slot, component));
+    return component;
+  }
+
+  function getComponentTypeName(type) {
+    return typeof type === "function" ? type.displayName || type.name || "Anonymous" : String(type);
+  }
+
+  function takeComponent(vnode, context) {
+    const index = componentReadIndex++;
+    const typeName = getComponentTypeName(vnode.type);
+    let component = previousComponents[index];
+    if (!component || component.__leChienComponentType !== typeName) {
+      component = createComponent(vnode, context, initialComponentStates[index]);
+    }
+
+    component.__v = vnode;
+    component.context = context;
+    component.props = vnode.props;
+    component.__h = [];
+    component.__leChienHookTypes = component.__leChienHookTypes || [];
+    component.__leChienComponentType = typeName;
+    vnode.__c = component;
+    activeComponents[index] = component;
+    return component;
+  }
+
+  function applyPendingHookUpdates(component) {
+    const hooks = component.__H?.__;
+    if (!Array.isArray(hooks)) return;
+    for (const hook of hooks) {
+      if (hook && hook.__N) {
+        hook.__ = hook.__N;
+        hook.__N = undefined;
+      }
     }
   }
 
-  function useRef(initial) {
-    const [ref] = useState({ current: initial });
-    return ref;
+  function commitEffectDeps(component) {
+    const hooks = component.__H?.__;
+    if (!Array.isArray(hooks)) return;
+    for (const hook of hooks) {
+      if (hook && hook.u) {
+        hook.__H = sanitizeEffectDeps(hook.u);
+        hook.u = undefined;
+      }
+    }
+  }
+
+  function collectPendingEffects() {
+    const effects = [];
+    for (const component of previousComponents) {
+      if (!component) continue;
+      if (Array.isArray(component.__h) && component.__h.length > 0) {
+        effects.push(...component.__h);
+        component.__h = [];
+      }
+      if (component.__H && Array.isArray(component.__H.__h) && component.__H.__h.length > 0) {
+        effects.push(...component.__H.__h);
+        component.__H.__h = [];
+      }
+      commitEffectDeps(component);
+    }
+    return effects;
+  }
+
+  function runEffectCleanup(effect) {
+    const cleanup = effect.__c;
+    if (typeof cleanup === "function") {
+      effect.__c = undefined;
+      cleanup();
+    }
+  }
+
+  function runEffect(effect) {
+    if (typeof effect.__ !== "function") return;
+    const result = effect.__();
+    if (result && typeof result.then === "function") {
+      result.catch(() => {});
+      effect.__c = undefined;
+    } else {
+      effect.__c = typeof result === "function" ? result : undefined;
+    }
+  }
+
+  function toChildArray(children) {
+    if (children === null || children === undefined || children === false || children === true) return [];
+    return Array.isArray(children) ? children : [children];
   }
 
   function sanitizeNode(node, path = "0", depth = 0) {
@@ -515,19 +714,30 @@ function createRuntime(initialState) {
         .filter((child) => child !== null);
     }
     if (!node || typeof node !== "object") return sanitizeText(node);
+    if (node.constructor !== undefined) return null;
 
-    let tag = node.tag;
+    let tag = node.type;
     const props = isPlainObject(node.props) ? node.props : {};
-    const children = Array.isArray(node.children) ? node.children : [];
+    const children = toChildArray(props.children);
 
-    if (tag === Fragment) {
+    if (tag === __PreactFragment) {
       return children
         .map((child, index) => sanitizeNode(child, path + "." + index, depth + 1))
         .filter((child) => child !== null);
     }
 
     if (typeof tag === "function") {
-      return sanitizeNode(tag({ ...props, children }), path, depth + 1);
+      const component = takeComponent(node, {});
+      let rendered;
+      let count = 0;
+      do {
+        component.__d = false;
+        applyPendingHookUpdates(component);
+        if (__preactOptions.__b) __preactOptions.__b(node);
+        if (__preactOptions.__r) __preactOptions.__r(node);
+        rendered = tag.call(component, props, {});
+      } while (component.__d && ++count < 25);
+      return sanitizeNode(rendered, path, depth + 1);
     }
 
     if (typeof tag !== "string") return null;
@@ -546,27 +756,25 @@ function createRuntime(initialState) {
   }
 
   function renderOnce() {
-    hookIndex = 0;
     nodeCount = 0;
-    pendingEffects = [];
     stateChanged = false;
+    componentReadIndex = 0;
+    activeComponents = [];
     handlers.clear();
-    const tree = sanitizeNode(vnode(__Component, {}));
+    const tree = sanitizeNode(__preactH(__Component, {}));
+    previousComponents = activeComponents;
     return tree ?? "";
   }
 
   async function renderWithEffects() {
     let tree = renderOnce();
     for (let pass = 0; pass < MAX_EFFECT_PASSES; pass++) {
-      const effects = pendingEffects;
+      const effects = collectPendingEffects();
       if (effects.length === 0) return tree;
-      pendingEffects = [];
       stateChanged = false;
       for (const effect of effects) {
-        const result = effect();
-        if (result && typeof result.catch === "function") {
-          result.catch(() => {});
-        }
+        runEffectCleanup(effect);
+        runEffect(effect);
       }
       if (!stateChanged) return tree;
       tree = renderOnce();
@@ -590,24 +798,44 @@ function createRuntime(initialState) {
   }
 
   return {
-    h: vnode,
-    Fragment,
-    useState,
-    useEffect,
-    useRef,
-    useMemo(fn) {
-      return fn();
-    },
-    useCallback(fn) {
-      return fn;
-    },
     render: renderWithEffects,
     dispatch,
     getState() {
-      return sanitizeState(hookState);
+      return sanitizeState(
+        previousComponents.map((component) =>
+          createHookSlot("component", {
+            type: component.__leChienComponentType,
+            hooks: extractHooks(component),
+          }),
+        ),
+      );
     },
   };
+
+  function extractHooks(component) {
+    const hooks = component.__H?.__;
+    if (!Array.isArray(hooks)) return [];
+    return hooks.map((hook, index) => {
+      const type = component.__leChienHookTypes?.[index];
+      if (type === HOOK_STATE || type === HOOK_REDUCER) {
+        const value = hook.__N ? hook.__N[0] : Array.isArray(hook.__) ? hook.__[0] : null;
+        return createHookSlot("state", { type, value: sanitizeStateValue(value) });
+      }
+      if (type === HOOK_EFFECT || type === HOOK_LAYOUT_EFFECT) {
+        return createHookSlot("effect", { type, deps: sanitizeEffectDeps(hook.__H) });
+      }
+      if (type === HOOK_REF) {
+        return createHookSlot("ref", { type, value: sanitizeStateValue(hook.__) });
+      }
+      if (type === HOOK_ID) {
+        return createHookSlot("id", { type, value: typeof hook.__ === "string" ? hook.__ : "" });
+      }
+      return createHookSlot("volatile", { type });
+    });
+  }
 }
+
+let __runtime = null;
 
 export default {
   async fetch(request) {
