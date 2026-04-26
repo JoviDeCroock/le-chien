@@ -34,12 +34,16 @@ function Counter() {
 Rules enforced through the prompt and by the renderer:
 
 - No JSX. Components use `h(tag, props, ...children)`.
+- Plain JavaScript only. The prompt bans TypeScript annotations and `as`
+  assertions; the renderer also strips common `as const` / `value as Type`
+  assertions because models still occasionally emit them.
 - No `import`/`export`. The renderer injects `h`, `Fragment`, `useState`,
-  `useEffect`, `useRef`, `useMemo`, and `useCallback`.
+  `useEffect`, `useRef`, `useMemo`, `useCallback`, and `useInterval`.
 - The component is a single PascalCase function or const placed last in the
   block.
-- Network, storage, timers, `document`, `window`, and browser globals are
-  unavailable inside the renderer.
+- Network, storage, arbitrary timers, `document`, `window`, and browser
+  globals are unavailable inside the renderer. Periodic UI updates must use
+  the controlled `useInterval(callback, delayMs)` primitive.
 - Use inline `style={{ ... }}` objects instead of Tailwind classes. The host
   page's Tailwind is JIT-compiled from source, so invented utility classes may
   not exist at runtime.
@@ -84,6 +88,10 @@ reaches the browser.
 - `useMemo()` and `useCallback()` use native Preact during a render pass, but
   non-serializable memoized values are intentionally recomputed on later
   requests instead of being restored as stale placeholders.
+- `useInterval(callback, delayMs)` registers a bounded host-managed timer for
+  the current render. The browser owns the real `setInterval` and sends opaque
+  `timer` events back to the render endpoint; artifact code still never gets
+  direct access to browser timers.
 
 Hook state is serialized per function component in render order. That keeps
 correctness independent from Worker Loader isolate reuse while still allowing
@@ -100,10 +108,10 @@ The worker sanitizes the returned tree into an allowlisted JSON VDOM shape:
 
 The browser renders that JSON VDOM with Preact. It never evaluates artifact
 JavaScript and never replays arbitrary DOM operations. When a user clicks,
-types, changes a control, or submits a form, the browser sends the opaque event
-id back to the render endpoint. The Dynamic Worker re-renders, invokes the
-matching handler inside the isolated worker, updates hook state, sanitizes the
-next tree, and returns it.
+types, changes a control, submits a form, or a registered `useInterval` timer
+ticks, the browser sends the opaque event id back to the render endpoint. The
+Dynamic Worker re-renders, invokes the matching handler inside the isolated
+worker, updates hook state, sanitizes the next tree, and returns it.
 
 During event re-renders, the browser keeps the previous sanitized VDOM mounted
 until the next response arrives. Only the initial render or a changed artifact
@@ -124,11 +132,12 @@ artifact JavaScript. Interactivity is event-driven:
    VDOM/state pair.
 
 This supports stateful buttons, forms, controls, small calculators, simple
-event-driven games, and deterministic `useEffect` state derivations. It
-intentionally does not support arbitrary browser APIs, DOM reads/writes,
-network/storage access, or long-running effects. If future artifacts need
-requestAnimationFrame-style animation or timers, add an explicit runtime
-primitive instead of allowing artifact code to run in the browser again.
+event-driven games, deterministic `useEffect` state derivations, and coarse
+periodic updates through `useInterval`. It intentionally does not support
+arbitrary browser APIs, DOM reads/writes, network/storage access, raw timers,
+or long-running effects. If future artifacts need requestAnimationFrame-style
+animation, add another explicit runtime primitive instead of allowing artifact
+code to run in the browser again.
 
 ## Dynamic Worker binding
 

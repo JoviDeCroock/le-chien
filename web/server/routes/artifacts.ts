@@ -5,7 +5,7 @@ import type { Bindings, Variables } from "../types";
 
 const artifactEventSchema = z.object({
   id: z.string().min(1).max(120),
-  type: z.enum(["click", "input", "change", "submit"]),
+  type: z.enum(["click", "input", "change", "submit", "timer"]),
   value: z.string().max(2_000).optional(),
   checked: z.boolean().optional(),
 });

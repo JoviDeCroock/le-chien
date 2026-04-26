@@ -11,13 +11,19 @@ export type ArtifactElementNode = {
 };
 
 export type ArtifactNode = ArtifactTextNode | ArtifactElementNode | ArtifactNode[];
+export type ArtifactEventType = "click" | "input" | "change" | "submit" | "timer";
+
+export type ArtifactTimer = {
+  id: string;
+  intervalMs: number;
+};
 
 export type ArtifactRenderInput = {
   code: string;
   state?: unknown[];
   event?: {
     id: string;
-    type: "click" | "input" | "change" | "submit";
+    type: ArtifactEventType;
     value?: string;
     checked?: boolean;
   };
@@ -26,6 +32,7 @@ export type ArtifactRenderInput = {
 export type ArtifactRenderResult = {
   tree?: ArtifactNode;
   state?: unknown[];
+  timers?: ArtifactTimer[];
   error?: string;
 };
 
@@ -60,6 +67,81 @@ interface StripResult {
   exportName: string | null;
 }
 
+function stripTypeScriptAssertions(raw: string) {
+  let output = "";
+  let chunk = "";
+  let index = 0;
+
+  const flushChunk = () => {
+    output += chunk
+      .replace(/\s+as\s+const\b/g, "")
+      .replace(
+        /\s+as\s+[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*(?:\s*<[^>\n;{}[\]]+>)?(?:\s*\[\])?(?=\s*[,);}\]\n])/g,
+        "",
+      );
+    chunk = "";
+  };
+
+  while (index < raw.length) {
+    const char = raw[index];
+    const next = raw[index + 1];
+
+    if (char === '"' || char === "'" || char === "`") {
+      flushChunk();
+      const quote = char;
+      output += char;
+      index++;
+      while (index < raw.length) {
+        const current = raw[index];
+        output += current;
+        index++;
+        if (current === "\\") {
+          output += raw[index] ?? "";
+          index++;
+          continue;
+        }
+        if (current === quote) break;
+      }
+      continue;
+    }
+
+    if (char === "/" && next === "/") {
+      flushChunk();
+      while (index < raw.length) {
+        const current = raw[index];
+        output += current;
+        index++;
+        if (current === "\n") break;
+      }
+      continue;
+    }
+
+    if (char === "/" && next === "*") {
+      flushChunk();
+      output += char + next;
+      index += 2;
+      while (index < raw.length) {
+        const current = raw[index];
+        const following = raw[index + 1];
+        output += current;
+        index++;
+        if (current === "*" && following === "/") {
+          output += following;
+          index++;
+          break;
+        }
+      }
+      continue;
+    }
+
+    chunk += char;
+    index++;
+  }
+
+  flushChunk();
+  return output;
+}
+
 function stripModuleSyntax(raw: string): StripResult {
   let code = raw;
   let exportName: string | null = null;
@@ -77,6 +159,7 @@ function stripModuleSyntax(raw: string): StripResult {
   });
 
   code = code.replace(/^export\s+(default\s+)?/gm, "");
+  code = stripTypeScriptAssertions(code);
 
   return { code: code.trim(), exportName };
 }
@@ -286,6 +369,9 @@ const MAX_STATE_JSON = 16_000;
 const MAX_TEXT_LENGTH = 4_000;
 const MAX_PROP_LENGTH = 1_000;
 const MAX_EFFECT_PASSES = 5;
+const MAX_TIMERS = 10;
+const MIN_TIMER_INTERVAL_MS = 1_000;
+const MAX_TIMER_INTERVAL_MS = 600_000;
 const HOOK_SLOT_KEY = "__leChienHookSlot";
 const HOOK_STATE = 1;
 const HOOK_REDUCER = 2;
@@ -340,6 +426,13 @@ __preactOptions.vnode = (vnode) => {
   sanitizePreactVNode(vnode);
 };
 
+let __activeRuntime = null;
+
+function __runtimeUseInterval(callback, delayMs) {
+  if (!__activeRuntime || typeof callback !== "function") return null;
+  return __activeRuntime.registerTimer(delayMs, callback);
+}
+
 const __userModule = (() => {
 const h = __preactH;
 const Fragment = __PreactFragment;
@@ -348,6 +441,7 @@ const useEffect = __preactUseEffect;
 const useRef = __preactUseRef;
 const useMemo = __preactUseMemo;
 const useCallback = __preactUseCallback;
+const useInterval = __runtimeUseInterval;
 const fetch = undefined;
 const WebSocket = undefined;
 const XMLHttpRequest = undefined;
@@ -540,6 +634,8 @@ function createRuntime(initialState) {
   let previousComponents = [];
   const initialComponentStates = normalizeInitialComponentStates(initialState);
   const handlers = new Map();
+  const timers = new Map();
+  let timerIndex = 0;
 
   function normalizeInitialComponentStates(state) {
     const sanitized = sanitizeState(state);
@@ -553,6 +649,22 @@ function createRuntime(initialState) {
     return isHookSlot(componentSlot, "component") && Array.isArray(componentSlot.hooks)
       ? componentSlot.hooks
       : [];
+  }
+
+  function normalizeTimerInterval(delayMs) {
+    if (delayMs === null || delayMs === undefined || delayMs === false) return null;
+    const numeric = Number(delayMs);
+    if (!Number.isFinite(numeric) || numeric <= 0) return null;
+    return Math.min(MAX_TIMER_INTERVAL_MS, Math.max(MIN_TIMER_INTERVAL_MS, Math.round(numeric)));
+  }
+
+  function registerTimer(delayMs, handler) {
+    if (timers.size >= MAX_TIMERS || typeof handler !== "function") return null;
+    const intervalMs = normalizeTimerInterval(delayMs);
+    if (intervalMs === null) return null;
+    const id = "timer:" + timerIndex++;
+    timers.set(id, { intervalMs, handler });
+    return id;
   }
 
   function createDispatch(hook, component) {
@@ -759,11 +871,19 @@ function createRuntime(initialState) {
     nodeCount = 0;
     stateChanged = false;
     componentReadIndex = 0;
+    timerIndex = 0;
     activeComponents = [];
     handlers.clear();
-    const tree = sanitizeNode(__preactH(__Component, {}));
-    previousComponents = activeComponents;
-    return tree ?? "";
+    timers.clear();
+    const previousRuntime = __activeRuntime;
+    __activeRuntime = runtimeApi;
+    try {
+      const tree = sanitizeNode(__preactH(__Component, {}));
+      previousComponents = activeComponents;
+      return tree ?? "";
+    } finally {
+      __activeRuntime = previousRuntime;
+    }
   }
 
   async function renderWithEffects() {
@@ -785,6 +905,16 @@ function createRuntime(initialState) {
   async function dispatch(event) {
     if (!event || typeof event.id !== "string") return;
     renderOnce();
+    if (event.type === "timer") {
+      const timer = timers.get(event.id);
+      if (!timer || typeof timer.handler !== "function") return;
+      await timer.handler({
+        type: "timer",
+        preventDefault() {},
+        stopPropagation() {},
+      });
+      return;
+    }
     const handler = handlers.get(event.id);
     if (typeof handler !== "function") return;
     const eventObject = {
@@ -797,9 +927,13 @@ function createRuntime(initialState) {
     await handler(eventObject);
   }
 
-  return {
+  const runtimeApi = {
+    registerTimer,
     render: renderWithEffects,
     dispatch,
+    getTimers() {
+      return Array.from(timers, ([id, timer]) => ({ id, intervalMs: timer.intervalMs }));
+    },
     getState() {
       return sanitizeState(
         previousComponents.map((component) =>
@@ -811,6 +945,8 @@ function createRuntime(initialState) {
       );
     },
   };
+
+  return runtimeApi;
 
   function extractHooks(component) {
     const hooks = component.__H?.__;
@@ -844,7 +980,7 @@ export default {
       __runtime = createRuntime(input.state);
       if (input.event) await __runtime.dispatch(input.event);
       const tree = await __runtime.render();
-      return json({ tree, state: __runtime.getState() });
+      return json({ tree, state: __runtime.getState(), timers: __runtime.getTimers() });
     } catch (err) {
       return json({ error: err instanceof Error ? err.name + ": " + err.message : String(err) }, 400);
     }

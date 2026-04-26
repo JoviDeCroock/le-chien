@@ -15,10 +15,21 @@ type ArtifactNode = ArtifactTextNode | ArtifactElementNode | ArtifactNode[];
 type ArtifactRenderResponse = {
   tree?: ArtifactNode;
   state?: unknown[];
+  timers?: ArtifactTimer[];
   error?: string;
 };
 
-type ArtifactEventType = "click" | "input" | "change" | "submit";
+type ArtifactEventType = "click" | "input" | "change" | "submit" | "timer";
+
+type ArtifactTimer = {
+  id: string;
+  intervalMs: number;
+};
+
+type ArtifactTimerHandle = {
+  intervalMs: number;
+  handle: number;
+};
 
 const CLIENT_ALLOWED_TAGS = new Set([
   "a",
@@ -146,18 +157,60 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
   const [tree, setTree] = useState<ArtifactNode | null>(null);
   const artifactStateRef = useRef<unknown[]>([]);
   const requestIdRef = useRef(0);
+  const timerHandlesRef = useRef<Map<string, ArtifactTimerHandle>>(new Map());
+  const timerEventsInFlightRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const abortController = new AbortController();
+    clearArtifactTimers();
     artifactStateRef.current = [];
     setTree(null);
     void renderArtifact({ signal: abortController.signal });
 
     return () => {
       abortController.abort();
+      clearArtifactTimers();
+      requestIdRef.current += 1;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, code]);
+
+  function clearArtifactTimers() {
+    for (const timer of timerHandlesRef.current.values()) {
+      window.clearInterval(timer.handle);
+    }
+    timerHandlesRef.current.clear();
+    timerEventsInFlightRef.current.clear();
+  }
+
+  function syncArtifactTimers(timers: ArtifactTimer[]) {
+    const nextTimers = new Map(
+      timers
+        .filter((timer) => typeof timer.id === "string" && Number.isFinite(timer.intervalMs))
+        .map((timer) => [timer.id, timer]),
+    );
+
+    for (const [timerId, current] of timerHandlesRef.current) {
+      const next = nextTimers.get(timerId);
+      if (!next || next.intervalMs !== current.intervalMs) {
+        window.clearInterval(current.handle);
+        timerHandlesRef.current.delete(timerId);
+        timerEventsInFlightRef.current.delete(timerId);
+      }
+    }
+
+    for (const timer of nextTimers.values()) {
+      if (timerHandlesRef.current.has(timer.id)) continue;
+      const handle = window.setInterval(() => {
+        if (timerEventsInFlightRef.current.has(timer.id)) return;
+        timerEventsInFlightRef.current.add(timer.id);
+        void renderArtifact({ event: { id: timer.id, type: "timer" } }).finally(() => {
+          timerEventsInFlightRef.current.delete(timer.id);
+        });
+      }, timer.intervalMs);
+      timerHandlesRef.current.set(timer.id, { intervalMs: timer.intervalMs, handle });
+    }
+  }
 
   async function renderArtifact(options: {
     signal?: AbortSignal;
@@ -191,10 +244,14 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
       if (requestId !== requestIdRef.current) return;
       artifactStateRef.current = body.state ?? [];
       setTree(body.tree ?? "");
+      syncArtifactTimers(body.timers ?? []);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      setError(err instanceof Error ? err.message : "Artifact render failed");
-      if (!preserveExistingTree) setTree(null);
+      if (requestId === requestIdRef.current) {
+        clearArtifactTimers();
+        setError(err instanceof Error ? err.message : "Artifact render failed");
+        if (!preserveExistingTree) setTree(null);
+      }
     } finally {
       if (requestId === requestIdRef.current) setRendering(false);
     }
