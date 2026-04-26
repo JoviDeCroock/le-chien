@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "le-chien",
   "main": "./server/index.ts",
-  "compatibility_date": "2026-02-01",
+  "compatibility_date": "2026-04-05",
   "compatibility_flags": ["nodejs_compat"],
   "placement": {
     "mode": "smart",
@@ -34,9 +34,11 @@
   "ai": {
     "binding": "AI",
   },
-  "browser": {
-    "binding": "BROWSER",
-  },
+  "worker_loaders": [
+    {
+      "binding": "LOADER",
+    },
+  ],
   "durable_objects": {
     "bindings": [{ "name": "CHAT_AGENT", "class_name": "ChatAgent" }],
   },

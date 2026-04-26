@@ -10,7 +10,7 @@ import { isBillingEnabled } from "../utils/billingEnabled";
 import { getAppOrigin } from "../utils/urls";
 
 type Env = Cloudflare.Env;
-type Auth = ReturnType<typeof betterAuth>;
+type Auth = ReturnType<typeof buildAuth>;
 
 const authCache = new WeakMap<object, Auth>();
 

@@ -8,7 +8,7 @@ declare namespace Cloudflare {
   }
   interface Env {
     DB: D1Database;
-    BROWSER: Fetcher;
+    LOADER: WorkerLoader;
     AI: Ai;
     APP_URL: "$YOUR_URL";
     BETTER_AUTH_URL: "$YOUR_URL/api/auth";

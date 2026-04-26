@@ -1,13 +1,14 @@
 # Live UI Artifacts (`​```preact` fence)
 
-Inline, sandboxed Preact components that the model can emit mid-response. The
-chat UI extracts them from assistant messages and renders them as live widgets
-between paragraphs of markdown.
+Inline Preact-like components that the model can emit mid-response. The chat UI
+extracts them from assistant messages and renders them as live widgets between
+paragraphs of markdown.
 
 ## Wire protocol
 
-The model is taught (via system prompt in `web/server/agents/chat-agent.ts`)
-to wrap interactive UI in a `​```preact` fenced code block. Example:
+The model is taught through the system prompt in
+`web/server/agents/chat-agent.ts` to wrap interactive UI in a `​```preact`
+fenced code block. Example:
 
 ````
 ```preact
@@ -30,119 +31,119 @@ function Counter() {
 ```
 ````
 
-Rules enforced through the prompt (and partially by the sandbox runtime):
+Rules enforced through the prompt and by the renderer:
 
-- No JSX. The runtime evaluates raw JavaScript via `new Function`, so JSX would
-  not parse. Components use `h(tag, props, ...children)`.
-- No `import`/`export`. The runtime provides `h`, `Fragment`, `useState`,
-  `useEffect`, `useRef`, `useMemo`, `useCallback` as scope-injected globals.
-- The component is a single PascalCase function placed last in the block.
-- **Inline styles, not Tailwind.** The host page's Tailwind is JIT-compiled
-  from source, so any utility the model invents (e.g. `bg-violet-600`) that
-  isn't already used somewhere in the app will simply not exist at runtime and
-  the element renders unstyled. Inline `style={{ ... }}` objects always apply.
-  The container sets a readable default text color as a backstop.
+- No JSX. Components use `h(tag, props, ...children)`.
+- No `import`/`export`. The renderer injects `h`, `Fragment`, `useState`,
+  `useEffect`, `useRef`, `useMemo`, and `useCallback`.
+- The component is a single PascalCase function or const placed last in the
+  block.
+- Network, storage, timers, `document`, `window`, and browser globals are
+  unavailable inside the renderer.
+- Use inline `style={{ ... }}` objects instead of Tailwind classes. The host
+  page's Tailwind is JIT-compiled from source, so invented utility classes may
+  not exist at runtime.
 
-`web/src/lib/parse-artifacts.ts` splits the streamed content into alternating
-`{ kind: "markdown" }` / `{ kind: "preact" }` segments. While a fence is open
-but not yet closed, the segment is marked `complete: false` and the bubble
-shows a "Compiling artifact…" placeholder instead of mounting half-written
-code.
+`web/src/lib/parse-artifacts.ts` splits streamed content into alternating
+markdown and `preact` segments. While a fence is open but not yet closed, the
+bubble shows a "Compiling artifact..." placeholder instead of rendering
+half-written code.
 
 ## Sandbox model
 
-Ported from an earlier local prototype. The runtime lives entirely in `web/src/runtime/`:
+Artifact code no longer runs in the browser. `SandboxedArtifact` posts the code,
+current hook state, and optional event payloads to
+`POST /api/v1/artifacts/render`. The server loads the code into a Cloudflare
+Dynamic Worker via the `LOADER` Worker Loader binding with `globalOutbound:
+null`.
 
-| File | Role |
-| --- | --- |
-| `safe-dom-types.ts` | Shared `DomOp` and message envelope types. |
-| `safe-dom-worker.ts` | Worker-side `SafeDocument`, `SafeElementBase`, etc. — a fake DOM that batches mutations into `DomOp[]` per microtask and posts them to the main thread. |
-| `safe-dom-main.ts` | Main-thread `SafeDomApplier` — replays `DomOp[]` against a real container element and forwards real DOM events back to the worker. |
-| `evaluator.ts` | Strips module syntax from the LLM source and runs it inside a `with(__sandbox__)` scope whose `Proxy` returns `undefined` for any identifier not explicitly whitelisted. |
-| `artifact-worker.ts` | Worker entry. Boots `SafeDocument`, installs it as `globalThis.document`, calls Preact's `render()` against it. |
-| `bridge.ts` | `SandboxBridge` — main-thread class that spawns the worker, wires up the applier, queues mounts until the worker says `ready`. |
+The Dynamic Worker builds a small Preact-compatible runtime:
 
-The component wrapper is `web/src/components/SandboxedArtifact.tsx`. It owns
-its own `SandboxBridge` per mount, exposes a Hide/Show toggle, and surfaces
-worker errors inline.
+- `h()` creates plain VDOM records.
+- `useState()` persists JSON-serializable state returned to the browser.
+- `useEffect()` runs after render when dependencies change and may update local
+  hook state; re-renders are capped to keep execution bounded.
+- `useMemo()` and `useCallback()` are synchronous helpers for render-time code.
 
-## Why a worker, not an iframe
+The worker sanitizes the returned tree into an allowlisted JSON VDOM shape:
 
-A sandboxed `<iframe srcdoc>` was the obvious alternative (and is what
-`docs/roadmap-tools.md` originally proposed). The worker approach wins on a
-few axes:
+- only known HTML/SVG tags are preserved;
+- event handlers become opaque event ids;
+- dangerous props, `on*` props, `dangerouslySetInnerHTML`, unsafe URLs, and
+  unsafe style values are dropped;
+- node count, depth, text length, prop length, code size, and serialized state
+  are bounded.
 
-- No second document, no styling double-load, no scrollbars-in-scrollbars,
-  no `iframe` resize calculations.
-- The DOM the user sees lives in the parent document — Tailwind classes Just
-  Work, dark theme is inherited, focus rings look right.
-- The trust boundary is stronger in some respects: the worker has no access to
-  cookies, `localStorage`, or any real DOM APIs. The Proxy-based scope blocks
-  `fetch`, `XMLHttpRequest`, `WebSocket`, `navigator`, and storage globals at
-  the language level, so even a worker that breaks out of its top-level
-  invocation has nowhere to go.
-- The trust boundary is weaker in others: the worker shares the same origin's
-  `postMessage` channel with the main thread. We mitigate by validating the
-  shape of incoming messages (`type: "ops" | "ready" | "error"`) and never
-  using DOM op payloads as code.
+The browser renders that JSON VDOM with Preact. It never evaluates artifact
+JavaScript and never replays arbitrary DOM operations. When a user clicks,
+types, changes a control, or submits a form, the browser sends the opaque event
+id back to the render endpoint. The Dynamic Worker re-renders, invokes the
+matching handler inside the isolated worker, updates hook state, sanitizes the
+next tree, and returns it.
+
+During event re-renders, the browser keeps the previous sanitized VDOM mounted
+until the next response arrives. Only the initial render or a changed artifact
+source shows the full "Rendering artifact..." placeholder, so interactive
+artifacts do not flicker between user actions.
+
+## Interactivity contract
+
+Dynamic Workers still allow interactive JavaScript, but not browser-resident
+artifact JavaScript. Interactivity is event-driven:
+
+1. Initial render sends `{ code, state: [] }` to the server.
+2. The Dynamic Worker returns sanitized JSON VDOM plus serialized hook state.
+3. The browser renders that inert VDOM and wires allowed event ids to a fetch
+   back to `/api/v1/artifacts/render`.
+4. The next request sends `{ code, state, event }`; the Dynamic Worker rebuilds
+   the handler map, invokes the matched handler, and returns the next sanitized
+   VDOM/state pair.
+
+This supports stateful buttons, forms, controls, small calculators, simple
+event-driven games, and deterministic `useEffect` state derivations. It
+intentionally does not support arbitrary browser APIs, DOM reads/writes,
+network/storage access, or long-running effects. If future artifacts need
+requestAnimationFrame-style animation or timers, add an explicit runtime
+primitive instead of allowing artifact code to run in the browser again.
+
+## Dynamic Worker binding
+
+Local and production Worker configs need a Worker Loader binding:
+
+```jsonc
+"worker_loaders": [
+  {
+    "binding": "LOADER",
+  },
+]
+```
+
+The Dynamic Worker module is created at request time in
+`web/server/lib/dynamic-workers.ts`. Artifact renders use `LOADER.get()` with a
+SHA-256 cache id derived from the generated worker source, so Cloudflare can
+reuse a warm isolate for identical artifact code when available. Hook state
+still round-trips explicitly between browser and server, so correctness does
+not depend on that cache being warm. Outbound network is disabled through the
+Worker Loader `globalOutbound: null` setting, so artifact code and the
+`run_javascript` tool do not inherit the app Worker's fetch capability.
 
 ## Streaming behavior
 
-`parseArtifacts` only mounts the worker when the closing ` ``` ` has been
-streamed. This avoids spinning up a worker per token and re-evaluating
-half-finished syntax. The placeholder card shows during streaming so the
-user knows something is coming.
-
-## Proxy traps and Preact's minified internals
-
-Preact's production build (`dist/preact.mjs`) mangles internal property names.
-Most notably `_listeners` becomes `n.l` — a plain object hung off each DOM
-node that maps `eventName + useCapture` → handler, read by the shared
-`eventProxy`. That object isn't an HTML attribute and must not be routed
-through `setAttribute` by the SafeElement proxy.
-
-Two traps in `_proxyOf` (`web/src/runtime/safe-dom-worker.ts`) guard this:
-
-- **setter**: non-primitive values (objects, functions) are stored directly on
-  the target instead of falling through to `setAttribute(prop, String(value))`.
-  This keeps Preact's `n.l` (and anything similarly-shaped) readable across
-  renders. Primitives still flow to `setAttribute`/`removeAttribute`.
-- **has trap**: returns `true` for any `/^on[a-z]+$/` prop. Preact uses
-  `lowerCaseName in dom` (`props.js:73`) to decide whether to register the
-  listener as `"click"` vs `"Click"`. Without the trap, it registered as
-  `"Click"`, which no browser dispatches — handlers silently never fired.
-
-## Adding a new sandbox global
-
-1. Import the symbol in `artifact-worker.ts`.
-2. Add it to `SANDBOX_GLOBALS`.
-3. Update the system prompt in `chat-agent.ts` so the model knows it exists.
-
-If the new global needs a stub on the main thread (e.g., a remote-callable
-API), extend `MainToWorkerMessage` / `WorkerToMainMessage` in
-`safe-dom-types.ts` and add a handler in both ends.
+`parseArtifacts` only renders the artifact after the closing ` ``` ` has been
+streamed. This avoids compiling a Dynamic Worker per token and avoids evaluating
+half-finished syntax. The placeholder card shows during streaming so the user
+knows something is coming.
 
 ## Containment and theme defaults
 
-The artifact mount (`.sandboxed-artifact-body` in `style.css`) is the only thing
-stopping a badly-styled component from blowing up the chat bubble. Concretely:
+The artifact mount (`.sandboxed-artifact-body` in `style.css`) still protects
+the surrounding chat bubble from badly styled output:
 
-- **Height clamp.** Container is `max-h-[480px] overflow-auto`. Models love to
-  reach for full-viewport heights on the root of a demo component. The
-  `min-h-screen` / `h-screen` Tailwind utilities are additionally neutralised
-  (`min-height: 0 !important; height: auto`) inside the artifact body, in case
-  a model ignores the inline-styles rule and those classes happen to exist in
-  the JIT output.
+- **Height clamp.** The container is `max-h-[480px] overflow-auto`.
 - **Default text color.** The container sets `text-neutral-200` so components
-  that forget a text color still render readable text on the dark card. A common
-  failure mode is the model emitting a white inner card (`bg-white`) with
-  light-gray text inherited from the app — invisible. The system prompt now
-  pushes models toward dark surfaces explicitly, but the default color is the
-  belt-and-braces.
-- **`contain: layout paint`.** Keeps the artifact's layout independent from the
-  surrounding chat stream so a tall component doesn't thrash the parent's
-  layout calculations.
+  that forget a text color still render readable text on the dark card.
+- **`contain: layout paint`.** Keeps artifact layout independent from the
+  surrounding chat stream.
 
-When editing the artifact container or system prompt, keep these three things
-aligned — loosening the height clamp without tightening the prompt means users
-see giant empty artifacts again.
+Keep the system prompt, server sanitizer, client renderer, and CSS container in
+sync when adding a new supported tag, prop, event type, or hook.
