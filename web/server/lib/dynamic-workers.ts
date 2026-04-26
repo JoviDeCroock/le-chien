@@ -1,5 +1,5 @@
-import preactHooksModuleSource from "preact/hooks/dist/hooks.module.js?raw";
-import preactModuleSource from "preact/dist/preact.module.js?raw";
+import preactHooksModuleSource from "preact/hooks?raw";
+import preactModuleSource from "preact?raw";
 
 export type ArtifactTextNode = string | number;
 
