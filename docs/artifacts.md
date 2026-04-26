@@ -57,13 +57,31 @@ current hook state, and optional event payloads to
 Dynamic Worker via the `LOADER` Worker Loader binding with `globalOutbound:
 null`.
 
-The Dynamic Worker builds a small Preact-compatible runtime:
+The Dynamic Worker loads the app's pinned `preact` and `preact/hooks` ESM
+bundles as Worker Loader modules, then renders the component with native
+Preact `h`, `Fragment`, and hook implementations. A small server-side renderer
+walks the resulting Preact VNode tree and converts it into the same sanitized
+JSON VDOM contract used by the browser.
 
-- `h()` creates plain VDOM records.
-- `useState()` persists JSON-serializable state returned to the browser.
-- `useEffect()` runs after render when dependencies change and may update local
-  hook state; re-renders are capped to keep execution bounded.
-- `useMemo()` and `useCallback()` are synchronous helpers for render-time code.
+Element VNode props are filtered through Preact's `options.vnode` hook as soon
+as `h()` creates them. That keeps unsafe DOM/SVG attributes out of normal
+element VNodes before the renderer walks the tree. Component props are left
+alone so generated helper components can still pass internal values around;
+the final JSON serializer applies the same allowlist again before anything
+reaches the browser.
+
+- `useState()` uses native Preact hook state during render and serializes
+  JSON-safe values back to the browser between requests.
+- `useEffect()` is flushed synchronously after render for deterministic local
+  state derivations; re-renders are capped to keep execution bounded.
+- `useRef()` persists JSON-safe `.current` values.
+- `useMemo()` and `useCallback()` use native Preact during a render pass, but
+  non-serializable memoized values are intentionally recomputed on later
+  requests instead of being restored as stale placeholders.
+
+Hook state is serialized per function component in render order. That keeps
+correctness independent from Worker Loader isolate reuse while still allowing
+nested function components to use hooks.
 
 The worker sanitizes the returned tree into an allowlisted JSON VDOM shape:
 
