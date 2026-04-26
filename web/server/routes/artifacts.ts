@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { renderDynamicArtifact } from "../lib/dynamic-workers";
 import type { Bindings, Variables } from "../types";
+import { isProduction } from "../utils/isProduction";
 
 const artifactEventSchema = z.object({
   id: z.string().min(1).max(120),
@@ -11,8 +11,8 @@ const artifactEventSchema = z.object({
 });
 
 const artifactRenderSchema = z.object({
+  artifactId: z.string().min(1).max(240),
   code: z.string().min(1).max(24_000),
-  state: z.array(z.unknown()).max(50).optional(),
   event: artifactEventSchema.optional(),
 });
 
@@ -24,9 +24,22 @@ artifactRoutes.post("/render", async (c) => {
     return c.json({ error: "Invalid artifact render request" }, 400);
   }
 
-  const result = await renderDynamicArtifact(c.env, parsed.data);
-  if (result.error) {
-    return c.json(result, 400);
-  }
-  return c.json(result);
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  const namespace = isProduction(c.env)
+    ? c.env.ARTIFACT_SESSION.jurisdiction("eu")
+    : c.env.ARTIFACT_SESSION;
+  const id = namespace.idFromName(`${user.id}:${parsed.data.artifactId}`);
+  const session = namespace.get(id);
+  const response = await session.fetch("https://artifact-session.local/render", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...parsed.data, userId: user.id }),
+  });
+
+  return new Response(response.body, {
+    status: response.status,
+    headers: { "Content-Type": "application/json" },
+  });
 });

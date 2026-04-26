@@ -13,8 +13,8 @@ export type ArtifactElementNode = {
 export type ArtifactNode = ArtifactTextNode | ArtifactElementNode | ArtifactNode[];
 
 export type ArtifactRenderInput = {
+  artifactId: string;
   code: string;
-  state?: unknown[];
   event?: {
     id: string;
     type: "click" | "input" | "change" | "submit";
@@ -25,8 +25,13 @@ export type ArtifactRenderInput = {
 
 export type ArtifactRenderResult = {
   tree?: ArtifactNode;
-  state?: unknown[];
   error?: string;
+};
+
+export type PreparedArtifactWorker = {
+  cacheId: string;
+  componentName: string;
+  source: string;
 };
 
 export type JavaScriptRunResult = {
@@ -39,6 +44,7 @@ const DYNAMIC_WORKER_COMPATIBILITY_DATE = "2026-04-25";
 const DYNAMIC_WORKER_MODULE = "index.js";
 const DYNAMIC_PREACT_MODULE = "preact.js";
 const DYNAMIC_PREACT_HOOKS_MODULE = "preact-hooks.js";
+export const ARTIFACT_FACET_EXPORT_NAME = "LeChienArtifactRuntimeFacet";
 const MAX_DYNAMIC_WORKER_ERROR_LENGTH = 500;
 const MAX_ARTIFACT_CODE_CHARS = 24_000;
 const MAX_JAVASCRIPT_CODE_CHARS = 16_000;
@@ -103,6 +109,23 @@ async function callDynamicWorker<T>(
   cacheId?: string,
   extraModules: Record<string, string> = {},
 ): Promise<DynamicWorkerResponse<T>> {
+  const worker = loadDynamicWorker(env, source, cacheId, extraModules);
+
+  const response = await worker.getEntrypoint().fetch("https://sandbox.local/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  return parseDynamicWorkerResponse(response);
+}
+
+function loadDynamicWorker(
+  env: Cloudflare.Env,
+  source: string,
+  cacheId?: string,
+  extraModules: Record<string, string> = {},
+): WorkerStub {
   if (!env.LOADER) {
     throw new Error("Dynamic Worker Loader binding is not configured");
   }
@@ -116,14 +139,12 @@ async function callDynamicWorker<T>(
     },
     globalOutbound: null,
   };
-  const worker = cacheId ? env.LOADER.get(cacheId, () => code) : env.LOADER.load(code);
+  return cacheId ? env.LOADER.get(cacheId, () => code) : env.LOADER.load(code);
+}
 
-  const response = await worker.getEntrypoint().fetch("https://sandbox.local/run", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-
+async function parseDynamicWorkerResponse<T>(
+  response: Response,
+): Promise<DynamicWorkerResponse<T>> {
   const text = await response.text();
   let data: DynamicWorkerResponse<T>;
   try {
@@ -163,15 +184,14 @@ export async function runDynamicJavaScript(
   }
 }
 
-export async function renderDynamicArtifact(
-  env: Cloudflare.Env,
-  input: ArtifactRenderInput,
-): Promise<ArtifactRenderResult> {
-  if (input.code.length > MAX_ARTIFACT_CODE_CHARS) {
+export async function prepareDynamicArtifactWorker(
+  code: string,
+): Promise<PreparedArtifactWorker | { error: string }> {
+  if (code.length > MAX_ARTIFACT_CODE_CHARS) {
     return { error: `Artifact code is too large. Limit is ${MAX_ARTIFACT_CODE_CHARS} characters.` };
   }
 
-  const stripped = stripModuleSyntax(input.code);
+  const stripped = stripModuleSyntax(code);
   const componentName = stripped.exportName ?? findComponentName(stripped.code);
   if (!componentName) {
     return {
@@ -186,16 +206,17 @@ export async function renderDynamicArtifact(
       "artifact",
       [source, preactModuleSource, preactHooksWorkerSource].join("\n"),
     );
-    return await callDynamicWorker<ArtifactRenderResult>(
-      env,
-      source,
-      input,
-      cacheId,
-      artifactWorkerRuntimeModules,
-    );
+    return { cacheId, componentName, source };
   } catch (err) {
     return { error: formatDynamicWorkerError(err) };
   }
+}
+
+export function loadDynamicArtifactWorker(
+  env: Cloudflare.Env,
+  prepared: PreparedArtifactWorker,
+): WorkerStub {
+  return loadDynamicWorker(env, prepared.source, prepared.cacheId, artifactWorkerRuntimeModules);
 }
 
 function buildJavaScriptWorkerSource(code: string) {
@@ -270,6 +291,7 @@ ${code}
 
 function buildArtifactWorkerSource(code: string, componentName: string) {
   return `
+import { DurableObject } from "cloudflare:workers";
 import { Fragment as __PreactFragment, h as __preactH, options as __preactOptions } from "./${DYNAMIC_PREACT_MODULE}";
 import {
   useCallback as __preactUseCallback,
@@ -836,19 +858,29 @@ function createRuntime(initialState) {
 }
 
 let __runtime = null;
+let __globalQueue = Promise.resolve();
 
-export default {
-  async fetch(request) {
+export class ${ARTIFACT_FACET_EXPORT_NAME} extends DurableObject {
+  fetch(request) {
+    const run = __globalQueue.then(() => this.renderArtifact(request));
+    __globalQueue = run.catch(() => {});
+    return run;
+  }
+
+  async renderArtifact(request) {
     try {
-      const input = await request.json();
-      __runtime = createRuntime(input.state);
+      const input = await request.json().catch(() => ({}));
+      const state = this.ctx.storage.kv.get("hookState") || [];
+      __runtime = createRuntime(state);
       if (input.event) await __runtime.dispatch(input.event);
       const tree = await __runtime.render();
-      return json({ tree, state: __runtime.getState() });
+      this.ctx.storage.kv.put("hookState", __runtime.getState());
+      this.ctx.storage.kv.put("updatedAt", Date.now());
+      return json({ tree });
     } catch (err) {
       return json({ error: err instanceof Error ? err.name + ": " + err.message : String(err) }, 400);
     }
-  },
-};
+  }
+}
 `;
 }

@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "le-chien",
   "main": "./server/index.ts",
-  "compatibility_date": "2026-04-05",
+  "compatibility_date": "2026-04-25",
   "compatibility_flags": ["nodejs_compat"],
   "placement": {
     "mode": "smart",
@@ -40,9 +40,15 @@
     },
   ],
   "durable_objects": {
-    "bindings": [{ "name": "CHAT_AGENT", "class_name": "ChatAgent" }],
+    "bindings": [
+      { "name": "CHAT_AGENT", "class_name": "ChatAgent" },
+      { "name": "ARTIFACT_SESSION", "class_name": "ArtifactSession" },
+    ],
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatAgent"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["ChatAgent"] },
+    { "tag": "v2", "new_sqlite_classes": ["ArtifactSession"] },
+  ],
   "d1_databases": [
     {
       "binding": "DB",

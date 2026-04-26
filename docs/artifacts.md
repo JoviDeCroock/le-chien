@@ -51,11 +51,17 @@ half-written code.
 
 ## Sandbox model
 
-Artifact code no longer runs in the browser. `SandboxedArtifact` posts the code,
-current hook state, and optional event payloads to
-`POST /api/v1/artifacts/render`. The server loads the code into a Cloudflare
-Dynamic Worker via the `LOADER` Worker Loader binding with `globalOutbound:
-null`.
+Artifact code no longer runs in the browser. `SandboxedArtifact` posts an
+`artifactId`, the code, and optional event payloads to
+`POST /api/v1/artifacts/render`. The browser does not own or round-trip hook
+state.
+
+The authenticated Worker routes each render to an `ArtifactSession` Durable
+Object keyed by `userId + artifactId`. That supervisor validates ownership,
+prepares the generated runtime, loads it through the `LOADER` Worker Loader
+binding with `globalOutbound: null`, and creates a Dynamic Worker Durable Object
+facet named `runtime`. The facet owns the serialized hook state in its isolated
+SQLite-backed storage.
 
 The Dynamic Worker loads the app's pinned `preact` and `preact/hooks` ESM
 bundles as Worker Loader modules, then renders the component with native
@@ -115,13 +121,13 @@ artifacts do not flicker between user actions.
 Dynamic Workers still allow interactive JavaScript, but not browser-resident
 artifact JavaScript. Interactivity is event-driven:
 
-1. Initial render sends `{ code, state: [] }` to the server.
-2. The Dynamic Worker returns sanitized JSON VDOM plus serialized hook state.
+1. Initial render sends `{ artifactId, code }` to the server.
+2. The `ArtifactSession` DO starts or resumes the Dynamic Worker facet.
 3. The browser renders that inert VDOM and wires allowed event ids to a fetch
    back to `/api/v1/artifacts/render`.
-4. The next request sends `{ code, state, event }`; the Dynamic Worker rebuilds
-   the handler map, invokes the matched handler, and returns the next sanitized
-   VDOM/state pair.
+4. The next request sends `{ artifactId, code, event }`; the facet reads its
+   stored hook state, rebuilds the handler map, invokes the matched handler,
+   persists the next state, and returns the next sanitized VDOM.
 
 This supports stateful buttons, forms, controls, small calculators, simple
 event-driven games, and deterministic `useEffect` state derivations. It
@@ -132,24 +138,38 @@ primitive instead of allowing artifact code to run in the browser again.
 
 ## Dynamic Worker binding
 
-Local and production Worker configs need a Worker Loader binding:
+Local and production Worker configs need a Worker Loader binding and an
+`ArtifactSession` Durable Object binding:
 
 ```jsonc
 "worker_loaders": [
   {
     "binding": "LOADER",
   },
-]
+],
+"durable_objects": {
+  "bindings": [
+    { "name": "CHAT_AGENT", "class_name": "ChatAgent" },
+    { "name": "ARTIFACT_SESSION", "class_name": "ArtifactSession" }
+  ]
+}
 ```
 
 The Dynamic Worker module is created at request time in
 `web/server/lib/dynamic-workers.ts`. Artifact renders use `LOADER.get()` with a
 SHA-256 cache id derived from the generated worker source, so Cloudflare can
-reuse a warm isolate for identical artifact code when available. Hook state
-still round-trips explicitly between browser and server, so correctness does
-not depend on that cache being warm. Outbound network is disabled through the
-Worker Loader `globalOutbound: null` setting, so artifact code and the
-`run_javascript` tool do not inherit the app Worker's fetch capability.
+reuse a warm isolate for identical artifact code when available. Because the
+artifact worker imports the pinned `preact` and `preact/hooks` runtime modules,
+those module sources are included in the cache key too. Hook state now lives in
+the facet's own SQLite storage rather than the browser. When the same
+`artifactId` receives different source, the supervisor deletes the old facet so
+the next render starts with empty hook state. Outbound network is disabled
+through the Worker Loader `globalOutbound: null` setting, so artifact code and
+the `run_javascript` tool do not inherit the app Worker's fetch capability.
+
+Artifact session metadata has a seven-day inactivity TTL. The supervisor sets a
+Durable Object alarm on each render and deletes the facet plus metadata when the
+session expires.
 
 ## Streaming behavior
 
