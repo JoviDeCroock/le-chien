@@ -51,11 +51,13 @@ half-written code.
 
 ## Sandbox model
 
-Artifact code no longer runs in the browser. `SandboxedArtifact` posts the code,
-current hook state, and optional event payloads to
-`POST /api/v1/artifacts/render`. The server loads the code into a Cloudflare
-Dynamic Worker via the `LOADER` Worker Loader binding with `globalOutbound:
-null`.
+Artifact code no longer runs in the browser. `SandboxedArtifact` posts an
+`artifactId`, the code, and an optional event payload to
+`POST /api/v1/artifacts/render`. The browser does not own or replay hook state.
+The server routes the render through an `ArtifactSession` Durable Object keyed
+by authenticated user id plus artifact id, and that DO loads the code into a
+Cloudflare Dynamic Worker via the `LOADER` Worker Loader binding with
+`globalOutbound: null`.
 
 The Dynamic Worker loads the app's pinned `preact` and `preact/hooks` ESM
 bundles as Worker Loader modules, then renders the component with native
@@ -77,7 +79,7 @@ the final JSON serializer applies the same allowlist again before anything
 reaches the browser.
 
 - `useState()` uses native Preact hook state during render and serializes
-  JSON-safe values back to the browser between requests.
+  JSON-safe values back to the `ArtifactSession` DO between requests.
 - `useEffect()` is flushed synchronously after render for deterministic local
   state derivations; re-renders are capped to keep execution bounded.
 - `useRef()` persists JSON-safe `.current` values.
@@ -87,7 +89,8 @@ reaches the browser.
 
 Hook state is serialized per function component in render order. That keeps
 correctness independent from Worker Loader isolate reuse while still allowing
-nested function components to use hooks.
+nested function components to use hooks. The browser never receives this
+serialized hook state.
 
 The worker sanitizes the returned tree into an allowlisted JSON VDOM shape:
 
@@ -103,7 +106,7 @@ JavaScript and never replays arbitrary DOM operations. When a user clicks,
 types, changes a control, or submits a form, the browser sends the opaque event
 id back to the render endpoint. The Dynamic Worker re-renders, invokes the
 matching handler inside the isolated worker, updates hook state, sanitizes the
-next tree, and returns it.
+next tree, and returns it to the `ArtifactSession` DO.
 
 During event re-renders, the browser keeps the previous sanitized VDOM mounted
 until the next response arrives. Only the initial render or a changed artifact
@@ -115,13 +118,16 @@ artifacts do not flicker between user actions.
 Dynamic Workers still allow interactive JavaScript, but not browser-resident
 artifact JavaScript. Interactivity is event-driven:
 
-1. Initial render sends `{ code, state: [] }` to the server.
-2. The Dynamic Worker returns sanitized JSON VDOM plus serialized hook state.
+1. Initial render sends `{ artifactId, code }` to the server.
+2. The `ArtifactSession` DO initializes empty hook state and calls the Dynamic
+   Worker with `{ code, state: [] }`.
 3. The browser renders that inert VDOM and wires allowed event ids to a fetch
    back to `/api/v1/artifacts/render`.
-4. The next request sends `{ code, state, event }`; the Dynamic Worker rebuilds
-   the handler map, invokes the matched handler, and returns the next sanitized
-   VDOM/state pair.
+4. The next request sends `{ artifactId, code, event }`; the DO retrieves the
+   stored hook state, the Dynamic Worker rebuilds the handler map, invokes the
+   matched handler, and returns the next sanitized VDOM/state pair to the DO.
+5. The DO persists the updated hook state and returns only the sanitized VDOM
+   to the browser.
 
 This supports stateful buttons, forms, controls, small calculators, simple
 event-driven games, and deterministic `useEffect` state derivations. It
@@ -145,11 +151,34 @@ Local and production Worker configs need a Worker Loader binding:
 The Dynamic Worker module is created at request time in
 `web/server/lib/dynamic-workers.ts`. Artifact renders use `LOADER.get()` with a
 SHA-256 cache id derived from the generated worker source, so Cloudflare can
-reuse a warm isolate for identical artifact code when available. Hook state
-still round-trips explicitly between browser and server, so correctness does
-not depend on that cache being warm. Outbound network is disabled through the
-Worker Loader `globalOutbound: null` setting, so artifact code and the
-`run_javascript` tool do not inherit the app Worker's fetch capability.
+reuse a warm isolate for identical artifact code when available. Hook state is
+stored in the `ArtifactSession` DO, so correctness still does not depend on the
+Dynamic Worker cache being warm. Outbound network is disabled through the Worker
+Loader `globalOutbound: null` setting, so artifact code and the `run_javascript`
+tool do not inherit the app Worker's fetch capability.
+
+## ArtifactSession Durable Object
+
+`web/server/agents/artifact-session.ts` owns per-user, per-artifact runtime
+state. The API Worker validates the user session, resolves the DO using
+`userId:artifactId`, and forwards the render request with the authenticated user
+id. The DO stores:
+
+- owner user id;
+- artifact id;
+- SHA-256 hash of the current source code;
+- serialized hook state returned by the Dynamic Worker;
+- a monotonically increasing render version;
+- creation and update timestamps.
+
+Requests to the same artifact session are queued inside the DO so rapid events
+process serially against the latest stored hook state. If the same `artifactId`
+receives different code, the DO resets hook state, updates the code hash, and
+does a fresh render without replaying the stale event.
+
+Artifact sessions are ephemeral chat UI state. Each render attempt schedules a
+DO alarm for 24 hours after the latest update. When the alarm fires, stale
+sessions delete their storage; active sessions push the alarm forward.
 
 ## Streaming behavior
 

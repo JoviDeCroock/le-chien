@@ -4,7 +4,7 @@
 declare namespace Cloudflare {
   interface GlobalProps {
     mainModule: typeof import("./server/index");
-    durableNamespaces: "ChatAgent";
+    durableNamespaces: "ChatAgent" | "ArtifactSession";
   }
   interface Env {
     DB: D1Database;
@@ -15,6 +15,7 @@ declare namespace Cloudflare {
     LOCAL: "false";
     CF_AI_GATEWAY_ID: "chien-gateway";
     CHAT_AGENT: DurableObjectNamespace<import("./server/index").ChatAgent>;
+    ARTIFACT_SESSION: DurableObjectNamespace<import("./server/index").ArtifactSession>;
   }
 }
 interface Env extends Cloudflare.Env {}

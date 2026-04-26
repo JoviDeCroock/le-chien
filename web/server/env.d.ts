@@ -17,5 +17,6 @@ declare namespace Cloudflare {
     POSTHOG_HOST?: string;
     TAVILY_API_KEY?: string;
     LOADER: WorkerLoader;
+    ARTIFACT_SESSION: DurableObjectNamespace;
   }
 }

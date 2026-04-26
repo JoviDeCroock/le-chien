@@ -14,7 +14,7 @@ type ArtifactNode = ArtifactTextNode | ArtifactElementNode | ArtifactNode[];
 
 type ArtifactRenderResponse = {
   tree?: ArtifactNode;
-  state?: unknown[];
+  version?: number;
   error?: string;
 };
 
@@ -139,17 +139,15 @@ const CLIENT_ALLOWED_PROPS = new Set([
   "y2",
 ]);
 
-export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
+export function SandboxedArtifact({ artifactId, code }: { artifactId: string; code: string }) {
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [rendering, setRendering] = useState(true);
   const [tree, setTree] = useState<ArtifactNode | null>(null);
-  const artifactStateRef = useRef<unknown[]>([]);
   const requestIdRef = useRef(0);
 
   useEffect(() => {
     const abortController = new AbortController();
-    artifactStateRef.current = [];
     setTree(null);
     void renderArtifact({ signal: abortController.signal });
 
@@ -157,7 +155,7 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
       abortController.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, code]);
+  }, [artifactId, code]);
 
   async function renderArtifact(options: {
     signal?: AbortSignal;
@@ -181,15 +179,14 @@ export function SandboxedArtifact({ id, code }: { id: string; code: string }) {
         headers: { "Content-Type": "application/json" },
         signal: options.signal,
         body: JSON.stringify({
+          artifactId,
           code,
-          state: artifactStateRef.current,
           event: options.event,
         }),
       });
       const body = (await response.json()) as ArtifactRenderResponse;
       if (!response.ok || body.error) throw new Error(body.error ?? "Artifact render failed");
       if (requestId !== requestIdRef.current) return;
-      artifactStateRef.current = body.state ?? [];
       setTree(body.tree ?? "");
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
