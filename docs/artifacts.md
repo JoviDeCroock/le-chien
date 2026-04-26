@@ -63,6 +63,12 @@ Preact `h`, `Fragment`, and hook implementations. A small server-side renderer
 walks the resulting Preact VNode tree and converts it into the same sanitized
 JSON VDOM contract used by the browser.
 
+Import those runtime bundles through the exported package entrypoints
+(`preact?raw` and `preact/hooks?raw`). The Cloudflare Worker build runs under
+`workerd` export conditions and rejects unexported deep imports such as
+`preact/hooks/dist/hooks.module.js?raw`, even if a client-only Vite build
+accepts them.
+
 Element VNode props are filtered through Preact's `options.vnode` hook as soon
 as `h()` creates them. That keeps unsafe DOM/SVG attributes out of normal
 element VNodes before the renderer walks the tree. Component props are left
